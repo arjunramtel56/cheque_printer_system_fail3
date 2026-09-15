@@ -809,7 +809,7 @@ function CalibrationControl({ label, value, onChange, disabled }: CalibrationCon
           min={-25}
           max={25}
           value={value}
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+          onChange={(e) => onChange(clampCalibration(parseFloat(e.target.value)))}
           disabled={disabled}
           style={{ borderRadius: "0 var(--radius-control) var(--radius-control) 0 !important", textAlign: "center", fontVariantNumeric: "tabular-nums" }}
         />
@@ -862,11 +862,11 @@ function CalibrationGroup({
   const step = 0.1;
 
   function setCalX(val: number) {
-    setCurrentCalibration((prev) => ({ ...prev, x: val }));
+    setCurrentCalibration((prev) => ({ ...prev, x: clampCalibration(val) }));
   }
 
   function setCalY(val: number) {
-    setCurrentCalibration((prev) => ({ ...prev, y: val }));
+    setCurrentCalibration((prev) => ({ ...prev, y: clampCalibration(val) }));
   }
 
   function resetX() {
