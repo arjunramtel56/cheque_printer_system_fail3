@@ -491,6 +491,7 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
           width: `${geom.chequeW}mm`,
           height: `${geom.chequeH}mm`,
           transform: geom.rotate === 90 ? "rotate(90deg)" : undefined,
+          transformOrigin: "0 0",
         }}
       >
         {/* Bank name */}
@@ -1046,20 +1047,38 @@ function PrepChecklist({ template, date, payee, amount, amountWords, printMode, 
     ? checkAmountWordsConsistency(amount, amountWords)
     : { consistent: false, expected: "" };
 
+  // Print geometry check — verifies the resolved layout fits within the page
+  // bounds. This is an *application-level* check only; it confirms the template
+  // geometry is valid, not that a physical printer is ready.
+  const geometryOk = useMemo(() => {
+    if (!template) return false;
+    try {
+      const geom = resolvePrintGeometry(template, printMode);
+      const geomErrors = validatePrintGeometry(geom, template, printMode);
+      if (geomErrors) return false;
+      const boundsErrors = validateCalibratedBounds(template, printMode);
+      if (boundsErrors) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }, [template, printMode]);
+
   const items: { label: string; ok: boolean; fieldId?: string }[] = [
-    { label: "Bank template selected", ok: !!template, fieldId: "template-select" },
-    { label: "Valid cheque date", ok: validateChequeDate(date).valid, fieldId: "date-input" },
-    { label: "Payee name", ok: payeeCheck.valid, fieldId: "payee-input" },
-    { label: "Valid amount > 0", ok: amountCheck.valid && amountCheck.paisa > 0, fieldId: "amount-input" },
+    { label: "Bank template", ok: !!template, fieldId: "template-select" },
+    { label: "Date", ok: validateChequeDate(date).valid, fieldId: "date-input" },
+    { label: "Payee", ok: payeeCheck.valid, fieldId: "payee-input" },
+    { label: "Amount", ok: amountCheck.valid && amountCheck.paisa > 0, fieldId: "amount-input" },
     { label: "Amount in words", ok: amountWords.trim() !== "" && consistency.consistent, fieldId: "words-input" },
-    { label: "Print mode selected", ok: printMode !== undefined && printMode !== null, fieldId: "print-mode" },
+    { label: "Print mode", ok: printMode !== undefined && printMode !== null, fieldId: "print-mode" },
     { label: `Calibration (${isDF ? "Direct Feed" : "A4 Carrier"})`, ok: validateCalibrationPair(calibration.x, calibration.y) === null },
+    { label: "Print geometry", ok: geometryOk },
   ];
 
   const allOk = items.every((i) => i.ok);
 
   return (
-    <div className="prep-checklist" aria-label="Print readiness checklist" style={{ marginTop: 16 }}>
+    <div className="prep-checklist" aria-label="Print readiness checklist (application-level checks only)" style={{ marginTop: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
         <span
           className="step"
@@ -1085,6 +1104,9 @@ function PrepChecklist({ template, date, payee, amount, amountWords, printMode, 
           </li>
         ))}
       </ul>
+      <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 8, marginBottom: 0 }}>
+        This checklist verifies application-level data only. It does not confirm physical printer readiness — always check your printer before printing real cheques.
+      </p>
     </div>
   );
 }
@@ -1246,12 +1268,12 @@ export default function Workspace() {
 
     // STEP 4: APPLY CALIBRATION (independent per mode group; range + finiteness checked)
     const cal = isDirectFeed(printMode) ? dfCalibration : a4Calibration;
-    const calError = validateCalibrationPair(cal.x, cal.y);
-    if (calError) { setPrintError(calError); return; }
+     const calError = validateCalibrationPair(cal.x, cal.y);
+     if (calError) { setPrintError(sanitizeError(calError)); return; }
 
-    // STEP 5: PREPARE PRINT LAYOUT
-    const profile = resolvedTemplate.profiles[printMode];
-    if (!profile) { setPrintError("Print layout not available for selected mode."); return; }
+     // STEP 5: PREPARE PRINT LAYOUT
+     const profile = resolvedTemplate.profiles[printMode];
+     if (!profile) { setPrintError("Print layout not available for selected mode."); return; }
 
      // STEP 5b: VALIDATE GEOMETRY (single source of truth guard) — confirms the
      // resolved @page/container math, A4 cheque bounds under max calibration,
@@ -1331,11 +1353,16 @@ export default function Workspace() {
        window.removeEventListener("afterprint", onAfterPrint);
      }
 
-     window.addEventListener("beforeprint", onBeforePrint);
-     window.addEventListener("afterprint", onAfterPrint);
-     window.print();
-     // afterprint fires asynchronously when the dialog closes or print is cancelled
-   }
+      window.addEventListener("beforeprint", onBeforePrint);
+      window.addEventListener("afterprint", onAfterPrint);
+      try {
+        window.print();
+      } catch (err) {
+        setPrintError(sanitizeError(err));
+        setIsPrinting(false);
+      }
+      // afterprint fires asynchronously when the dialog closes or print is cancelled
+    }
 
   function handleClear() {
     // Preserve system configuration (printMode is a persistent UI preference);
@@ -1450,6 +1477,8 @@ export default function Workspace() {
                   value={printMode}
                   onChange={(e) => handleModeChange(e.target.value as ProfileKey)}
                   disabled={!template}
+                  aria-required={true}
+                  aria-describedby="print-mode-help"
                 >
                   <optgroup label="Direct Feed (actual-size cheque)">
                     <option value="custom_short">{PROFILE_LABELS.custom_short}</option>
@@ -1460,7 +1489,7 @@ export default function Workspace() {
                     <option value="a4_horizontal">{PROFILE_LABELS.a4_horizontal}</option>
                   </optgroup>
                 </select>
-                <small>Choose Direct Feed for blank cheques or A4 Carrier for test prints on paper.</small>
+                <small id="print-mode-help">Choose Direct Feed for blank cheques or A4 Carrier for test prints on paper.</small>
               </div>
               <div className="field">
                 <label htmlFor="date-input">Cheque Date</label>
@@ -1471,6 +1500,7 @@ export default function Workspace() {
                   max={new Date().toISOString().slice(0, 10)}
                   onChange={(e) => setDate(e.target.value)}
                   disabled={!template}
+                  aria-required={true}
                 />
               </div>
             </div>
@@ -1489,17 +1519,18 @@ export default function Workspace() {
               />
               {(() => {
                 const pc = validatePayee(payee);
-                return !pc.valid && payee !== "" ? <span className="error-state">{pc.error}</span> : null;
+                return !pc.valid && payee !== "" ? <span className="error-state" id="payee-error" role="alert">{pc.error}</span> : null;
               })()}
-              <small>Leading/trailing spaces are trimmed automatically. Up to 120 characters.</small>
-            </div>
+               <small>Leading/trailing spaces are trimmed automatically. Up to 120 characters.</small>
+             </div>
 
             {/* Amount + Amount in Words */}
             <div className="two-columns">
               <div className="field">
                 <label htmlFor="amount-input">Amount (NPR)</label>
                 <div className="input-prefix">
-                  <b>Rs.</b>
+                  <b aria-hidden="true">Rs.</b>
+                  <label htmlFor="amount-input" className="sr-only">Amount</label>
                   <input
                     id="amount-input"
                     type="text"
@@ -1508,9 +1539,12 @@ export default function Workspace() {
                     value={amount}
                     onChange={(e) => handleAmountChange(e.target.value)}
                     disabled={!template}
+                    aria-invalid={!!amountError}
+                    aria-describedby={amountError ? "amount-error" : undefined}
+                    aria-required={true}
                   />
                 </div>
-                {amountError && <span className="error-state">{amountError}</span>}
+                {amountError && <span className="error-state" id="amount-error" role="alert">{amountError}</span>}
                 <small>Enter whole numbers or decimals up to 2 places.</small>
               </div>
               <div className="field">
@@ -1523,8 +1557,9 @@ export default function Workspace() {
                   value={amountWords}
                   onChange={(e) => handleWordEdit(e.target.value)}
                   disabled={!template}
+                  aria-describedby="words-help"
                 />
-                <small>You may edit the generated wording before printing.</small>
+                <small id="words-help">You may edit the generated wording before printing.</small>
               </div>
             </div>
 
@@ -1650,7 +1685,7 @@ export default function Workspace() {
               </span>
             </div>
 
-            <div className="preview-stage">
+            <div className="preview-stage" id="preview-stage" tabIndex={-1}>
               {template ? (
                 isDirectFeed(printMode) ? (
                   <DirectFeedPreview
