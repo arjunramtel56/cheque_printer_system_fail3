@@ -13,7 +13,7 @@
     overflow: hidden !important;
   }
 
-  /* Hide all application UI */
+  /* Hide all application UI — screen-only elements */
   .no-print {
     display: none !important;
   }
@@ -21,14 +21,21 @@
   /* Reset any residual layout from globals.css */
   .compose-grid,
   .preview-column,
-  .preview-stage {
+  .preview-stage,
+  .cheque-form,
+  .panel,
+  .card,
+  .tip-card,
+  .template-summary,
+  .form-actions,
+  .step {
     position: static !important;
     inset: auto !important;
     z-index: auto !important;
     background: transparent !important;
     margin: 0 !important;
     padding: 0 !important;
-    display: block !important;
+    display: none !important;
     width: auto !important;
     height: auto !important;
     overflow: visible !important;
@@ -37,11 +44,15 @@
   }
 
   /* -------------------------------------------------------
-     Print output wrapper — hidden on screen, shown during print.
-     Dimensions are set by JS-injected @page rules.
+     Print output wrapper — hidden off-screen on display,
+     shown during print via JS-injected @media rules.
+     Default display:none here prevents any flash on screen.
      ------------------------------------------------------- */
   .print-output-screen {
-    display: none;
+    display: none !important;
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
   }
 
   /* -------------------------------------------------------
@@ -58,6 +69,8 @@
     page-break-inside: avoid;
     margin: 0 !important;
     padding: 0 !important;
+    width: auto !important;
+    height: auto !important;
   }
 
   /* -------------------------------------------------------
@@ -74,6 +87,8 @@
     page-break-inside: avoid;
     margin: 0 !important;
     padding: 0 !important;
+    width: auto !important;
+    height: auto !important;
   }
 
   /* Field text: monospace, no wrapping, proper alignment */
@@ -83,6 +98,15 @@
     white-space: nowrap !important;
     overflow: visible !important;
     line-height: 1.1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Force exact dimensions — no browser scaling */
+  .print-direct-feed,
+  .print-a4-carrier {
+    transform: none !important;
+    scale: 1 !important;
   }
 
   /* Default page settings — overridden by JS-injected rules
@@ -92,3 +116,4 @@
     margin: 0;
   }
 }
+

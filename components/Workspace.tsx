@@ -1010,7 +1010,9 @@ export default function Workspace() {
   const wordOverrideRef = useRef(false);
   const printStyleRef = useRef<HTMLStyleElement | null>(null);
   const printOutputRef = useRef<HTMLDivElement | null>(null);
+  const printKeyRef = useRef(0);
   const [printError, setPrintError] = useState("");
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const template = useMemo(() => getTemplate(templateId) ?? null, [templateId]);
   const isDF = template ? isDirectFeed(printMode) : true;
@@ -1063,34 +1065,53 @@ export default function Workspace() {
   function handlePrint() {
     setPrintError("");
 
-    const validationResult = validatePrintData(
-      template,
-      date,
-      payee,
-      amount,
-      amountWords,
-      printMode,
-      dfCalibration,
-      a4Calibration,
-    );
+    // STEP 1: VALIDATE DATA
+    const dateValid = date !== "" && /^\d{4}-\d{2}-\d{2}$/.test(date);
+    if (!dateValid) { setPrintError("Invalid or missing date."); return; }
+    if (!payee.trim()) { setPrintError("Payee name is required."); return; }
+    const amountValidation = validateAmount(amount);
+    if (!amountValidation.valid) { setPrintError(amountValidation.error ?? "Invalid amount."); return; }
+    if (amountValidation.paisa === 0) { setPrintError("Amount must be greater than zero."); return; }
+    if (!amountWords.trim()) { setPrintError("Amount in words is required."); return; }
 
-    if (!validationResult.valid) {
-      setPrintError(validationResult.error);
+    // STEP 2: VALIDATE BANK TEMPLATE
+    if (!template) { setPrintError("No bank template selected."); return; }
+    const resolvedTemplate = template; // narrow for closure safety
+
+    // STEP 3: VALIDATE PRINT MODE
+    if (!printMode) { setPrintError("Print mode not selected."); return; }
+
+    // STEP 4: APPLY CALIBRATION
+    const cal = isDirectFeed(printMode) ? dfCalibration : a4Calibration;
+    if (cal.x < -25 || cal.x > 25 || cal.y < -25 || cal.y > 25) {
+      setPrintError("Calibration values must be between -25 and 25 mm.");
       return;
     }
 
-    if (!template || !profile) return;
+    // STEP 5: PREPARE PRINT LAYOUT
+    const profile = template.profiles[printMode];
+    if (!profile) { setPrintError("Print layout not available for selected mode."); return; }
 
-    const mode = printMode;
-    const isPrintDF = isDirectFeed(mode);
+    setIsPrinting(true);
 
+    // Increment print key to force deterministic render on each print trigger
+    const currentPrintKey = ++printKeyRef.current;
+
+    // Remove any previous injected style
+    if (printStyleRef.current) {
+      printStyleRef.current.remove();
+      printStyleRef.current = null;
+    }
+
+    // STEP 6: HIDE NON-PRINT UI — inject @page + visibility rules BEFORE browser print dialog
+    const isPrintDF = isDirectFeed(printMode);
     let css = "";
     if (isPrintDF) {
       const pw = template.widthMm;
       const ph = template.heightMm;
-      const pageW = mode === "custom_short" ? ph : pw;
-      const pageH = mode === "custom_short" ? pw : ph;
-       css = `
+      const pageW = printMode === "custom_short" ? ph : pw;
+      const pageH = printMode === "custom_short" ? pw : ph;
+      css = `
 @media print {
   @page {
     size: ${pageW.toFixed(1)}mm ${pageH.toFixed(1)}mm;
@@ -1110,10 +1131,10 @@ export default function Workspace() {
 }
       `;
     } else {
-      const isPortrait = mode === "a4_vertical";
+      const isPortrait = printMode === "a4_vertical";
       const pageW = isPortrait ? A4_MM_WIDTH : A4_LANDSCAPE_WIDTH;
       const pageH = isPortrait ? A4_MM_HEIGHT : A4_LANDSCAPE_HEIGHT;
-       css = `
+      css = `
 @media print {
   @page {
     size: ${pageW}mm ${pageH}mm;
@@ -1134,33 +1155,37 @@ export default function Workspace() {
       `;
     }
 
-    // Remove old injected style
-    if (printStyleRef.current) {
-      printStyleRef.current.remove();
-      printStyleRef.current = null;
-    }
-
-    // Inject new style before print
     const style = document.createElement("style");
     style.textContent = css;
     document.head.appendChild(style);
     printStyleRef.current = style;
 
-    // Sync the print output ref to current state
-    if (printOutputRef.current) {
-      // Force re-render by toggling key
-      printOutputRef.current.dataset.key = `${templateId}-${mode}-${dfCalibration.x}-${dfCalibration.y}-${a4Calibration.x}-${a4Calibration.y}-${date}-${payee}-${amount}-${amountWords}-${accountPayee}`;
+    // STEP 7: TRIGGER BROWSER PRINT via beforeprint event for deterministic timing
+    function onBeforePrint() {
+      // Ensure print output is synced to current state
+      if (printOutputRef.current) {
+        printOutputRef.current.dataset.printKey = String(currentPrintKey);
+        printOutputRef.current.dataset.templateId = resolvedTemplate.id;
+        printOutputRef.current.dataset.mode = printMode;
+        printOutputRef.current.dataset.calX = String(cal.x);
+        printOutputRef.current.dataset.calY = String(cal.y);
+      }
     }
 
-    window.print();
-
-    // Clean up after print dialog closes
-    setTimeout(() => {
+    function onAfterPrint() {
       if (printStyleRef.current) {
         printStyleRef.current.remove();
         printStyleRef.current = null;
       }
-    }, 2000);
+      setIsPrinting(false);
+      window.removeEventListener("beforeprint", onBeforePrint);
+      window.removeEventListener("afterprint", onAfterPrint);
+    }
+
+    window.addEventListener("beforeprint", onBeforePrint);
+    window.addEventListener("afterprint", onAfterPrint);
+    window.print();
+    // afterprint fires asynchronously when the dialog closes or print is cancelled
   }
 
   function handleClear() {
@@ -1359,6 +1384,11 @@ export default function Workspace() {
             {printError && (
               <p className="error-state" style={{ marginTop: 8 }}>{printError}</p>
             )}
+            {isPrinting && (
+              <p className="error-state" style={{ marginTop: 8, color: "var(--brand-blue)" }}>
+                Opening print dialog… Please confirm Actual Size (100%) in your printer settings.
+              </p>
+            )}
             {!canPrint && templateId !== "" && (
               <p className="error-state" style={{ marginTop: 8 }}>
                 Fill all required fields (date, payee, amount) before printing.
@@ -1446,16 +1476,27 @@ export default function Workspace() {
       </div>
 
       {/* ================================================================
-          PRINT OUTPUT — Hidden on screen, visible only during browser print.
+          PRINT OUTPUT — Hidden off-screen on display, visible only during browser print.
           Renders at 1:1 mm scale for actual-size output.
           ================================================================ */}
       {template && profile && (
         <div
           ref={printOutputRef}
+          data-print-key={printKeyRef.current}
+          data-template-id={template.id}
           data-mode={printMode}
           className="print-output-screen"
+          style={{
+            position: "absolute",
+            left: "-9999px",
+            top: "-9999px",
+            width: 0,
+            height: 0,
+            overflow: "hidden",
+          }}
         >
           <PrintOutput
+            key={printKeyRef.current}
             template={template}
             date={date}
             payee={payee}
