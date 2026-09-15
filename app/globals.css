@@ -179,7 +179,22 @@ button, input, select, textarea { font-family: inherit; font-size: 1rem; }
 /* ---------- Error state ---------- */
 .error-state { color: var(--danger); font-size: 0.85rem; margin-top: 4px; }
 
+/* ---------- Info state (non-error inline messaging) ---------- */
+.info-state { color: var(--info); font-size: 0.85rem; margin-top: 4px; }
+
+/* ---------- Prep checklist ---------- */
+.prep-checklist { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; }
+.prep-checklist ul li { font-family: var(--font-stack); }
+
 /* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .compose-grid { grid-template-columns: 1fr; }
+  .two-columns { grid-template-columns: 1fr; }
+  .preview-stage { min-height: 200px; padding: 8px; }
+  .preview-heading h2 { font-size: 0.95rem; }
+  .panel { padding: 16px; }
+}
+
 @media (max-width: 900px) {
   .compose-grid { grid-template-columns: 1fr; }
   .two-columns { grid-template-columns: 1fr; }

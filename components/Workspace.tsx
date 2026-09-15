@@ -30,6 +30,24 @@ const A4_MM_HEIGHT = 297;
 const A4_LANDSCAPE_WIDTH = 297;
 const A4_LANDSCAPE_HEIGHT = 210;
 
+// Explicit workflow states — a single, unambiguous indicator of where the
+// user is in the print pipeline.  The UI renders state badges and the print
+// button surfaces the concrete reason it is blocked.
+type FormState =
+  | "idle"             // EMPTY — no template selected
+  | "template-selected"  // BANK SELECTED — template picked, fields empty
+  | "data-entering"      // DATA ENTERED (partial) — some fields filled
+  | "ready-preview"      // READY TO PREVIEW — all fields populated, validation passes
+  | "ready-print"        // READY TO PRINT — same as above (synced when print dialog about to open)
+  | "printing"           // PRINTING — window.print() is open
+  | "done";              // PRINT COMPLETED / CANCELLED
+
+// Map each validation rule to the message the print button should show.
+interface PrintReadiness {
+  ready: boolean;
+  reason: string | null;
+}
+
 function fitFontSize(text: string, field: { fontSize?: number; minFontSize?: number; letterSpacing?: number; width: number }): number {
   const preferred = Number(field.fontSize || 10);
   const minimum = Number(field.minFontSize ?? Math.max(7, preferred - 3));
@@ -856,39 +874,23 @@ interface CalibrationGroupProps {
   dfCalibration: Calibration;
   a4Calibration: Calibration;
   currentCalibration: Calibration;
-  setDfCalibration: React.Dispatch<React.SetStateAction<Calibration>>;
-  setA4Calibration: React.Dispatch<React.SetStateAction<Calibration>>;
   setCurrentCalibration: React.Dispatch<React.SetStateAction<Calibration>>;
   template: BankTemplate | null;
-  isDF: boolean;
 }
 
 function CalibrationGroup({
   dfCalibration,
   a4Calibration,
   currentCalibration,
-  setDfCalibration,
-  setA4Calibration,
   setCurrentCalibration,
   template,
-  isDF,
 }: CalibrationGroupProps) {
-  const step = 0.1;
-
   function setCalX(val: number) {
     setCurrentCalibration((prev) => ({ ...prev, x: clampCalibration(val) }));
   }
 
   function setCalY(val: number) {
     setCurrentCalibration((prev) => ({ ...prev, y: clampCalibration(val) }));
-  }
-
-  function resetX() {
-    setCurrentCalibration((prev) => ({ ...prev, x: 0 }));
-  }
-
-  function resetY() {
-    setCurrentCalibration((prev) => ({ ...prev, y: 0 }));
   }
 
   function resetAll() {
@@ -963,6 +965,68 @@ function BankTemplateSelector({
 }
 
 // ---------------------------------------------------------------------------
+// PrepChecklist — visual pre-print validation summary (not a gate; the real
+// gate is printReadiness + handlePrint's sequential guards).  This component
+// only *shows* the checklist so users see exactly what is checked before the
+// browser print dialog opens.
+// ---------------------------------------------------------------------------
+
+interface PrepChecklistProps {
+  template: BankTemplate | null;
+  date: string;
+  payee: string;
+  amount: string;
+  amountWords: string;
+  printMode: ProfileKey;
+  calibration: Calibration;
+  isDF: boolean;
+}
+
+function PrepChecklist({ template, date, payee, amount, amountWords, printMode, calibration, isDF }: PrepChecklistProps) {
+  const items: { label: string; ok: boolean; fieldId?: string }[] = [
+    { label: "Bank template selected", ok: !!template, fieldId: "template-select" },
+    { label: "Valid cheque date", ok: date !== "" && /^\d{4}-\d{2}-\d{2}$/.test(date), fieldId: "date-input" },
+    { label: "Payee name", ok: payee.trim() !== "", fieldId: "payee-input" },
+    { label: "Valid amount > 0", ok: (() => { const v = validateAmount(amount); return v.valid && v.paisa > 0; })(), fieldId: "amount-input" },
+    { label: "Amount in words", ok: amountWords.trim() !== "", fieldId: "words-input" },
+    { label: "Print mode selected", ok: printMode !== undefined && printMode !== null, fieldId: "print-mode" },
+    { label: `Calibration (${isDF ? "Direct Feed" : "A4 Carrier"})`, ok: validateCalibrationPair(calibration.x, calibration.y) === null },
+  ];
+
+  const allOk = items.every((i) => i.ok);
+
+  return (
+    <div className="prep-checklist" aria-label="Print readiness checklist" style={{ marginTop: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <span
+          className="step"
+          style={{ background: allOk ? "color-mix(in srgb, var(--success) 14%, transparent)" : undefined }}
+          aria-hidden="true"
+        >
+          {allOk ? "✓" : "…"}
+        </span>
+        <strong style={{ fontSize: "0.9rem", color: allOk ? "var(--success)" : "var(--text-secondary)" }}>
+          {allOk ? "Ready to print" : "Complete all fields to enable printing"}
+        </strong>
+      </div>
+      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 4, fontSize: "0.85rem" }}>
+        {items.map((item) => (
+          <li key={item.label} style={{ display: "flex", alignItems: "center", gap: 6, color: item.ok ? "var(--text-primary)" : "var(--text-muted)" }}>
+            <span style={{ width: 14, textAlign: "center", color: item.ok ? "var(--success)" : "var(--text-muted)" }}>
+              {item.ok ? "✓" : "✗"}
+            </span>
+            <span>{item.label}</span>
+            {!item.ok && item.fieldId && (
+              <span className="sr-only">Field needs attention: {item.label}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main Workspace
 // ---------------------------------------------------------------------------
 
@@ -1010,13 +1074,36 @@ export default function Workspace() {
     return "";
   }, [amount]);
 
-  // canPrint requires amount > 0 (so words will exist) and all other fields filled
   const hasAmount = useMemo(() => {
     const v = validateAmount(amount);
     return v.valid && v.paisa > 0;
   }, [amount]);
 
-  const canPrint = templateId !== "" && date !== "" && payee.trim() !== "" && hasAmount && !amountError && amountWords.trim() !== "";
+  // -----------------------------------------------------------------------
+  // Explicit workflow state + print-readiness (single source of truth for
+  // the disabled reason the print button surfaces).
+  // -----------------------------------------------------------------------
+  const printReadiness = useMemo<PrintReadiness>(() => {
+    if (!template) return { ready: false, reason: "Select a bank template" };
+    if (date === "") return { ready: false, reason: "Enter cheque date" };
+    if (payee.trim() === "") return { ready: false, reason: "Enter payee name" };
+    if (!hasAmount) return { ready: false, reason: "Enter valid amount" };
+    if (amountWords.trim() === "") return { ready: false, reason: "Enter amount in words" };
+    if (!printMode) return { ready: false, reason: "Select print mode" };
+    const cal = isDF ? dfCalibration : a4Calibration;
+    if (validateCalibrationPair(cal.x, cal.y) !== null) {
+      return { ready: false, reason: "Correct invalid calibration" };
+    }
+    return { ready: true, reason: null };
+  }, [template, date, payee, hasAmount, amountWords, printMode, isDF, dfCalibration, a4Calibration]);
+
+  // Derive the explicit form state for the state badge.
+  const derivedFormState = useMemo<FormState>(() => {
+    if (!template) return "idle";
+    if (isPrinting) return "printing";
+    if (!printReadiness.ready) return "data-entering";
+    return "ready-print";
+  }, [template, printReadiness, isPrinting]);
 
   // Auto-sync words when amount changes (only if user hasn't manually overridden)
   useEffect(() => {
@@ -1067,6 +1154,7 @@ export default function Workspace() {
     const profile = resolvedTemplate.profiles[printMode];
     if (!profile) { setPrintError("Print layout not available for selected mode."); return; }
 
+    // STEP 6: ENTER PRINTING STATE
     setIsPrinting(true);
 
     // Increment print key to force deterministic render on each print trigger
@@ -1132,6 +1220,23 @@ export default function Workspace() {
   }
 
   function handleClear() {
+    // Preserve system configuration (printMode is a persistent UI preference);
+    // only reset cheque data and transient state.  An explicit confirmation
+    // guard prevents accidental wipes when the user has entered data.
+    if (
+      templateId !== "" ||
+      date !== "" ||
+      payee !== "" ||
+      amount !== "" ||
+      amountWords !== "" ||
+      (dfCalibration.x !== 0 || dfCalibration.y !== 0) ||
+      (a4Calibration.x !== 0 || a4Calibration.y !== 0)
+    ) {
+      if (!window.confirm("Clear all cheque details and calibration? This cannot be undone.")) {
+        return;
+      }
+    }
+
     setTemplateId("");
     setDate("");
     setPayee("");
@@ -1142,6 +1247,7 @@ export default function Workspace() {
     setDfCalibration({ x: 0, y: 0 });
     setA4Calibration({ x: 0, y: 0 });
     setPrintError("");
+    setFormState("idle");
   }
 
   function handleModeChange(newMode: ProfileKey) {
@@ -1167,8 +1273,38 @@ export default function Workspace() {
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span className="step">01</span>
                 <h2>Cheque Details</h2>
+                <span
+                  className="state-badge"
+                  style={{
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                    padding: "2px 8px",
+                    borderRadius: "12px",
+                    background:
+                      derivedFormState === "ready-print"
+                        ? "color-mix(in srgb, var(--success) 14%, transparent)"
+                        : derivedFormState === "printing"
+                          ? "color-mix(in srgb, var(--info) 14%, transparent)"
+                          : "color-mix(in srgb, var(--text-muted) 10%, transparent)",
+                    color:
+                      derivedFormState === "ready-print"
+                        ? "var(--success)"
+                        : derivedFormState === "printing"
+                          ? "var(--info)"
+                          : "var(--text-secondary)",
+                  }}
+                  aria-label={`Workflow state: ${derivedFormState}`}
+                >
+                  {derivedFormState === "ready-print"
+                    ? "Ready to Print"
+                    : derivedFormState === "printing"
+                      ? "Printing\u2026"
+                      : derivedFormState === "data-entering"
+                        ? "Filling Details"
+                        : "Select Bank Template"}
+                </span>
               </div>
-              <button type="button" className="text-button" onClick={handleClear}>
+              <button type="button" className="text-button" onClick={handleClear} aria-label="Clear all cheque details and calibration">
                 Clear All
               </button>
             </div>
@@ -1287,11 +1423,8 @@ export default function Workspace() {
                   dfCalibration={dfCalibration}
                   a4Calibration={a4Calibration}
                   currentCalibration={currentCalibration}
-                  setDfCalibration={setDfCalibration}
-                  setA4Calibration={setA4Calibration}
                   setCurrentCalibration={setCurrentCalibration}
                   template={template}
-                  isDF={isDF}
                 />
               </div>
               <small>
@@ -1318,28 +1451,42 @@ export default function Workspace() {
               </div>
             )}
 
-            <div className="form-actions" style={{ marginTop: 16 }}>
-              <button type="button" className="button secondary" disabled={!canPrint} onClick={handlePrint}>
-                Print
+
+            <PrepChecklist
+              template={template}
+              date={date}
+              payee={payee}
+              amount={amount}
+              amountWords={amountWords}
+              printMode={printMode}
+              calibration={currentCalibration}
+              isDF={isDF}
+            />
+            <div className="form-actions" style={{ marginTop: 16, flexDirection: "column", alignItems: "stretch", gap: 8 }}>
+              <button
+                type="button"
+                className="button secondary"
+                disabled={!printReadiness.ready}
+                onClick={handlePrint}
+                aria-disabled={!printReadiness.ready}
+                aria-describedby="print-reason"
+              >
+                {isPrinting ? "Printing" : "Print Cheque"}
               </button>
+              {/* Specific reason the print button is disabled */}
+              {!printReadiness.ready && !isPrinting && (
+                <p id="print-reason" className="error-state" role="alert" aria-live="polite">
+                  {printReadiness.reason}
+                </p>
+              )}
             </div>
 
             {printError && (
-              <p className="error-state" style={{ marginTop: 8 }}>{printError}</p>
+              <p className="error-state" style={{ marginTop: 8 }} role="alert" aria-live="assertive">{printError}</p>
             )}
             {isPrinting && (
-              <p className="error-state" style={{ marginTop: 8, color: "var(--brand-blue)" }}>
-                Opening print dialog… Please confirm Actual Size (100%) in your printer settings.
-              </p>
-            )}
-            {!canPrint && templateId !== "" && (
-              <p className="error-state" style={{ marginTop: 8 }}>
-                Fill all required fields (date, payee, amount) before printing.
-              </p>
-            )}
-            {!template && (
-              <p className="error-state" style={{ marginTop: 8 }}>
-                Printing is disabled until a bank template is selected.
+              <p className="info-state" style={{ marginTop: 8 }} aria-live="polite">
+                Opening print dialog� Please confirm <b>Actual Size (100%)</b> in your printer settings.
               </p>
             )}
           </form>
