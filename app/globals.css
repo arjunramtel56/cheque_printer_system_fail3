@@ -185,11 +185,4 @@ button, input, select, textarea { font-family: inherit; font-size: 1rem; }
   .two-columns { grid-template-columns: 1fr; }
 }
 
-@media print {
-  body { background: #fff; }
-  .no-print { display: none !important; }
-}
-
-.print-output-screen {
-  display: none;
-}
+/* Print rules live in ./print.css (imported in layout.tsx). */

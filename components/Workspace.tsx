@@ -10,6 +10,7 @@ import {
   formatAmountDisplay,
   validateAmount,
 } from "@/lib/amountWords";
+import { clampCalibration, validateCalibrationPair } from "@/lib/calibration";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
@@ -784,8 +785,8 @@ interface CalibrationControlProps {
 
 function CalibrationControl({ label, value, onChange, disabled }: CalibrationControlProps) {
   const step = 0.1;
-  const increase = () => onChange(Math.round((value + step) * 10) / 10);
-  const decrease = () => onChange(Math.round((value - step) * 10) / 10);
+  const increase = () => onChange(clampCalibration(value + step));
+  const decrease = () => onChange(clampCalibration(value - step));
   const reset = () => onChange(0);
 
   return (

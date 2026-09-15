@@ -1,7 +1,31 @@
 /* ============================================================
    Reactify Cheque Printer — Print stylesheet
    Handles actual-size printing for Direct Feed and A4 Carrier.
+
+   SCREEN:  .print-output-screen (the 1:1 print payload) is parked
+            off-screen to the left so it never flashes or affects
+            layout. It must NOT be width:0/overflow:hidden — its
+            children carry explicit mm dimensions and would be
+            clipped to a 0×0 box.
+   PRINT:   The wrapper returns to normal flow at the top of the
+            page; screen UI is hidden; containers keep their
+            inline mm dimensions (1:1, no scaling). The print
+            button additionally injects a top-level @page rule with
+            the mode-specific page size before window.print().
    ============================================================ */
+
+/* ---------- Screen: park the 1:1 print payload off-screen ---------- */
+.print-output-screen {
+  position: absolute !important;
+  left: -10000px !important;
+  top: 0 !important;
+}
+
+/* ---------- Top-level @page default (overridden by injected rule) ---------- */
+@page {
+  size: auto;
+  margin: 0;
+}
 
 @media print {
   html, body {
@@ -44,20 +68,20 @@
   }
 
   /* -------------------------------------------------------
-     Print output wrapper — hidden off-screen on display,
-     shown during print via JS-injected @media rules.
-     Default display:none here prevents any flash on screen.
+     Print output wrapper — back in normal flow at page top.
+     Only the active mode's container has content; the other
+     (if present) is display:none via injected rules.
      ------------------------------------------------------- */
   .print-output-screen {
-    display: none !important;
-    position: absolute !important;
-    left: -9999px !important;
-    top: -9999px !important;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
   }
 
   /* -------------------------------------------------------
      Direct Feed output — cheque-sized container at 1:1 mm.
-     Width/height set by inline styles; @page size injected by JS.
+     Inline styles carry the exact mm width/height; @page size
+     is injected by JS at the top level before window.print().
      ------------------------------------------------------- */
   .print-direct-feed {
     position: relative !important;
@@ -69,13 +93,11 @@
     page-break-inside: avoid;
     margin: 0 !important;
     padding: 0 !important;
-    width: auto !important;
-    height: auto !important;
   }
 
   /* -------------------------------------------------------
      A4 Carrier output — full A4 page at 1:1 mm.
-     Cheque positioned within via profile.x/y + calibration offsets.
+     Cheque positioned within via profile.x/y + calibration.
      ------------------------------------------------------- */
   .print-a4-carrier {
     position: relative !important;
@@ -87,8 +109,6 @@
     page-break-inside: avoid;
     margin: 0 !important;
     padding: 0 !important;
-    width: auto !important;
-    height: auto !important;
   }
 
   /* Field text: monospace, no wrapping, proper alignment */
@@ -108,12 +128,4 @@
     transform: none !important;
     scale: 1 !important;
   }
-
-  /* Default page settings — overridden by JS-injected rules
-     for each mode before window.print() is called. */
-  @page {
-    size: auto;
-    margin: 0;
-  }
 }
-
