@@ -186,8 +186,8 @@ assert(dfLongG.pageW === 190.5 && dfLongG.pageH === 88.9, "DF long-edge: @page m
 const a4vG = resolvePrintGeometry(siddhartha, "a4_vertical");
 assert(a4vG.containerW === 210 && a4vG.containerH === 297, "A4 portrait: container equals A4 page");
 assert(a4vG.pageW === 210 && a4vG.pageH === 297, "A4 portrait: @page is 210×297");
-assert(a4vG.chequeX === a4vG.chequeY + 0 ? true : true, "A4: cheque position fields present");
 assert(typeof a4vG.chequeX === "number" && typeof a4vG.chequeY === "number", "A4 portrait: cheque x/y offsets exposed");
+assert(a4vG.chequeX + siddhartha.widthMm <= a4vG.pageW, "A4 portrait: cheque fits within page width");
 
 const a4hG = resolvePrintGeometry(siddhartha, "a4_horizontal");
 assert(a4hG.pageW === 297 && a4hG.pageH === 210, "A4 landscape: @page is 297×210");
