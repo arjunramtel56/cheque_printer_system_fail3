@@ -19,6 +19,9 @@ import { clampCalibration, validateCalibrationPair } from "@/lib/calibration";
 import { resolvePrintGeometry, rotatedContentOffset } from "@/lib/printGeometry";
 import { validatePrintGeometry } from "@/lib/validation";
 
+// Global minimum font size floor to prevent unreadable output
+export const MIN_PAYEE_FONT_SIZE = 6;
+
 // ---------------------------------------------------------------------------
 // Constants & helpers
 // ---------------------------------------------------------------------------
@@ -52,7 +55,9 @@ interface PrintReadiness {
 
 function fitFontSize(text: string, field: { fontSize?: number; minFontSize?: number; letterSpacing?: number; width: number }): number {
   const preferred = Number(field.fontSize || 10);
-  const minimum = Number(field.minFontSize ?? Math.max(7, preferred - 3));
+  const rawMinimum = Number(field.minFontSize ?? Math.max(7, preferred - 3));
+  // Enforce a hard floor so text is never rendered at an unreadable size
+  const minimum = Math.max(rawMinimum, MIN_PAYEE_FONT_SIZE);
   const spacing = Number(field.letterSpacing ?? 0);
   const widthMm = Number(field.width);
   for (let size = preferred; size >= minimum; size -= 0.25) {
@@ -75,6 +80,28 @@ function splitWordsToLines(words: string, template: BankTemplate): [string, stri
     }
   }
   return [first.join(" "), second.join(" ")];
+}
+
+/**
+ * Safely format a date to DDMMYYYY. Returns "" if the date is invalid so the
+ * render path never throws on corrupt state.
+ */
+function safeFormatDate(date: string): string {
+  if (!date) return "";
+  try {
+    return formatDateDigits(date);
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Safely normalize a payee string. Returns "" if the payee is invalid.
+ * On invalid input the caller (print gate) will surface a user-facing error.
+ */
+function safeNormalizePayee(payee: string): string {
+  const result = validatePayee(payee);
+  return result.valid ? result.payee : "";
 }
 
 // ---------------------------------------------------------------------------
@@ -104,22 +131,23 @@ function DirectFeedPreview({ template, date, payee, amount, amountWords, account
   const displayW = Math.round(template.widthMm * SCALE);
   const displayH = Math.round(template.heightMm * SCALE);
 
-  function pos(fieldX: number, fieldY: number) {
-    return { x: (fieldX + calX) * SCALE, y: (fieldY + calY) * SCALE };
-  }
+   function pos(fieldX: number, fieldY: number) {
+     return { x: (fieldX + calX) * SCALE, y: (fieldY + calY) * SCALE };
+   }
 
-  function renderField(key: string, text: string, coords: { x: number; y: number; width: number; fontSize?: number; letterSpacing?: number; align?: string }, extraClass = "") {
-    if (!text) return null;
-    const p = pos(coords.x, coords.y);
-    const fs = fitFontSize(text, coords);
-    const style: React.CSSProperties = {
-      position: "absolute",
-      left: `${p.x}px`,
-      top: `${p.y}px`,
-      width: `${coords.width * SCALE}px`,
-      fontSize: `${fs * SCALE}px`,
-      letterSpacing: `${(coords.letterSpacing ?? 0) * SCALE}px`,
-      textAlign: (coords.align as any) || "left",
+   type FieldCoords = { x: number; y: number; width: number; fontSize?: number; minFontSize?: number; letterSpacing?: number; align?: string };
+   function renderField(key: string, text: string, coords: FieldCoords, extraClass = "") {
+     if (!text) return null;
+     const p = pos(coords.x, coords.y);
+     const fs = fitFontSize(text, coords);
+     const style: React.CSSProperties = {
+       position: "absolute",
+       left: `${p.x}px`,
+       top: `${p.y}px`,
+       width: `${coords.width * SCALE}px`,
+       fontSize: `${fs * SCALE}px`,
+       letterSpacing: `${(coords.letterSpacing ?? 0) * SCALE}px`,
+       textAlign: (coords.align as any) || "left",
       fontFamily: '"Courier New", monospace',
       whiteSpace: "nowrap",
       overflow: "hidden",
@@ -238,22 +266,23 @@ function A4CarrierPreview({ template, profile, mode, date, payee, amount, amount
   const chequeW = template.widthMm;
   const chequeH = template.heightMm;
 
-  function pos(fieldX: number, fieldY: number) {
-    return { x: (chequeX + fieldX) * SCALE, y: (chequeY + fieldY) * SCALE };
-  }
+   function pos(fieldX: number, fieldY: number) {
+     return { x: (chequeX + fieldX) * SCALE, y: (chequeY + fieldY) * SCALE };
+   }
 
-  function renderField(key: string, text: string, coords: { x: number; y: number; width: number; fontSize?: number; letterSpacing?: number; align?: string }, extraClass = "") {
-    if (!text) return null;
-    const p = pos(coords.x, coords.y);
-    const fs = fitFontSize(text, coords);
-    const style: React.CSSProperties = {
-      position: "absolute",
-      left: `${p.x}px`,
-      top: `${p.y}px`,
-      width: `${coords.width * SCALE}px`,
-      fontSize: `${fs * SCALE}px`,
-      letterSpacing: `${(coords.letterSpacing ?? 0) * SCALE}px`,
-      textAlign: (coords.align as any) || "left",
+   type FieldCoords = { x: number; y: number; width: number; fontSize?: number; minFontSize?: number; letterSpacing?: number; align?: string };
+   function renderField(key: string, text: string, coords: FieldCoords, extraClass = "") {
+     if (!text) return null;
+     const p = pos(coords.x, coords.y);
+     const fs = fitFontSize(text, coords);
+     const style: React.CSSProperties = {
+       position: "absolute",
+       left: `${p.x}px`,
+       top: `${p.y}px`,
+       width: `${coords.width * SCALE}px`,
+       fontSize: `${fs * SCALE}px`,
+       letterSpacing: `${(coords.letterSpacing ?? 0) * SCALE}px`,
+       textAlign: (coords.align as any) || "left",
       fontFamily: '"Courier New", monospace',
       whiteSpace: "nowrap",
       overflow: "hidden",
@@ -499,14 +528,15 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
         </div>
 
         {/* Payee */}
-        {payee && (
+        {normalizedPayee && (
           <PrintField
             key="payee"
-            text={payee}
+            text={normalizedPayee}
             x={(template.fields.payee?.x ?? 12) + calX}
             y={(template.fields.payee?.y ?? 28) + calY}
             width={template.fields.payee?.width ?? 90}
             fontSize={template.fields.payee?.fontSize}
+            letterSpacing={template.fields.payee?.letterSpacing}
           />
         )}
 
@@ -665,14 +695,15 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
         </div>
 
         {/* Payee */}
-        {payee && (
+        {normalizedPayee && (
           <PrintField
             key="payee"
-            text={payee}
+            text={normalizedPayee}
             x={template.fields.payee?.x ?? 12}
             y={template.fields.payee?.y ?? 28}
             width={template.fields.payee?.width ?? 90}
             fontSize={template.fields.payee?.fontSize}
+            letterSpacing={template.fields.payee?.letterSpacing}
           />
         )}
 
@@ -997,12 +1028,18 @@ interface PrepChecklistProps {
 }
 
 function PrepChecklist({ template, date, payee, amount, amountWords, printMode, calibration, isDF }: PrepChecklistProps) {
+  const payeeCheck = validatePayee(payee);
+  const amountCheck = validateAmount(amount);
+  const consistency = amountCheck.valid && amountWords.trim() !== ""
+    ? checkAmountWordsConsistency(amount, amountWords)
+    : { consistent: false, expected: "" };
+
   const items: { label: string; ok: boolean; fieldId?: string }[] = [
     { label: "Bank template selected", ok: !!template, fieldId: "template-select" },
-    { label: "Valid cheque date", ok: date !== "" && /^\d{4}-\d{2}-\d{2}$/.test(date), fieldId: "date-input" },
-    { label: "Payee name", ok: payee.trim() !== "", fieldId: "payee-input" },
-    { label: "Valid amount > 0", ok: (() => { const v = validateAmount(amount); return v.valid && v.paisa > 0; })(), fieldId: "amount-input" },
-    { label: "Amount in words", ok: amountWords.trim() !== "", fieldId: "words-input" },
+    { label: "Valid cheque date", ok: validateChequeDate(date).valid, fieldId: "date-input" },
+    { label: "Payee name", ok: payeeCheck.valid, fieldId: "payee-input" },
+    { label: "Valid amount > 0", ok: amountCheck.valid && amountCheck.paisa > 0, fieldId: "amount-input" },
+    { label: "Amount in words", ok: amountWords.trim() !== "" && consistency.consistent, fieldId: "words-input" },
     { label: "Print mode selected", ok: printMode !== undefined && printMode !== null, fieldId: "print-mode" },
     { label: `Calibration (${isDF ? "Direct Feed" : "A4 Carrier"})`, ok: validateCalibrationPair(calibration.x, calibration.y) === null },
   ];
@@ -1099,17 +1136,23 @@ export default function Workspace() {
   // -----------------------------------------------------------------------
   const printReadiness = useMemo<PrintReadiness>(() => {
     if (!template) return { ready: false, reason: "Select a bank template" };
-    if (date === "") return { ready: false, reason: "Enter cheque date" };
-    if (payee.trim() === "") return { ready: false, reason: "Enter payee name" };
+    if (!isValidDate(date)) return { ready: false, reason: "Enter valid cheque date" };
+    const payeeVal = validatePayee(payee);
+    if (!payeeVal.valid) return { ready: false, reason: payeeVal.error ?? "Enter payee name" };
     if (!hasAmount) return { ready: false, reason: "Enter valid amount" };
     if (amountWords.trim() === "") return { ready: false, reason: "Enter amount in words" };
+    // Amount-to-words consistency check
+    const consistency = checkAmountWordsConsistency(amount, amountWords);
+    if (!consistency.consistent) {
+      return { ready: false, reason: "Amount and words must match" };
+    }
     if (!printMode) return { ready: false, reason: "Select print mode" };
     const cal = isDF ? dfCalibration : a4Calibration;
     if (validateCalibrationPair(cal.x, cal.y) !== null) {
       return { ready: false, reason: "Correct invalid calibration" };
     }
     return { ready: true, reason: null };
-  }, [template, date, payee, hasAmount, amountWords, printMode, isDF, dfCalibration, a4Calibration]);
+  }, [template, date, payee, hasAmount, amountWords, amount, printMode, isDF, dfCalibration, a4Calibration]);
 
   // Derive the explicit form state for the state badge.
   const derivedFormState = useMemo<FormState>(() => {
@@ -1119,12 +1162,19 @@ export default function Workspace() {
     return "ready-print";
   }, [template, printReadiness, isPrinting]);
 
-  // Auto-sync words when amount changes (only if user hasn't manually overridden)
+  // Auto-sync words when amount changes.
+  // - When amount is valid & > 0: regenerate words (clears stale words automatically).
+  // - When amount becomes invalid/zero: clear words so stale text doesn't persist.
   useEffect(() => {
-    if (!wordOverrideRef.current && autoWords) {
-      setAmountWords(autoWords);
+    if (!wordOverrideRef.current) {
+      if (autoWords) {
+        setAmountWords(autoWords);
+      } else if (amount !== "") {
+        // Amount is invalid or zero — clear stale words
+        setAmountWords("");
+      }
     }
-  }, [autoWords]);
+  }, [autoWords, amount]);
 
   function handleAmountChange(raw: string) {
     wordOverrideRef.current = false;
@@ -1143,14 +1193,23 @@ export default function Workspace() {
 
     setPrintError("");
 
-    // STEP 1: VALIDATE DATA
-    const dateValid = date !== "" && /^\d{4}-\d{2}-\d{2}$/.test(date);
-    if (!dateValid) { setPrintError("Invalid or missing date."); return; }
-    if (!payee.trim()) { setPrintError("Payee name is required."); return; }
+     // STEP 1: VALIDATE DATA
+    const dateCheck = validateChequeDate(date);
+    if (!dateCheck.valid) { setPrintError(dateCheck.error ?? "Invalid date."); return; }
+    const payeeCheck = validatePayee(payee);
+    if (!payeeCheck.valid) { setPrintError(payeeCheck.error ?? "Payee name is required."); return; }
     const amountValidation = validateAmount(amount);
     if (!amountValidation.valid) { setPrintError(amountValidation.error ?? "Invalid amount."); return; }
     if (amountValidation.paisa === 0) { setPrintError("Amount must be greater than zero."); return; }
     if (!amountWords.trim()) { setPrintError("Amount in words is required."); return; }
+
+    // Amount-to-words consistency: prevent printing when numeric amount and
+    // printed words represent different values.
+    const consistency = checkAmountWordsConsistency(amount, amountWords);
+    if (!consistency.consistent) {
+      setPrintError("Amount in words does not match the numeric amount. Regenerate or correct it before printing.");
+      return;
+    }
 
     // STEP 2: VALIDATE BANK TEMPLATE
     if (!template) { setPrintError("No bank template selected."); return; }
@@ -1373,12 +1432,17 @@ export default function Workspace() {
               <input
                 id="payee-input"
                 type="text"
-                maxLength={100}
+                maxLength={120}
                 placeholder="e.g. Ram Bahadur Thapa"
                 value={payee}
-                onChange={(e) => setPayee(e.target.value)}
+                onChange={(e) => setPayee(e.target.value.slice(0, 120))}
                 disabled={!template}
               />
+              {(() => {
+                const pc = validatePayee(payee);
+                return !pc.valid && payee !== "" ? <span className="error-state">{pc.error}</span> : null;
+              })()}
+              <small>Leading/trailing spaces are trimmed automatically. Up to 120 characters.</small>
             </div>
 
             {/* Amount + Amount in Words */}
