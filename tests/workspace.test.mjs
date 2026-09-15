@@ -1,6 +1,6 @@
-import { getTemplate, getAllTemplates } from "../lib/templates.js";
-import { amountToWordsFromPaisa, formatDateDigits, validateAmount } from "../lib/amountWords.js";
-import { isDirectFeed, isA4Carrier, DIRECT_FEED_MODES, A4_CARRIER_MODES } from "../lib/types.js";
+import { getTemplate, getAllTemplates } from "../lib/templates.ts";
+import { amountToWordsFromPaisa, formatDateDigits, validateAmount } from "../lib/amountWords.ts";
+import { isDirectFeed, isA4Carrier, DIRECT_FEED_MODES, A4_CARRIER_MODES } from "../lib/types.ts";
 
 // Test 1: Templates load
 const all = getAllTemplates();
@@ -170,4 +170,24 @@ for (const t of all) {
 }
 console.log("TEST_22_ALL_PROFILES_VALID: OK");
 
-console.log("\n=== ALL 22 TESTS PASSED ===");
+// Test 23: A4 Carrier portrait — cheque fits within A4 bounds (210×297 mm)
+for (const t of all) {
+  const a4v = t.profiles.a4_vertical;
+  const rightEdge = a4v.x + t.widthMm;
+  const bottomEdge = a4v.y + t.heightMm;
+  if (rightEdge > a4v.pageWidth) throw new Error(t.bankName + " a4_vertical: cheque overflows right edge (" + rightEdge.toFixed(2) + " > " + a4v.pageWidth + ")");
+  if (bottomEdge > a4v.pageHeight) throw new Error(t.bankName + " a4_vertical: cheque overflows bottom edge (" + bottomEdge.toFixed(2) + " > " + a4v.pageHeight + ")");
+}
+console.log("TEST_23_A4_VERTICAL_NO_OVERFLOW: OK");
+
+// Test 24: A4 Carrier landscape — cheque fits within A4 bounds (297×210 mm)
+for (const t of all) {
+  const a4h = t.profiles.a4_horizontal;
+  const rightEdge = a4h.x + t.widthMm;
+  const bottomEdge = a4h.y + t.heightMm;
+  if (rightEdge > a4h.pageWidth) throw new Error(t.bankName + " a4_horizontal: cheque overflows right edge (" + rightEdge.toFixed(2) + " > " + a4h.pageWidth + ")");
+  if (bottomEdge > a4h.pageHeight) throw new Error(t.bankName + " a4_horizontal: cheque overflows bottom edge (" + bottomEdge.toFixed(2) + " > " + a4h.pageHeight + ")");
+}
+console.log("TEST_24_A4_HORIZONTAL_NO_OVERFLOW: OK");
+
+console.log("\n=== ALL 24 TESTS PASSED ===");

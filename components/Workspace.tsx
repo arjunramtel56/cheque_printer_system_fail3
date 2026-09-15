@@ -837,6 +837,82 @@ function CalibrationControl({ label, value, onChange, disabled }: CalibrationCon
   );
 }
 
+interface CalibrationGroupProps {
+  dfCalibration: Calibration;
+  a4Calibration: Calibration;
+  currentCalibration: Calibration;
+  setDfCalibration: React.Dispatch<React.SetStateAction<Calibration>>;
+  setA4Calibration: React.Dispatch<React.SetStateAction<Calibration>>;
+  setCurrentCalibration: React.Dispatch<React.SetStateAction<Calibration>>;
+  template: BankTemplate | null;
+  isDF: boolean;
+}
+
+function CalibrationGroup({
+  dfCalibration,
+  a4Calibration,
+  currentCalibration,
+  setDfCalibration,
+  setA4Calibration,
+  setCurrentCalibration,
+  template,
+  isDF,
+}: CalibrationGroupProps) {
+  const step = 0.1;
+
+  function setCalX(val: number) {
+    setCurrentCalibration((prev) => ({ ...prev, x: val }));
+  }
+
+  function setCalY(val: number) {
+    setCurrentCalibration((prev) => ({ ...prev, y: val }));
+  }
+
+  function resetX() {
+    setCurrentCalibration((prev) => ({ ...prev, x: 0 }));
+  }
+
+  function resetY() {
+    setCurrentCalibration((prev) => ({ ...prev, y: 0 }));
+  }
+
+  function resetAll() {
+    setCurrentCalibration({ x: 0, y: 0 });
+  }
+
+  return (
+    <>
+      <CalibrationControl
+        label="X Offset"
+        value={currentCalibration.x}
+        onChange={setCalX}
+        disabled={!template}
+      />
+      <CalibrationControl
+        label="Y Offset"
+        value={currentCalibration.y}
+        onChange={setCalY}
+        disabled={!template}
+      />
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+        <button
+          type="button"
+          className="text-button"
+          disabled={!(template && (dfCalibration.x !== 0 || dfCalibration.y !== 0 || a4Calibration.x !== 0 || a4Calibration.y !== 0))}
+          onClick={resetAll}
+          title="Reset X and Y to 0 for current print mode"
+          style={{ fontSize: "0.8rem", padding: "4px 6px" }}
+        >
+          Reset All
+        </button>
+        <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+          DF: X:{dfCalibration.x.toFixed(1)} Y:{dfCalibration.y.toFixed(1)} · A4: X:{a4Calibration.x.toFixed(1)} Y:{a4Calibration.y.toFixed(1)}
+        </span>
+      </div>
+    </>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Template Selector
 // ---------------------------------------------------------------------------
@@ -982,14 +1058,6 @@ export default function Workspace() {
   function handleWordEdit(val: string) {
     wordOverrideRef.current = true;
     setAmountWords(val);
-  }
-
-  function setCalibrationX(val: number) {
-    setCurrentCalibration((prev) => ({ ...prev, x: val }));
-  }
-
-  function setCalibrationY(val: number) {
-    setCurrentCalibration((prev) => ({ ...prev, y: val }));
   }
 
   function handlePrint() {
@@ -1247,17 +1315,15 @@ export default function Workspace() {
                 </b>
               </span>
               <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
-                <CalibrationControl
-                  label="X Offset"
-                  value={currentCalibration.x}
-                  onChange={setCalibrationX}
-                  disabled={!template}
-                />
-                <CalibrationControl
-                  label="Y Offset"
-                  value={currentCalibration.y}
-                  onChange={setCalibrationY}
-                  disabled={!template}
+                <CalibrationGroup
+                  dfCalibration={dfCalibration}
+                  a4Calibration={a4Calibration}
+                  currentCalibration={currentCalibration}
+                  setDfCalibration={setDfCalibration}
+                  setA4Calibration={setA4Calibration}
+                  setCurrentCalibration={setCurrentCalibration}
+                  template={template}
+                  isDF={isDF}
                 />
               </div>
               <small>

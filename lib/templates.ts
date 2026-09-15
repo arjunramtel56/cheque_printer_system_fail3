@@ -27,7 +27,7 @@ export const BANK_TEMPLATES: BankTemplate[] = [
     profiles: {
       custom_short: { x: 10, y: 10, pageWidth: 210, pageHeight: 297, rotate: 90 },
       custom_long: { x: 10, y: 10, pageWidth: 210, pageHeight: 297, rotate: 0 },
-      a4_vertical: { x: 62.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
+      a4_vertical: { x: 9.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
       a4_horizontal: { x: 20, y: 50.75, pageWidth: 297, pageHeight: 210, rotate: 0 },
     },
   },
@@ -54,7 +54,7 @@ export const BANK_TEMPLATES: BankTemplate[] = [
     profiles: {
       custom_short: { x: 10, y: 10, pageWidth: 210, pageHeight: 297, rotate: 90 },
       custom_long: { x: 10, y: 10, pageWidth: 210, pageHeight: 297, rotate: 0 },
-      a4_vertical: { x: 62.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
+      a4_vertical: { x: 9.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
       a4_horizontal: { x: 20, y: 50.75, pageWidth: 297, pageHeight: 210, rotate: 0 },
     },
   },
@@ -81,7 +81,7 @@ export const BANK_TEMPLATES: BankTemplate[] = [
     profiles: {
       custom_short: { x: 10, y: 10, pageWidth: 210, pageHeight: 297, rotate: 90 },
       custom_long: { x: 10, y: 10, pageWidth: 210, pageHeight: 297, rotate: 0 },
-      a4_vertical: { x: 62.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
+      a4_vertical: { x: 9.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
       a4_horizontal: { x: 20, y: 50.75, pageWidth: 297, pageHeight: 210, rotate: 0 },
     },
   },
@@ -108,7 +108,7 @@ export const BANK_TEMPLATES: BankTemplate[] = [
     profiles: {
       custom_short: { x: 10, y: 10, pageWidth: 210, pageHeight: 297, rotate: 90 },
       custom_long: { x: 10, y: 10, pageWidth: 210, pageHeight: 297, rotate: 0 },
-      a4_vertical: { x: 62.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
+      a4_vertical: { x: 9.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
       a4_horizontal: { x: 20, y: 50.75, pageWidth: 297, pageHeight: 210, rotate: 0 },
     },
   },
@@ -135,7 +135,7 @@ export const BANK_TEMPLATES: BankTemplate[] = [
     profiles: {
       custom_short: { x: 10, y: 10, pageWidth: 210, pageHeight: 297, rotate: 90 },
       custom_long: { x: 10, y: 10, pageWidth: 210, pageHeight: 297, rotate: 0 },
-      a4_vertical: { x: 62.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
+      a4_vertical: { x: 9.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
       a4_horizontal: { x: 20, y: 50.75, pageWidth: 297, pageHeight: 210, rotate: 0 },
     },
   },

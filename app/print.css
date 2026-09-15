@@ -37,8 +37,16 @@
   }
 
   /* -------------------------------------------------------
-     Print output containers (hidden on screen, shown here)
-     Dimensions set by inline styles; @page set by JS injection.
+     Print output wrapper — hidden on screen, shown during print.
+     Dimensions are set by JS-injected @page rules.
+     ------------------------------------------------------- */
+  .print-output-screen {
+    display: none;
+  }
+
+  /* -------------------------------------------------------
+     Direct Feed output — cheque-sized container at 1:1 mm.
+     Width/height set by inline styles; @page size injected by JS.
      ------------------------------------------------------- */
   .print-direct-feed {
     position: relative !important;
@@ -48,8 +56,14 @@
     overflow: hidden !important;
     page-break-after: avoid;
     page-break-inside: avoid;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
+  /* -------------------------------------------------------
+     A4 Carrier output — full A4 page at 1:1 mm.
+     Cheque positioned within via profile.x/y + calibration offsets.
+     ------------------------------------------------------- */
   .print-a4-carrier {
     position: relative !important;
     background: #fff !important;
@@ -58,12 +72,21 @@
     overflow: hidden !important;
     page-break-after: avoid;
     page-break-inside: avoid;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  /* -------------------------------------------------------
-     Default page settings — overridden by JS-injected rules
-     for each mode before window.print() is called.
-     ------------------------------------------------------- */
+  /* Field text: monospace, no wrapping, proper alignment */
+  .print-direct-feed [style*="position: absolute"],
+  .print-a4-carrier [style*="position: absolute"] {
+    font-family: "Courier New", ui-monospace, SFMono-Regular, monospace !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Default page settings — overridden by JS-injected rules
+     for each mode before window.print() is called. */
   @page {
     size: auto;
     margin: 0;
