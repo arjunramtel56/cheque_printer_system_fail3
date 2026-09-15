@@ -16,7 +16,7 @@ import {
   isValidDate,
 } from "@/lib/amountWords";
 import { clampCalibration, validateCalibrationPair } from "@/lib/calibration";
-import { resolvePrintGeometry, rotatedContentOffset, calibratedBounds } from "@/lib/printGeometry";
+import { resolvePrintGeometry, rotatedContentOffset, resolveCalibratedGeometry } from "@/lib/printGeometry";
 import { validatePrintGeometry, validateCalibratedBounds } from "@/lib/validation";
 
 // Global minimum font size floor to prevent unreadable output
@@ -263,15 +263,16 @@ function A4CarrierPreview({ template, profile, mode, date, payee, amount, amount
 
   // Page dimensions sourced from the single geometry resolver so the screen
   // preview and the print @page can never disagree.
-  const geom = useMemo(() => resolvePrintGeometry(template, mode), [template, mode]);
+  // Calibration is clamped at runtime so the cheque never leaves the page.
+  const geom = useMemo(() => resolveCalibratedGeometry(template, mode, { x: calX, y: calY }), [template, mode, calX, calY]);
   const paperW = geom.pageW;
   const paperH = geom.pageH;
   const displayPW = Math.round(paperW * SCALE);
   const displayPH = Math.round(paperH * SCALE);
 
-  // Cheque position on A4 paper in mm, with calibration
-  const chequeX = profile.x + calX;
-  const chequeY = profile.y + calY;
+  // Cheque position on A4 paper in mm, with calibration (clamped to keep on-page)
+  const chequeX = geom.finalChequeX;
+  const chequeY = geom.finalChequeY;
   const chequeW = template.widthMm;
   const chequeH = template.heightMm;
 
@@ -629,11 +630,13 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
 
   // A4 Carrier mode — page box from the shared geometry resolver (portrait or
   // landscape), container = A4 box, cheque inset at profile.x/y + calibration.
-  const geom = resolvePrintGeometry(template, mode);
+  // Calibration is clamped by resolveCalibratedGeometry so the cheque never
+  // leaves the page — preview and print use the SAME clamped geometry.
+  const geom = resolveCalibratedGeometry(template, mode, { x: calX, y: calY });
   const paperW = geom.pageW;
   const paperH = geom.pageH;
-  const chequeX = profile.x + calX;
-  const chequeY = profile.y + calY;
+  const chequeX = geom.finalChequeX;
+  const chequeY = geom.finalChequeY;
 
   return (
     <div
@@ -1108,8 +1111,9 @@ export default function Workspace() {
   const printStyleRef = useRef<HTMLStyleElement | null>(null);
   const printOutputRef = useRef<HTMLDivElement | null>(null);
   const printKeyRef = useRef(0);
-  const [printError, setPrintError] = useState("");
+   const [printError, setPrintError] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
+  const [printCompleted, setPrintCompleted] = useState(false);
 
   const template = useMemo(() => getTemplate(templateId) ?? null, [templateId]);
   const isDF = template ? isDirectFeed(printMode) : true;
@@ -1162,27 +1166,26 @@ export default function Workspace() {
     return { ready: true, reason: null };
   }, [template, date, payee, hasAmount, amountWords, amount, printMode, isDF, dfCalibration, a4Calibration]);
 
-  // Derive the explicit form state for the state badge.
-  const derivedFormState = useMemo<FormState>(() => {
-    if (isPrinting) return "printing";
-    if (!template) return "empty";
-    const cal = isDF ? dfCalibration : a4Calibration;
-    const calOk = validateCalibrationPair(cal.x, cal.y) === null;
-    const hasBank = !!template;
-    const hasDate = isValidDate(date);
-    const hasPayee = validatePayee(payee).valid;
-    const hasAmount = hasAmount;
-    const hasWords = amountWords.trim() !== "";
-    const hasMode = !!printMode;
-    if (!printReadiness.ready) {
-      if (!hasBank) return "empty";
-      if (!hasDate || !hasPayee || !hasAmount || !hasWords || !hasMode || !calOk) {
-        return "data-entering";
-      }
-      return "ready-preview";
-    }
-    return "ready-print";
-  }, [template, printReadiness, isPrinting, date, payee, hasAmount, amountWords, printMode, isDF, dfCalibration, a4Calibration]);
+   // Derive the explicit form state for the state badge.
+   const derivedFormState = useMemo<FormState>(() => {
+     if (isPrinting) return "printing";
+     if (printCompleted) return "done";
+     if (!template) return "empty";
+     const cal = isDF ? dfCalibration : a4Calibration;
+     const calOk = validateCalibrationPair(cal.x, cal.y) === null;
+     const hasDate = isValidDate(date);
+     const hasPayee = validatePayee(payee).valid;
+     const hasAmountVal = hasAmount;
+     const hasWords = amountWords.trim() !== "";
+     const hasMode = !!printMode;
+     if (!printReadiness.ready) {
+       if (!hasDate || !hasPayee || !hasAmountVal || !hasWords || !hasMode || !calOk) {
+         return "data-entering";
+       }
+       return "ready-preview";
+     }
+     return "ready-print";
+   }, [template, printReadiness, isPrinting, printCompleted, date, payee, hasAmount, amountWords, printMode, isDF, dfCalibration, a4Calibration]);
 
   // Auto-sync words when amount changes.
   // - When amount is valid & > 0: regenerate words (clears stale words automatically).
@@ -1214,6 +1217,7 @@ export default function Workspace() {
     if (isPrinting) return;
 
     setPrintError("");
+    setPrintCompleted(false);
 
      // STEP 1: VALIDATE DATA
     const dateCheck = validateChequeDate(date);
@@ -1316,21 +1320,22 @@ export default function Workspace() {
       }
     }
 
-    function onAfterPrint() {
-      if (printStyleRef.current) {
-        printStyleRef.current.remove();
-        printStyleRef.current = null;
-      }
-      setIsPrinting(false);
-      window.removeEventListener("beforeprint", onBeforePrint);
-      window.removeEventListener("afterprint", onAfterPrint);
-    }
+     function onAfterPrint() {
+       if (printStyleRef.current) {
+         printStyleRef.current.remove();
+         printStyleRef.current = null;
+       }
+       setIsPrinting(false);
+       setPrintCompleted(true);
+       window.removeEventListener("beforeprint", onBeforePrint);
+       window.removeEventListener("afterprint", onAfterPrint);
+     }
 
-    window.addEventListener("beforeprint", onBeforePrint);
-    window.addEventListener("afterprint", onAfterPrint);
-    window.print();
-    // afterprint fires asynchronously when the dialog closes or print is cancelled
-  }
+     window.addEventListener("beforeprint", onBeforePrint);
+     window.addEventListener("afterprint", onAfterPrint);
+     window.print();
+     // afterprint fires asynchronously when the dialog closes or print is cancelled
+   }
 
   function handleClear() {
     // Preserve system configuration (printMode is a persistent UI preference);
@@ -1360,6 +1365,7 @@ export default function Workspace() {
     setDfCalibration({ x: 0, y: 0 });
     setA4Calibration({ x: 0, y: 0 });
     setPrintError("");
+    setPrintCompleted(false);
   }
 
   function handleModeChange(newMode: ProfileKey) {
@@ -1595,19 +1601,31 @@ export default function Workspace() {
               <button
                 type="button"
                 className="button secondary"
-                disabled={!printReadiness.ready}
+                disabled={!printReadiness.ready || isPrinting}
                 onClick={handlePrint}
-                aria-disabled={!printReadiness.ready}
-                aria-describedby="print-reason"
+                aria-disabled={!printReadiness.ready || isPrinting}
+                aria-describedby={printReadiness.ready ? "print-help" : "print-reason"}
+                aria-label={
+                  isPrinting
+                    ? "Printing cheque — wait for the print dialog"
+                    : printCompleted
+                      ? "Print completed — select a new bank or clear to start over"
+                      : printReadiness.ready
+                        ? "Print cheque"
+                        : `Print cheque — requires: ${printReadiness.reason ?? "all fields complete"}`
+                }
               >
-                {isPrinting ? "Printing" : "Print Cheque"}
+                {isPrinting ? "Printing…" : printCompleted ? "Print Again" : "Print Cheque"}
               </button>
               {/* Specific reason the print button is disabled */}
               {!printReadiness.ready && !isPrinting && (
-                <p id="print-reason" className="error-state" role="alert" aria-live="polite">
+                <p id="print-reason" className="error-state" role="status" aria-live="polite">
                   {printReadiness.reason}
                 </p>
               )}
+              <p id="print-help" className="sr-only">
+                Prints the cheque at actual size. Ensure printer is set to Actual Size (100%).
+              </p>
             </div>
 
             {printError && (

@@ -12,7 +12,6 @@ import {
   CALIBRATION_MIN_MM,
   CALIBRATION_MAX_MM,
 } from "../lib/calibration.ts";
-import { calibratedBounds } from "../lib/printGeometry.ts";
 import { validateBankTemplate, validatePrintGeometry, validateCalibratedBounds } from "../lib/validation.ts";
 
 let passed = 0;
