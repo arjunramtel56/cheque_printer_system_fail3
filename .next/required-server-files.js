@@ -4,7 +4,7 @@ self.__SERVER_FILES_MANIFEST={
     "env": {},
     "webpack": null,
     "typescript": {
-      "ignoreBuildErrors": true
+      "ignoreBuildErrors": false
     },
     "typedRoutes": false,
     "distDir": ".next",

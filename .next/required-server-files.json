@@ -4,7 +4,7 @@
     "env": {},
     "webpack": null,
     "typescript": {
-      "ignoreBuildErrors": true
+      "ignoreBuildErrors": false
     },
     "typedRoutes": false,
     "distDir": ".next",
