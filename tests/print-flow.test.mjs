@@ -196,11 +196,12 @@ assert(a4hG.rotate === 0, "A4 modes never rotate content");
 
 // 2.6 rotatedContentOffset — mathematically verified for short-edge-first rotation.
 //     Page box = 88.9×190.5 mm (H×W), cheque = 190.5×88.9 mm (W×H). With
-//     transform-origin: 0 0 and 90° CW CSS rotation, the cheque div must be
-//     offset to (0, chequeW=190.5) so the rotated bounding box fills [0,88.9]×[0,190.5].
+//     transform-origin: 0 0 and 90° CW CSS rotation (matrix [0 -1; 1 0]),
+//     the rotated bounding box is [-H, 0] × [0, W] = [-88.9, 0] × [0, 190.5].
+//     To fill the page box [0, 88.9] × [0, 190.5], the offset is (chequeH, 0).
 import { rotatedContentOffset } from "../lib/printGeometry.ts";
 const off90 = rotatedContentOffset(dfShortG);
-assert(off90.leftMm === 0 && off90.topMm === 190.5, "DF short-edge rotation offset is (0, 190.5)mm with transform-origin 0 0");
+assert(off90.leftMm === 88.9 && off90.topMm === 0, "DF short-edge rotation offset is (88.9, 0)mm with transform-origin 0 0");
 
 const off0 = rotatedContentOffset(dfLongG);
 assert(off0.leftMm === 0 && off0.topMm === 0, "DF long-edge rotation offset is 0,0 (no rotation)");

@@ -312,6 +312,16 @@ assert(p12.valid, "Devanagari payee accepted");
 const p13 = validatePayee("ABC & Co. #5");
 assert(p13.valid, "payee with ampersand and hash accepted");
 
+// Very long Unicode payee (Devanagari) at exact max length
+const unicodeLong = "राम".repeat(Math.ceil(MAX_PAYEE_CHARS / 3));
+const p14 = validatePayee(unicodeLong.slice(0, MAX_PAYEE_CHARS));
+assert(p14.valid, "long Unicode payee at max length accepted");
+
+// Unicode payee exceeding max length rejected
+const unicodeTooLong = "राम".repeat(Math.ceil(MAX_PAYEE_CHARS / 3) + 10);
+const p15 = validatePayee(unicodeTooLong);
+assert(!p15.valid, "overlength Unicode payee rejected");
+
 console.log("\n=== TEST GROUP 8: AMOUNT-TO-WORDS CONSISTENCY ===");
 
 // Consistent

@@ -21,7 +21,6 @@
 
 import type { BankTemplate, ProfileKey, Calibration } from "./types.ts";
 import { isDirectFeed } from "./types.ts";
-import { CALIBRATION_MAX_MM } from "./calibration.ts";
 
 // ---------------------------------------------------------------------------
 // Canonical size constants — the ONLY definitions used across the engine.
@@ -224,53 +223,4 @@ function clampCalibrationValue(v: number, min: number, max: number): number {
   if (!Number.isFinite(v)) return 0;
   const clamped = Math.min(max, Math.max(min, v));
   return Math.round(clamped * 10) / 10;
-}
-
-/**
- * Compute the worst-case calibrated bounding box for a template + mode.
- *
- * Returns the extreme positions the cheque can reach when calibration is
- * pushed to ±CALIBRATION_MAX_MM in both axes. Used to guarantee that even
- * at maximum calibration the cheque never leaves the page.
- *
- * - Direct Feed: the page box IS the cheque, so calibration does not move
- *   the cheque relative to the page — the bounding box is the page itself.
- *
- * - A4 Carrier: cheque base position is profile.x/y; calibration can shift
- *   it by ±MAX in X and Y. We compute the min and max achievable edges.
- */
-export function calibratedBounds(
-  template: BankTemplate,
-  mode: ProfileKey,
-): {
-  minX: number;
-  minY: number;
-  maxRight: number;
-  maxBottom: number;
-} {
-  const profile = template.profiles[mode];
-  const chequeW = template.widthMm;
-  const chequeH = template.heightMm;
-  const cal = CALIBRATION_MAX_MM;
-
-  if (isDirectFeed(mode)) {
-    // Page box == cheque. Calibration only shifts field content inside the
-    // cheque box; the cheque bounding box on the page is always [0,0]..[pageW,pageH].
-    const geom = resolvePrintGeometry(template, mode);
-    return {
-      minX: 0,
-      minY: 0,
-      maxRight: geom.pageW,
-      maxBottom: geom.pageH,
-    };
-  }
-
-  // A4 Carrier — worst case: calibration pushes cheque in negative direction
-  // (minX = profile.x - cal) or positive direction (maxRight = profile.x + chequeW + cal).
-  return {
-    minX: profile.x - cal,
-    minY: profile.y - cal,
-    maxRight: profile.x + chequeW + cal,
-    maxBottom: profile.y + chequeH + cal,
-  };
 }
