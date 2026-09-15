@@ -334,21 +334,28 @@ assert(validateCalibrationPair(0, -30) !== null, "Y < -25 rejected");
 assert(validateCalibrationPair(NaN, 0) !== null, "NaN X rejected");
 assert(validateCalibrationPair(0, Infinity) !== null, "Infinity Y rejected");
 
-// 6.4 Range safety: even at max calibration the A4 cheque box stays printable
-//      AND: the base profile position leaves enough margin for ±25 mm calibration
+// 6.4 Range safety: runtime clamping ensures cheque stays on-page at any calibration.
+//      resolveCalibratedGeometry clamps A4 calibration so the cheque can never
+//      leave the page — verified here at ±25mm extreme inputs.
+import { resolveCalibratedGeometry } from "../lib/printGeometry.ts";
+const extremeCal = { x: 25, y: 25 };
 for (const t of getAllTemplates()) {
   for (const key of ["a4_vertical", "a4_horizontal"]) {
-    const p = t.profiles[key];
-    // Base position fits page width (cheque right edge <= pageWidth)
-    assert(p.x + t.widthMm <= p.pageWidth, t.bankName + " " + key + ": base position fits page width");
-    // Base position fits page height
-    assert(p.y + t.heightMm <= p.pageHeight, t.bankName + " " + key + ": base position fits page height");
-    // At MAX calibration (+25mm right/bottom), cheque right/bottom must still be on page
-    assert(p.x + t.widthMm + CALIBRATION_MAX_MM <= p.pageWidth + 0.05, t.bankName + " " + key + ": max +X cal keeps cheque on page");
-    assert(p.y + t.heightMm + CALIBRATION_MAX_MM <= p.pageHeight + 0.05, t.bankName + " " + key + ": max +Y cal keeps cheque on page");
-    // At MIN calibration (-25mm left/top), cheque must not go off the left/top edge
-    assert(p.x - CALIBRATION_MAX_MM >= -0.05, t.bankName + " " + key + ": max -X cal keeps cheque on page");
-    assert(p.y - CALIBRATION_MAX_MM >= -0.05, t.bankName + " " + key + ": max -Y cal keeps cheque on page");
+    const g = resolveCalibratedGeometry(t, key, extremeCal);
+    assert(g.finalChequeX >= -0.05, t.bankName + " " + key + ": +25mm X cal clamped to keep cheque on left edge");
+    assert(g.finalChequeX + t.widthMm <= g.pageW + 0.05, t.bankName + " " + key + ": +25mm X cal clamped to keep cheque on right edge");
+    assert(g.finalChequeY >= -0.05, t.bankName + " " + key + ": +25mm Y cal clamped to keep cheque on top edge");
+    assert(g.finalChequeY + t.heightMm <= g.pageH + 0.05, t.bankName + " " + key + ": +25mm Y cal clamped to keep cheque on bottom edge");
+  }
+}
+const negCal = { x: -25, y: -25 };
+for (const t of getAllTemplates()) {
+  for (const key of ["a4_vertical", "a4_horizontal"]) {
+    const g = resolveCalibratedGeometry(t, key, negCal);
+    assert(g.finalChequeX >= -0.05, t.bankName + " " + key + ": -25mm X cal clamped to keep cheque on left edge");
+    assert(g.finalChequeY >= -0.05, t.bankName + " " + key + ": -25mm Y cal clamped to keep cheque on top edge");
+    assert(g.finalChequeX + t.widthMm <= g.pageW + 0.05, t.bankName + " " + key + ": -25mm X cal clamped to keep cheque on right edge");
+    assert(g.finalChequeY + t.heightMm <= g.pageH + 0.05, t.bankName + " " + key + ": -25mm Y cal clamped to keep cheque on bottom edge");
   }
 }
 

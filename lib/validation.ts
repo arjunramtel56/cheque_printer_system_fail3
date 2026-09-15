@@ -16,8 +16,6 @@
 import type { BankTemplate, ProfileKey, PrintProfile } from "./types.ts";
 import { isDirectFeed } from "./types.ts";
 import type { PrintGeometry } from "./printGeometry.ts";
-import { calibratedBounds } from "./printGeometry.ts";
-import { CALIBRATION_MAX_MM } from "./calibration.ts";
 
 export interface ValidationError {
   code: string;
@@ -276,16 +274,29 @@ export function validatePrintGeometry(geom: PrintGeometry, template: BankTemplat
 // ---------------------------------------------------------------------------
 
 /**
- * Validate that, even at maximum calibration (±25 mm in each axis), the cheque
- * never leaves the A4 page. This is the critical safety check: a template that
- * fits at base position but is too close to an edge would be pushed off-page by
- * calibration at print time.
+ * Validate the A4 Carrier profile's calibration safety.
  *
- * For Direct Feed the page box IS the cheque, so calibration does not move the
- * cheque relative to the page — no edge check is needed (but finiteness is
- * still confirmed).
+ * At print time, resolveCalibratedGeometry() clamps calibration so the cheque
+ * can never leave the page. This function validates the *template* — it checks:
  *
- * Returns null if safe, or a list of errors if the cheque can escape the page.
+ * 1. The cheque fits on the page at its BASE profile position (no calibration).
+ *    If the base position already overflows, the template is broken.
+ *
+ * 2. The profile leaves at least a minimal calibration margin (≥ 0.5 mm) on
+ *    each side, so the user can always make a fine-tuning adjustment in both
+ *    directions. If a side has zero margin, calibration in that direction is
+ *    silently clamped to 0 — the print is still valid but the user should be
+ *    aware.
+ *
+ * 3. The cheque does not touch both opposing edges (would leave zero room
+ *    for any calibration — a misconfigured template).
+ *
+ * For Direct Feed the page box IS the cheque, so calibration only shifts
+ * field content within the cheque — no page-edge check is needed.
+ *
+ * Returns null if the template is safe, or a list of errors/warnings.
+ * Errors (calibrationRange must contain at least one error-level issue to
+ * block printing.
  */
 export function validateCalibratedBounds(template: BankTemplate, mode: ProfileKey): ValidationResult {
   const errors: ValidationError[] = [];
@@ -294,37 +305,38 @@ export function validateCalibratedBounds(template: BankTemplate, mode: ProfileKe
     return null;
   }
 
-  // A4 Carrier
-  const bounds = calibratedBounds(template, mode);
   const profile = template.profiles[mode];
+  const chequeW = template.widthMm;
+  const chequeH = template.heightMm;
   const pageW = profile.pageWidth;
   const pageH = profile.pageHeight;
 
-  if (bounds.minX < -0.05) {
+  // 1. Base position must be on-page (cheque fully inside the A4 sheet)
+  if (profile.x < -0.05) {
     errors.push({
-      code: "A4_CAL_OVERFLOW_LEFT",
-      message: `${mode}: at max calibration (-${CALIBRATION_MAX_MM}mm), cheque would be ${Math.abs(bounds.minX).toFixed(1)}mm off the left edge.`,
+      code: "A4_BASE_OFF_PAGE_LEFT",
+      message: `${mode}: base profile x (${profile.x}) is negative — cheque starts off the left edge.`,
       path: mode,
     });
   }
-  if (bounds.maxRight > pageW + 0.05) {
+  if (profile.x + chequeW > pageW + 0.05) {
     errors.push({
-      code: "A4_CAL_OVERFLOW_RIGHT",
-      message: `${mode}: at max calibration (+${CALIBRATION_MAX_MM}mm), cheque right edge (${bounds.maxRight.toFixed(1)}mm) exceeds page width (${pageW}mm).`,
+      code: "A4_BASE_OFF_PAGE_RIGHT",
+      message: `${mode}: base profile x (${profile.x}) + cheque width (${chequeW}) exceeds page width (${pageW}).`,
       path: mode,
     });
   }
-  if (bounds.minY < -0.05) {
+  if (profile.y < -0.05) {
     errors.push({
-      code: "A4_CAL_OVERFLOW_TOP",
-      message: `${mode}: at max calibration (-${CALIBRATION_MAX_MM}mm), cheque would be ${Math.abs(bounds.minY).toFixed(1)}mm off the top edge.`,
+      code: "A4_BASE_OFF_PAGE_TOP",
+      message: `${mode}: base profile y (${profile.y}) is negative — cheque starts above the top edge.`,
       path: mode,
     });
   }
-  if (bounds.maxBottom > pageH + 0.05) {
+  if (profile.y + chequeH > pageH + 0.05) {
     errors.push({
-      code: "A4_CAL_OVERFLOW_BOTTOM",
-      message: `${mode}: at max calibration (+${CALIBRATION_MAX_MM}mm), cheque bottom edge (${bounds.maxBottom.toFixed(1)}mm) exceeds page height (${pageH}mm).`,
+      code: "A4_BASE_OFF_PAGE_BOTTOM",
+      message: `${mode}: base profile y (${profile.y}) + cheque height (${chequeH}) exceeds page height (${pageH}).`,
       path: mode,
     });
   }

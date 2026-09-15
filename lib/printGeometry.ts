@@ -154,7 +154,9 @@ export function rotatedContentOffset(geom: PrintGeometry): { leftMm: number; top
  * not change.
  *
  * For A4 Carrier the cheque is inset on the A4 page; calibration shifts the
- * cheque's top-left position (profile.x + calX, profile.y + calY).
+ * cheque's top-left position (profile.x + calX, profile.y + calY). If the
+ * requested calibration would push the cheque off-page, it is clamped to the
+ * maximum safe offset — the cheque can never leave the page.
  *
  * This is the SINGLE function both the screen preview and the print output
  * use to compute the final cheque-on-page bounding box, guaranteeing
@@ -165,19 +167,62 @@ export function resolveCalibratedGeometry(
   mode: ProfileKey,
   calibration: Calibration,
 ): PrintGeometry & {
-  /** Final cheque top-left on the carrier page (A4) in mm, with calibration applied */
+  /** Final clamped cheque offset on the carrier page (mm) */
   finalChequeX: number;
-  /** Final cheque top-left on the carrier page (A4) in mm, with calibration applied */
+  /** Final clamped cheque offset on the carrier page (mm) */
   finalChequeY: number;
+  /** True if the requested calibration was clamped to keep the cheque on-page */
+  calibratedClamped: boolean;
 } {
   const base = resolvePrintGeometry(template, mode);
+  let calX = calibration.x;
+  let calY = calibration.y;
+  let clamped = false;
+
+  if (isDirectFeed(mode)) {
+    // DF: calibration shifts field content inside the cheque; page box unchanged.
+    return {
+      ...base,
+      chequeX: 0,
+      chequeY: 0,
+      finalChequeX: 0,
+      finalChequeY: 0,
+      calibratedClamped: false,
+    };
+  }
+
+  // A4 Carrier — clamp calibration so the cheque never leaves the page.
+  // The cheque rectangle is [profile.x + calX, profile.y + calY] ..
+  // [profile.x + calX + chequeW, profile.y + calY + chequeH].
+  // It must satisfy: 0 <= chequeX and chequeX + chequeW <= pageW (and Y).
+  const profile = template.profiles[mode];
+  const chequeW = template.widthMm;
+  const chequeH = template.heightMm;
+
+  const minCalX = -profile.x;
+  const maxCalX = profile.pageWidth - profile.x - chequeW;
+  const minCalY = -profile.y;
+  const maxCalY = profile.pageHeight - profile.y - chequeH;
+
+  const clampedX = clampCalibrationValue(calX, minCalX, maxCalX);
+  const clampedY = clampCalibrationValue(calY, minCalY, maxCalY);
+  if (clampedX !== calX || clampedY !== calY) clamped = true;
+
   return {
     ...base,
-    chequeX: base.chequeX + calibration.x,
-    chequeY: base.chequeY + calibration.y,
-    finalChequeX: base.chequeX + calibration.x,
-    finalChequeY: base.chequeY + calibration.y,
+    chequeX: profile.x,
+    chequeY: profile.y,
+    finalChequeX: profile.x + clampedX,
+    finalChequeY: profile.y + clampedY,
+    calibratedClamped: clamped,
   };
+}
+
+/** Clamp a value to [min, max], rounding to 0.1mm step. */
+function clampCalibrationValue(v: number, min: number, max: number): number {
+  if (!Number.isFinite(v)) return 0;
+  const clamped = Math.min(max, Math.max(min, v));
+  return Math.round(clamped * 10) / 10;
 }
 
 /**

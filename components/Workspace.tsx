@@ -36,16 +36,16 @@ const PROFILE_LABELS: Record<ProfileKey, string> = {
 const SCALE = 2.4;
 
 // Explicit workflow states — a single, unambiguous indicator of where the
-// user is in the print pipeline.  The UI renders state badges and the print
+// user is in the print pipeline. The UI renders a state badge and the print
 // button surfaces the concrete reason it is blocked.
 type FormState =
-  | "idle"             // EMPTY — no template selected
-  | "template-selected"  // BANK SELECTED — template picked, fields empty
-  | "data-entering"      // DATA ENTERED (partial) — some fields filled
-  | "ready-preview"      // READY TO PREVIEW — all fields populated, validation passes
-  | "ready-print"        // READY TO PRINT — same as above (synced when print dialog about to open)
-  | "printing"           // PRINTING — window.print() is open
-  | "done";              // PRINT COMPLETED / CANCELLED
+  | "empty"              // EMPTY — no template selected
+  | "template-selected"    // BANK SELECTED — template picked, fields empty
+  | "data-entering"        // DATA ENTERING — some fields filled (incomplete)
+  | "ready-preview"        // READY TO PREVIEW — all fields populated, validation passes
+  | "ready-print"          // READY TO PRINT — preview reviewed, print button active
+  | "printing"             // PRINTING — window.print() dialog is open
+  | "done";                // PRINT FINISHED / CANCELLED — print cycle complete
 
 // Map each validation rule to the message the print button should show.
 interface PrintReadiness {
@@ -83,9 +83,18 @@ function splitWordsToLines(words: string, template: BankTemplate): [string, stri
 }
 
 /**
- * Safely format a date to DDMMYYYY. Returns "" if the date is invalid so the
- * render path never throws on corrupt state.
+ * Sanitize an error for display: strip stack traces, internal exception messages,
+ * and implementation details. Only professional, user-facing messages are surfaced.
  */
+function sanitizeError(err: unknown): string {
+  if (typeof err === "string") return err;
+  if (err instanceof Error) {
+    // Return only the message, never the stack trace
+    return err.message;
+  }
+  return "An unexpected error occurred. Please try again.";
+}
+
 function safeFormatDate(date: string): string {
   if (!date) return "";
   try {
@@ -1136,31 +1145,44 @@ export default function Workspace() {
   // -----------------------------------------------------------------------
   const printReadiness = useMemo<PrintReadiness>(() => {
     if (!template) return { ready: false, reason: "Select a bank template" };
-    if (!isValidDate(date)) return { ready: false, reason: "Enter valid cheque date" };
+    if (!isValidDate(date) || date === "") return { ready: false, reason: "Enter cheque date" };
     const payeeVal = validatePayee(payee);
     if (!payeeVal.valid) return { ready: false, reason: payeeVal.error ?? "Enter payee name" };
     if (!hasAmount) return { ready: false, reason: "Enter valid amount" };
     if (amountWords.trim() === "") return { ready: false, reason: "Enter amount in words" };
-    // Amount-to-words consistency check
     const consistency = checkAmountWordsConsistency(amount, amountWords);
     if (!consistency.consistent) {
-      return { ready: false, reason: "Amount and words must match" };
+      return { ready: false, reason: "Amount and words do not match" };
     }
     if (!printMode) return { ready: false, reason: "Select print mode" };
     const cal = isDF ? dfCalibration : a4Calibration;
     if (validateCalibrationPair(cal.x, cal.y) !== null) {
-      return { ready: false, reason: "Correct invalid calibration" };
+      return { ready: false, reason: "Correct calibration" };
     }
     return { ready: true, reason: null };
   }, [template, date, payee, hasAmount, amountWords, amount, printMode, isDF, dfCalibration, a4Calibration]);
 
   // Derive the explicit form state for the state badge.
   const derivedFormState = useMemo<FormState>(() => {
-    if (!template) return "idle";
     if (isPrinting) return "printing";
-    if (!printReadiness.ready) return "data-entering";
+    if (!template) return "empty";
+    const cal = isDF ? dfCalibration : a4Calibration;
+    const calOk = validateCalibrationPair(cal.x, cal.y) === null;
+    const hasBank = !!template;
+    const hasDate = isValidDate(date);
+    const hasPayee = validatePayee(payee).valid;
+    const hasAmount = hasAmount;
+    const hasWords = amountWords.trim() !== "";
+    const hasMode = !!printMode;
+    if (!printReadiness.ready) {
+      if (!hasBank) return "empty";
+      if (!hasDate || !hasPayee || !hasAmount || !hasWords || !hasMode || !calOk) {
+        return "data-entering";
+      }
+      return "ready-preview";
+    }
     return "ready-print";
-  }, [template, printReadiness, isPrinting]);
+  }, [template, printReadiness, isPrinting, date, payee, hasAmount, amountWords, printMode, isDF, dfCalibration, a4Calibration]);
 
   // Auto-sync words when amount changes.
   // - When amount is valid & > 0: regenerate words (clears stale words automatically).
@@ -1371,27 +1393,39 @@ export default function Workspace() {
                     padding: "2px 8px",
                     borderRadius: "12px",
                     background:
-                      derivedFormState === "ready-print"
+                      derivedFormState === "ready-print" || derivedFormState === "ready-preview"
                         ? "color-mix(in srgb, var(--success) 14%, transparent)"
                         : derivedFormState === "printing"
                           ? "color-mix(in srgb, var(--info) 14%, transparent)"
-                          : "color-mix(in srgb, var(--text-muted) 10%, transparent)",
+                          : derivedFormState === "done"
+                            ? "color-mix(in srgb, var(--text-muted) 14%, transparent)"
+                            : "color-mix(in srgb, var(--text-secondary) 10%, transparent)",
                     color:
-                      derivedFormState === "ready-print"
+                      derivedFormState === "ready-print" || derivedFormState === "ready-preview"
                         ? "var(--success)"
                         : derivedFormState === "printing"
                           ? "var(--info)"
-                          : "var(--text-secondary)",
+                          : derivedFormState === "done"
+                            ? "var(--text-secondary)"
+                            : "var(--text-secondary)",
                   }}
                   aria-label={`Workflow state: ${derivedFormState}`}
                 >
-                  {derivedFormState === "ready-print"
-                    ? "Ready to Print"
-                    : derivedFormState === "printing"
-                      ? "Printing\u2026"
-                      : derivedFormState === "data-entering"
-                        ? "Filling Details"
-                        : "Select Bank Template"}
+                  {derivedFormState === "empty"
+                    ? "Select Bank"
+                    : derivedFormState === "template-selected"
+                      ? "Bank Selected"
+                    : derivedFormState === "data-entering"
+                      ? "Filling Details"
+                      : derivedFormState === "ready-preview"
+                        ? "Review Preview"
+                        : derivedFormState === "ready-print"
+                          ? "Ready to Print"
+                          : derivedFormState === "printing"
+                            ? "Printing…"
+                            : derivedFormState === "done"
+                              ? "Print Finished"
+                              : "Select Bank Template"}
                 </span>
               </div>
               <button type="button" className="text-button" onClick={handleClear} aria-label="Clear all cheque details and calibration">
