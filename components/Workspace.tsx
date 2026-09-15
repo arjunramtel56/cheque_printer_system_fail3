@@ -1249,25 +1249,25 @@ export default function Workspace() {
     const profile = resolvedTemplate.profiles[printMode];
     if (!profile) { setPrintError("Print layout not available for selected mode."); return; }
 
-    // STEP 5b: VALIDATE GEOMETRY (single source of truth guard) — confirms the
-    // resolved @page/container math, A4 cheque bounds under max calibration,
-    // NaN/Infinity safety, and Direct-Feed rotation sanity. Prevents printing a
-    // template whose geometry would place fields off-page.
-    const geom = resolvePrintGeometry(resolvedTemplate, printMode);
-    const geomErrors = validatePrintGeometry(geom, resolvedTemplate, printMode);
-    if (geomErrors) {
-      setPrintError(`Print geometry invalid: ${geomErrors.map((e) => e.message).join(" ")}`);
-      return;
-    }
+     // STEP 5b: VALIDATE GEOMETRY (single source of truth guard) — confirms the
+     // resolved @page/container math, A4 cheque bounds under max calibration,
+     // NaN/Infinity safety, and Direct-Feed rotation sanity. Prevents printing a
+     // template whose geometry would place fields off-page.
+     const geom = resolvePrintGeometry(resolvedTemplate, printMode);
+     const geomErrors = validatePrintGeometry(geom, resolvedTemplate, printMode);
+     if (geomErrors) {
+       setPrintError("The selected template has an invalid layout. Please choose a different bank template.");
+       return;
+     }
 
-    // STEP 5c: CALIBRATED BOUNDS CHECK — verify the cheque stays within the
-    // page even at maximum ±25 mm calibration. This is the safety net that
-    // prevents printing a template whose base position is too close to an edge.
-    const calBoundsErrors = validateCalibratedBounds(resolvedTemplate, printMode);
-    if (calBoundsErrors) {
-      setPrintError(`Calibration would push cheque off page: ${calBoundsErrors.map((e) => e.message).join(" ")}`);
-      return;
-    }
+     // STEP 5c: CALIBRATED BOUNDS CHECK — verify the cheque stays within the
+     // page even at maximum ±25 mm calibration. This is the safety net that
+     // prevents printing a template whose base position is too close to an edge.
+     const calBoundsErrors = validateCalibratedBounds(resolvedTemplate, printMode);
+     if (calBoundsErrors) {
+       setPrintError("Calibration would push the cheque off the page. Adjust the X/Y offset values.");
+       return;
+     }
     // STEP 6: ENTER PRINTING STATE
     setIsPrinting(true);
 

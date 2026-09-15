@@ -423,39 +423,49 @@ for (const t of getAllTemplates()) {
   }
 }
 
-// 7.5 Calibrated bounds: all shipped templates keep cheque on page at ±25mm cal
+// 7.5 Calibrated bounds: all shipped templates have valid base positions
+// (cheque fits on page at base profile position; runtime clamping handles excess cal)
 for (const t of getAllTemplates()) {
   for (const m of ["custom_short", "custom_long", "a4_vertical", "a4_horizontal"]) {
     const errs = validateCalibratedBounds(t, m);
-    assert(errs === null, t.id + " " + m + ": calibrated bounds safe (DF is no-op, A4 checked at ±25mm)");
+    assert(errs === null, t.id + " " + m + ": base position valid (runtime clamping handles excess cal)");
   }
 }
 
-// 7.6 A template that would go off-page at max calibration is flagged
-const tightA4 = JSON.parse(JSON.stringify(siddhartha));
-tightA4.profiles.a4_vertical.y = 190; // y + 88.9 + 25 = 303.9 > 297 → off bottom at max cal
-assert(validateCalibratedBounds(tightA4, "a4_vertical") !== null, "A4 portrait with cheque too close to bottom flagged at max cal");
+// 7.6 A template whose base profile position puts the cheque off-page is flagged
+const badBase = JSON.parse(JSON.stringify(siddhartha));
+badBase.profiles.a4_vertical.x = -5;
+assert(validateCalibratedBounds(badBase, "a4_vertical") !== null, "A4 portrait with negative base x flagged");
+
+const badBase2 = JSON.parse(JSON.stringify(siddhartha));
+badBase2.profiles.a4_vertical.y = 210;
+assert(validateCalibratedBounds(badBase2, "a4_vertical") !== null, "A4 portrait with base y overflow flagged");
 
 // 7.7 DF profiles with wrong page dims are flagged by validateBankTemplate
 const badDfProfile = JSON.parse(JSON.stringify(siddhartha));
-badDfProfile.profiles.custom_short.pageWidth = 210; // wrong — should be 88.9
-badDfProfile.profiles.custom_short.pageHeight = 297; // wrong — should be 190.5
+badDfProfile.profiles.custom_short.pageWidth = 210;
+badDfProfile.profiles.custom_short.pageHeight = 297;
 {
   const errs = validateBankTemplate(badDfProfile);
   assert(errs !== null && errs.some((e) => e.code === "DF_PROFILE_DIM_MISMATCH"), "DF profile wrong page dimensions flagged");
 }
 
-// 7.8 calibratedBounds returns correct worst-case for A4
-const siddA4vBounds = calibratedBounds(siddhartha, "a4_vertical");
-assert(siddA4vBounds.minX === 9.75 - CALIBRATION_MAX_MM, "A4 portrait minX = profile.x - 25 = " + (9.75 - CALIBRATION_MAX_MM));
-assert(siddA4vBounds.maxRight === 9.75 + 190.5 + CALIBRATION_MAX_MM, "A4 portrait maxRight = profile.x + chequeW + 25");
-assert(siddA4vBounds.minY === 20 - CALIBRATION_MAX_MM, "A4 portrait minY = profile.y - 25");
-assert(siddA4vBounds.maxBottom === 20 + 88.9 + CALIBRATION_MAX_MM, "A4 portrait maxBottom = profile.y + chequeH + 25");
+// 7.8 A4 profiles with wrong page dims are flagged by validateBankTemplate
+const badA4Profile = JSON.parse(JSON.stringify(siddhartha));
+badA4Profile.profiles.a4_vertical.pageWidth = 200;
+{
+  const errs = validateBankTemplate(badA4Profile);
+  assert(errs !== null && errs.some((e) => e.code === "A4_PROFILE_DIM_MISMATCH"), "A4 profile wrong page dimensions flagged");
+}
 
-// 7.9 calibratedBounds for DF returns page box (calibration does not move cheque)
-const siddDfBounds = calibratedBounds(siddhartha, "custom_short");
-assert(siddDfBounds.minX === 0 && siddDfBounds.minY === 0, "DF short-edge minX/minY = 0 (cheque fills page)");
-assert(siddDfBounds.maxRight === 88.9 && siddDfBounds.maxBottom === 190.5, "DF short-edge maxRight/maxBottom = page box");
+// 7.9 resolveCalibratedGeometry returns clamped position for A4 at extreme cal
+const clampedG = resolveCalibratedGeometry(siddhartha, "a4_horizontal", { x: 25, y: 25 });
+assert(clampedG.finalChequeX + siddhartha.widthMm <= clampedG.pageW + 0.05, "Extreme +25mm X cal is clamped on A4 landscape");
+assert(clampedG.finalChequeY + siddhartha.heightMm <= clampedG.pageH + 0.05, "Extreme +25mm Y cal is clamped on A4 landscape");
+
+// 7.10 DF calibration does not move the cheque bounding box
+const dfCalG = resolveCalibratedGeometry(siddhartha, "custom_short", { x: 10, y: -10 });
+assert(dfCalG.finalChequeX === 0 && dfCalG.finalChequeY === 0, "DF calibration does not move cheque on page (fields shift inside)");
 
 console.log("\n=== TEST GROUP 8: PRINT CSS WIRING ===");
 
