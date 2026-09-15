@@ -189,3 +189,7 @@ button, input, select, textarea { font-family: inherit; font-size: 1rem; }
   body { background: #fff; }
   .no-print { display: none !important; }
 }
+
+.print-output-screen {
+  display: none;
+}

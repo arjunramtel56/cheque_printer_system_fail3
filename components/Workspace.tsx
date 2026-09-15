@@ -1022,11 +1022,14 @@ export default function Workspace() {
       const ph = template.heightMm;
       const pageW = mode === "custom_short" ? ph : pw;
       const pageH = mode === "custom_short" ? pw : ph;
-      css = `
+       css = `
 @media print {
   @page {
     size: ${pageW.toFixed(1)}mm ${pageH.toFixed(1)}mm;
     margin: 0;
+  }
+  .print-output-screen {
+    display: block !important;
   }
   .print-direct-feed {
     display: block !important;
@@ -1042,11 +1045,14 @@ export default function Workspace() {
       const isPortrait = mode === "a4_vertical";
       const pageW = isPortrait ? A4_MM_WIDTH : A4_LANDSCAPE_WIDTH;
       const pageH = isPortrait ? A4_MM_HEIGHT : A4_LANDSCAPE_HEIGHT;
-      css = `
+       css = `
 @media print {
   @page {
     size: ${pageW}mm ${pageH}mm;
     margin: 0;
+  }
+  .print-output-screen {
+    display: block !important;
   }
   .print-a4-carrier {
     display: block !important;
@@ -1381,7 +1387,7 @@ export default function Workspace() {
         <div
           ref={printOutputRef}
           data-mode={printMode}
-          style={{ display: "none" }}
+          className="print-output-screen"
         >
           <PrintOutput
             template={template}
