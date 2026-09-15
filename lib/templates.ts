@@ -1,8 +1,6 @@
 import type { BankTemplate, ProfileKey } from "./types.ts";
 import { validateBankTemplate } from "./validation.ts";
-
-export const STANDARD_WIDTH_MM = 190.5;
-export const STANDARD_HEIGHT_MM = 88.9;
+import { STANDARD_CHEQUE_W_MM as STANDARD_WIDTH_MM, STANDARD_CHEQUE_H_MM as STANDARD_HEIGHT_MM } from "./printGeometry.ts";
 
 function assertNoTemplateErrors(template: BankTemplate): void {
   const errs = validateBankTemplate(template);
