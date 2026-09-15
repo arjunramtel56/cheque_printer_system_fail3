@@ -948,48 +948,6 @@ function BankTemplateSelector({
 }
 
 // ---------------------------------------------------------------------------
-// Print Validation
-// ---------------------------------------------------------------------------
-
-interface PrintValidationResult {
-  valid: boolean;
-  error: string;
-}
-
-function validatePrintData(
-  template: BankTemplate | null,
-  date: string,
-  payee: string,
-  amount: string,
-  amountWords: string,
-  printMode: ProfileKey,
-  dfCalibration: Calibration,
-  a4Calibration: Calibration,
-): PrintValidationResult {
-  if (!template) return { valid: false, error: "No bank template selected." };
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { valid: false, error: "Invalid or missing date." };
-  if (!payee.trim()) return { valid: false, error: "Payee name is required." };
-
-  const amountValidation = validateAmount(amount);
-  if (!amountValidation.valid) return { valid: false, error: amountValidation.error ?? "Invalid amount." };
-  if (amountValidation.paisa === 0) return { valid: false, error: "Amount must be greater than zero." };
-
-  if (!amountWords.trim()) return { valid: false, error: "Amount in words is required." };
-
-  if (!printMode) return { valid: false, error: "Print mode not selected." };
-
-  const cal = isDirectFeed(printMode) ? dfCalibration : a4Calibration;
-  if (cal.x < -25 || cal.x > 25 || cal.y < -25 || cal.y > 25) {
-    return { valid: false, error: "Calibration values must be between -25 and 25 mm." };
-  }
-
-  const profile = template.profiles[printMode];
-  if (!profile) return { valid: false, error: "Print layout not available for selected mode." };
-
-  return { valid: true, error: "" };
-}
-
-// ---------------------------------------------------------------------------
 // Main Workspace
 // ---------------------------------------------------------------------------
 
