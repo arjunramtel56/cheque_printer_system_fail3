@@ -1,0 +1,71 @@
+/* ============================================================
+   Reactify Cheque Printer — Print stylesheet
+   Handles actual-size printing for Direct Feed and A4 Carrier.
+   ============================================================ */
+
+@media print {
+  html, body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: hidden !important;
+  }
+
+  /* Hide all application UI */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset any residual layout from globals.css */
+  .compose-grid,
+  .preview-column,
+  .preview-stage {
+    position: static !important;
+    inset: auto !important;
+    z-index: auto !important;
+    background: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* -------------------------------------------------------
+     Print output containers (hidden on screen, shown here)
+     Dimensions set by inline styles; @page set by JS injection.
+     ------------------------------------------------------- */
+  .print-direct-feed {
+    position: relative !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: hidden !important;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-a4-carrier {
+    position: relative !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: hidden !important;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* -------------------------------------------------------
+     Default page settings — overridden by JS-injected rules
+     for each mode before window.print() is called.
+     ------------------------------------------------------- */
+  @page {
+    size: auto;
+    margin: 0;
+  }
+}
