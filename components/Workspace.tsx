@@ -1247,7 +1247,6 @@ export default function Workspace() {
     setDfCalibration({ x: 0, y: 0 });
     setA4Calibration({ x: 0, y: 0 });
     setPrintError("");
-    setFormState("idle");
   }
 
   function handleModeChange(newMode: ProfileKey) {
