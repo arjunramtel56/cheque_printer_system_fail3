@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getAllTemplates, getTemplate } from "@/lib/templates";
 import type { BankTemplate, ProfileKey, Calibration } from "@/lib/types";
-import { isDirectFeed, isA4Carrier } from "@/lib/types";
+import { isDirectFeed } from "@/lib/types";
 import {
   amountToWordsFromPaisa,
   formatDateDigits,
