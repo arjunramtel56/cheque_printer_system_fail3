@@ -311,10 +311,9 @@ export function checkAmountWordsConsistency(
 // ---------------------------------------------------------------------------
 
 export function formatAmountDisplay(amountPaisa: number): string {
-  return (amountPaisa / 100).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  const rupees = Math.floor(amountPaisa / 100);
+  const paisaRemainder = amountPaisa % 100;
+  return `${rupees.toLocaleString("en-US")}.${String(paisaRemainder).padStart(2, "0")}`;
 }
 
 // ---------------------------------------------------------------------------

@@ -91,19 +91,23 @@ assert(zeroResult.valid && zeroResult.paisa === 0, "0 is parseable as 0 paisa (z
 assertAccepts(" 100 ", 10000, "surrounding whitespace trimmed before parsing");
 
 // Very large but within range
-assert(!validateAmount("999999999999.99").valid === false, "max valid amount 999999999999.99 is accepted");
-
-// Overflow
-const overflowResult = validateAmount("999999999999.99");
-if (overflowResult.valid) {
-  assert(overflowResult.paisa === MAX_AMOUNT_PAISA, "max valid amount yields MAX_AMOUNT_PAISA");
-} else {
-  assert(false, "max valid amount should be accepted");
+const maxResult = validateAmount("999999999999.99");
+assert(maxResult.valid === true, "max valid amount 999999999999.99 is accepted");
+if (maxResult.valid) {
+  assert(maxResult.paisa === MAX_AMOUNT_PAISA, "max valid amount yields MAX_AMOUNT_PAISA");
 }
 
 // Just above max
 assertRejects("1000000000000.00", "rejects amount above max");
 assertRejects("999999999999.999", "rejects amount with 3 decimals even if under max");
+
+// Non-string inputs rejected (Infinity, NaN as actual values, numbers, null, undefined)
+assert(parseNumericAmount(Infinity as unknown as string) === null, "rejects Infinity value");
+assert(parseNumericAmount(-Infinity as unknown as string) === null, "rejects -Infinity value");
+assert(parseNumericAmount(NaN as unknown as string) === null, "rejects NaN value");
+assert(parseNumericAmount(123 as unknown as string) === null, "rejects number type");
+assert(parseNumericAmount(null as unknown as string) === null, "rejects null");
+assert(parseNumericAmount(undefined as unknown as string) === null, "rejects undefined");
 
 // Decimal precision — exactly 2 decimals OK, 3+ rejected
 assertAccepts("1.99", 199, "exactly 2 decimals accepted");
@@ -132,8 +136,13 @@ assert(paisa3 === 10005, "100.05 NPR → 10005 paisa (leading zero in paisa)");
 const paisa4 = parseNumericAmount("1,000.50");
 assert(paisa4 === 100050, "1,000.50 NPR → 100050 paisa (comma + decimal)");
 
+// Maximum amount round-trips correctly through integer paisa
+assert(formatAmountDisplay(MAX_AMOUNT_PAISA) === "999,999,999,999.99", "max amount displays correctly with integer paisa (no float errors)");
+
 // Verify no floating point arithmetic issues in display formatting
 assert(formatAmountDisplay(10050) === "100.50", "formatAmountDisplay(10050) → '100.50'");
+assert(formatAmountDisplay(1) === "0.01", "formatAmountDisplay(1) → '0.01' (single paisa)");
+assert(formatAmountDisplay(100) === "1.00", "formatAmountDisplay(100) → '1.00'");
 
 console.log("\n=== TEST GROUP 5: AMOUNT IN WORDS ===");
 
@@ -213,6 +222,15 @@ assert(!isValidDate("24-03-15"), "2-digit year rejected");
 assert(!isValidDate(""), "empty date rejected");
 assert(!isValidDate("2024-3-15"), "single-digit month rejected");
 assert(!isValidDate("2024-03-5"), "single-digit day rejected");
+
+// Explicit reject cases from PART 2 requirements
+assert(!isValidDate("2026-02-30"), "rejects 2026-02-30 (no Feb 30)");
+assert(!isValidDate("2026-13-01"), "rejects 2026-13-01 (month 13)");
+assert(!isValidDate("2026-00-10"), "rejects 2026-00-10 (month 00)");
+
+// Year 0000 rejected (invalid year, not a leap year)
+assert(!isValidDate("0000-02-29"), "rejects year 0000");
+assert(!isValidDate("0000-01-01"), "rejects year 0000");
 assert(!isValidDate("0000-01-01"), "year 0000 rejected");
 assert(!isValidDate("2024-12-32"), "day 32 in December rejected");
 assert(isValidDate("9999-12-31"), "max valid year 9999 accepted");
