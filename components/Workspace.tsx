@@ -9,6 +9,11 @@ import {
   formatDateDigits,
   formatAmountDisplay,
   validateAmount,
+  generateAmountWords,
+  checkAmountWordsConsistency,
+  validateChequeDate,
+  validatePayee,
+  isValidDate,
 } from "@/lib/amountWords";
 import { clampCalibration, validateCalibrationPair } from "@/lib/calibration";
 import { resolvePrintGeometry, rotatedContentOffset } from "@/lib/printGeometry";
@@ -88,10 +93,11 @@ interface PreviewProps {
 }
 
 function DirectFeedPreview({ template, date, payee, amount, amountWords, accountPayee, offsetX, offsetY }: PreviewProps) {
-  const dateDigits = date ? formatDateDigits(date) : "";
+  const dateDigits = date ? safeFormatDate(date) : "";
   const amountPaisa = validateAmount(amount).paisa;
   const words = amountWords || (amountPaisa > 0 ? amountToWordsFromPaisa(amountPaisa) : "");
   const [words1, words2] = amountPaisa > 0 ? splitWordsToLines(words, template) : ["", ""];
+  const normalizedPayee = safeNormalizePayee(payee);
 
   const calX = Number(offsetX ?? 0);
   const calY = Number(offsetY ?? 0);
@@ -162,9 +168,12 @@ function DirectFeedPreview({ template, date, payee, amount, amountWords, account
         Pay against this cheque to
       </div>
 
-      {/* Payee */}
-      {payee &&
-        renderField("payee", payee, template.fields.payee ?? { x: 12, y: 28, width: 90 })}
+       {/* Payee */}
+       {normalizedPayee &&
+         renderField("payee", normalizedPayee, {
+           ...template.fields.payee,
+           minFontSize: Math.max(template.fields.payee?.minFontSize ?? 7, MIN_PAYEE_FONT_SIZE),
+         })}
 
       {/* Or Bearer */}
       <div style={{
@@ -206,10 +215,11 @@ function DirectFeedPreview({ template, date, payee, amount, amountWords, account
 }
 
 function A4CarrierPreview({ template, profile, mode, date, payee, amount, amountWords, accountPayee, offsetX, offsetY }: PreviewProps & { profile: { x: number; y: number; pageWidth: number; pageHeight: number; rotate: 0 | 90 }; mode: ProfileKey }) {
-  const dateDigits = date ? formatDateDigits(date) : "";
+  const dateDigits = date ? safeFormatDate(date) : "";
   const amountPaisa = validateAmount(amount).paisa;
   const words = amountWords || (amountPaisa > 0 ? amountToWordsFromPaisa(amountPaisa) : "");
   const [words1, words2] = amountPaisa > 0 ? splitWordsToLines(words, template) : ["", ""];
+  const normalizedPayee = safeNormalizePayee(payee);
 
   const calX = Number(offsetX ?? 0);
   const calY = Number(offsetY ?? 0);
@@ -317,9 +327,12 @@ function A4CarrierPreview({ template, profile, mode, date, payee, amount, amount
           Pay against this cheque to
         </div>
 
-        {/* Payee */}
-        {payee &&
-          renderField("payee", payee, template.fields.payee ?? { x: 12, y: 28, width: 90 })}
+         {/* Payee */}
+         {normalizedPayee &&
+           renderField("payee", normalizedPayee, {
+             ...template.fields.payee,
+             minFontSize: Math.max(template.fields.payee?.minFontSize ?? 7, MIN_PAYEE_FONT_SIZE),
+           })}
 
         {/* Or Bearer */}
         <div style={{
