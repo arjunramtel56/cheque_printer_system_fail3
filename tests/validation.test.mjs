@@ -548,6 +548,411 @@ for (const [id, expectedY] of Object.entries(expectedApY)) {
   assert(t?.fields.accountPayee?.y === expectedY, `${id}: accountPayee Y = ${expectedY} (preserved bank-specific)`);
 }
 
+// ---------------------------------------------------------------------------
+// TEST GROUP 12: STALE WORDS CLEANUP (PART 2 requirement #3)
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 12: STALE WORDS CLEANUP ===");
+
+// 12.1: When amount becomes invalid, auto-generated words should be empty
+const staleWords1 = generateAmountWords("1000");
+assert(staleWords1 === "One Thousand Rupees Only", "generateAmountWords('1000') produces words");
+const staleWords2 = generateAmountWords("abc");
+assert(staleWords2 === "", "generateAmountWords('abc') produces empty (stale words cleared)");
+const staleWords3 = generateAmountWords("0");
+assert(staleWords3 === "", "generateAmountWords('0') produces empty (zero → no words)");
+
+// 12.2: checkAmountWordsConsistency — stale words from previous valid amount should not be consistent
+// When the amount changes to a new value, the old words should not match
+const sw1 = checkAmountWordsConsistency("2000", "One Thousand Rupees Only");
+assert(!sw1.consistent, "stale words from 1000 do not match 2000");
+assert(sw1.expected === "Two Thousand Rupees Only", "expected words regenerate for 2000");
+
+// 12.3: Amount invalidated then words cleared — consistency should fail
+const sw2 = checkAmountWordsConsistency("abc", "One Thousand Rupees Only");
+assert(!sw2.consistent, "invalid amount with any words → not consistent");
+
+// 12.4: The expected field always returns the canonical words for the current amount
+const sw3 = checkAmountWordsConsistency("500.50", "Five Hundred Rupees and Fifty Paisa Only");
+assert(sw3.consistent, "matching words for 500.50 consistent");
+const sw4 = checkAmountWordsConsistency("500.50", "Wrong words");
+assert(!sw4.consistent, "wrong words for 500.50 not consistent");
+assert(sw4.expected === "Five Hundred Rupees and Fifty Paisa Only", "expected field returns canonical words");
+
+// ---------------------------------------------------------------------------
+// TEST GROUP 13: MAXIMUM AMOUNT (PART 2 requirement #1, #2)
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 13: MAXIMUM AMOUNT ===");
+
+// 13.1 Maximum valid amount
+const maxCheck = validateAmount("999999999999.99");
+assert(maxCheck.valid && maxCheck.paisa === MAX_AMOUNT_PAISA, "maximum amount 999999999999.99 accepted as " + MAX_AMOUNT_PAISA + " paisa");
+
+// 13.2 Maximum amount with comma grouping
+const maxComma = validateAmount("999,999,999,999.99");
+assert(maxComma.valid && maxComma.paisa === MAX_AMOUNT_PAISA, "max amount with commas accepted");
+
+// 13.3 Maximum amount displays without floating-point errors
+const maxDisplay = formatAmountDisplay(MAX_AMOUNT_PAISA);
+assert(maxDisplay === "999,999,999,999.99", "max amount display uses integer paisa (no float errors): " + maxDisplay);
+
+// 13.4 Words for maximum amount
+const maxWords = amountToWordsFromPaisa(MAX_AMOUNT_PAISA);
+assert(maxWords.includes("Only") && maxWords.includes("Rupees"), "max amount words generated correctly");
+
+// 13.5 Amount just above maximum rejected
+const overMax = validateAmount("1000000000000.00");
+assert(!overMax.valid, "amount above maximum rejected");
+
+// 13.6 Amount with 3 decimal places rejected even if under max
+const threeDecimals = validateAmount("999999999999.999");
+assert(!threeDecimals.valid, "3 decimal places rejected even near max");
+
+// ---------------------------------------------------------------------------
+// TEST GROUP 14: UNICODE & SPECIAL CHARACTER PAYEES (PART 2 requirement #5)
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 14: UNICODE & SPECIAL CHARACTER PAYEES ===");
+
+// 14.1 Devanagari (Nepali) payee
+const unicode1 = validatePayee("कृष्ण प्रसाद शेर्मा");
+assert(unicode1.valid && unicode1.payee === "कृष्ण प्रसाद शेर्मा", "Devanagari payee accepted and preserved");
+
+// 14.2 Arabic script payee
+const unicode2 = validatePayee("أحمد محمد");
+assert(unicode2.valid && unicode2.payee === "أحمد محمد", "Arabic script payee accepted and preserved");
+
+// 14.3 Mixed script payee
+const unicode3 = validatePayee("John राम Doe");
+assert(unicode3.valid, "mixed-script payee accepted");
+
+// 14.4 Payee with emoji (should be rejected — emoji are not valid in payee names)
+const emojiPayee = validatePayee("Ram 🎉 Bahadur");
+assert(!emojiPayee.valid, "payee with emoji rejected");
+
+// 14.5 Payee with only special characters (non-empty after trim)
+const specialOnly = validatePayee("ABC & Co. #5 @ Ltd.");
+assert(specialOnly.valid, "payee with ampersand, hash, at-sign accepted");
+
+// 14.6 Payee with tabs and newlines normalized
+const tabbed = validatePayee("Ram\tBahadur\nThapa");
+assert(tabbed.valid && tabbed.payee === "Ram Bahadur Thapa", "tabs and newlines collapsed to spaces");
+
+// 14.7 Unicode payee that is at max length
+const unicodeMax = "क".repeat(MAX_PAYEE_CHARS);
+const unicodeMaxResult = validatePayee(unicodeMax);
+assert(unicodeMaxResult.valid, "Unicode payee at exactly max length accepted");
+
+// 14.8 Unicode payee exceeding max length
+const unicodeTooLong2 = "क".repeat(MAX_PAYEE_CHARS + 1);
+const unicodeTooLongResult = validatePayee(unicodeTooLong2);
+assert(!unicodeTooLongResult.valid, "overlength Unicode payee rejected");
+
+// ---------------------------------------------------------------------------
+// TEST GROUP 15: DATE VALIDATION — ADDITIONAL EDGE CASES (PART 2 requirement #4)
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 15: DATE VALIDATION EDGE CASES ===");
+
+// 15.1 February 29 in various leap years
+assert(isValidDate("1600-02-29"), "1600 is a leap year (div by 400) — Feb 29 valid");
+assert(!isValidDate("1700-02-29"), "1700 is NOT a leap year (div by 100 not 400) — Feb 29 rejected");
+assert(!isValidDate("1800-02-29"), "1800 is NOT a leap year — Feb 29 rejected");
+assert(!isValidDate("1900-02-29"), "1900 is NOT a leap year — Feb 29 rejected");
+assert(isValidDate("2000-02-29"), "2000 is a leap year — Feb 29 valid");
+
+// 15.2 Months with 31 vs 30 days
+assert(isValidDate("2024-01-31"), "January has 31 days");
+assert(!isValidDate("2024-01-32"), "January 32 rejected");
+assert(isValidDate("2024-03-31"), "March has 31 days");
+assert(!isValidDate("2024-03-32"), "March 32 rejected");
+assert(isValidDate("2024-05-31"), "May has 31 days");
+assert(!isValidDate("2024-05-32"), "May 32 rejected");
+assert(isValidDate("2024-07-31"), "July has 31 days");
+assert(!isValidDate("2024-07-32"), "July 32 rejected");
+assert(isValidDate("2024-08-31"), "August has 31 days");
+assert(isValidDate("2024-10-31"), "October has 31 days");
+assert(isValidDate("2024-12-31"), "December has 31 days");
+assert(!isValidDate("2024-12-32"), "December 32 rejected");
+
+// 15.3 Months with 30 days
+assert(isValidDate("2024-04-30"), "April has 30 days");
+assert(!isValidDate("2024-04-31"), "April 31 rejected");
+assert(isValidDate("2024-06-30"), "June has 30 days");
+assert(!isValidDate("2024-06-31"), "June 31 rejected");
+assert(isValidDate("2024-09-30"), "September has 30 days");
+assert(!isValidDate("2024-09-31"), "September 31 rejected");
+assert(isValidDate("2024-11-30"), "November has 30 days");
+assert(!isValidDate("2024-11-31"), "November 31 rejected");
+
+// 15.4 Date round-trip through formatDateDigits
+assert(formatDateDigits("2024-02-29") === "29022024", "leap day formats to DDMMYYYY");
+assert(formatDateDigits("2023-02-28") === "28022023", "non-leap Feb 28 formats correctly");
+
+// 15.5 validateChequeDate rejects future dates
+const futureIso = "9999-12-31";
+assert(!validateChequeDate(futureIso).valid, "far-future date rejected by validateChequeDate");
+
+// 15.6 Date with extra whitespace — should be rejected by the strict format check
+assert(!isValidDate(" 2024-03-15"), "date with leading space rejected");
+assert(!isValidDate("2024-03-15 "), "date with trailing space rejected");
+
+// ---------------------------------------------------------------------------
+// TEST GROUP 16: AMOUNT-TO-WORDS CONSISTENCY — USER EDIT PRESERVATION
+// (PART 2 requirement #3: preserve manual edits, validate before printing)
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 16: USER EDITED WORDS VALIDATION ===");
+
+// 16.1 User edits words to be consistent with the amount
+const userConsistent = checkAmountWordsConsistency("1000", "One Thousand Rupees Only");
+assert(userConsistent.consistent, "user-typed matching words consistent");
+
+// 16.2 User edits words to be inconsistent — should be flagged
+const userInconsistent = checkAmountWordsConsistency("1000", "One Thousand Rupees and Fifty Paisa Only");
+assert(!userInconsistent.consistent, "user-typed inconsistent words flagged");
+
+// 16.3 Case-insensitive comparison allows user style variations
+const caseVariant = checkAmountWordsConsistency("100", "one hundred rupees only");
+assert(caseVariant.consistent, "case-insensitive user variation accepted");
+
+// 16.5 Correct words with extra whitespace and different case
+const cleanVariant = checkAmountWordsConsistency("1000", "  ONE   THOUSAND   RUPEES   ONLY  ");
+assert(cleanVariant.consistent, "canonical words with extra whitespace + uppercase still consistent");
+
+// ---------------------------------------------------------------------------
+// TEST GROUP 17: AMOUNT PARSER — EXHAUSTIVE MALFORMED INPUT REJECTION
+// (PART 2 requirement #1)
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 17: AMOUNT PARSER — EXHAUSTIVE MALFORMED INPUT REJECTION ===");
+
+// 17.1 Non-numeric strings
+assertRejects("abc", "rejects pure alphabetic");
+assertRejects("123abc", "rejects trailing alphabetic suffix");
+assertRejects("abc123", "rejects leading alphabetic prefix");
+assertRejects("1.2.3", "rejects multiple decimal points");
+assertRejects("10..50", "rejects double decimal point");
+assertRejects("10.123", "rejects 3 decimal places");
+
+// 17.2 Negative values
+assertRejects("-100", "rejects negative");
+assertRejects("-100.50", "rejects negative with decimals");
+assertRejects("-0.01", "rejects negative fractional");
+
+// 17.3 Empty / whitespace only
+assertRejects("", "rejects empty string");
+assertRejects("   ", "rejects whitespace-only");
+assertRejects("\t\t", "rejects tab-only");
+assertRejects("\n\t ", "rejects mixed whitespace");
+
+// 17.4 Special float values
+assertRejects("Infinity", "rejects Infinity string");
+assertRejects("-Infinity", "rejects -Infinity string");
+assertRejects("+Infinity", "rejects +Infinity string");
+assertRejects("NaN", "rejects NaN string");
+assert(!validateAmount("Infinity").valid, "validNumber(Infinity) rejects");
+assert(!validateAmount("-Infinity").valid, "validNumber(-Infinity) rejects");
+assert(!validateAmount("NaN").valid, "validNumber(NaN) rejects");
+
+// 17.5 Scientific notation
+assertRejects("1e5", "rejects scientific notation (lowercase)");
+assertRejects("1E5", "rejects scientific notation (uppercase)");
+assertRejects("1.5e3", "rejects scientific notation with decimal");
+
+// 17.6 Trailing/leading decimal point
+assertRejects("100.", "rejects trailing decimal");
+assertRejects(".50", "rejects leading decimal");
+assertRejects("100.0.", "rejects trailing dot after decimal");
+
+// 17.7 Commas in wrong positions
+assertRejects("1,00", "rejects invalid comma group 1,00");
+assertRejects("1,0000", "rejects invalid comma group 1,0000");
+assertRejects("1,00,000", "rejects Indian comma grouping");
+assertRejects("1,000,00", "rejects trailing bad comma group");
+assertRejects(",100", "rejects leading comma");
+assertRejects("100,", "rejects trailing comma");
+assertRejects("1,000.50.00", "rejects multiple decimals after comma");
+
+// 17.8 Leading zeros
+assertRejects("007", "rejects leading zeros (007)");
+assertRejects("00", "rejects double zero");
+
+// 17.9 Plus sign
+assertRejects("+100", "rejects positive sign prefix");
+assertRejects("+100.50", "rejects positive sign with decimals");
+
+// 17.10 Hexadecimal
+assertRejects("0x100", "rejects hex notation");
+assertRejects("0xFF", "rejects hex with letters");
+
+// 17.11 Whitespace inside (internal space)
+assertRejects("1 000", "rejects internal space");
+assertRejects("1000 00", "rejects internal space between digits");
+
+// 17.12 Currency symbols
+assertRejects("$100", "rejects dollar prefix");
+assertRejects("100$", "rejects dollar suffix");
+assertRejects("Rs. 100", "rejects currency prefix with text");
+assertRejects("100 NPR", "rejects currency suffix with text");
+assertRejects("₨100", "rejects rupee symbol prefix");
+
+// ---------------------------------------------------------------------------
+// TEST GROUP 18: PAYEE OVERFLOW PREVENTION (PART 2 requirement #5)
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 18: PAYEE OVERFLOW PREVENTION ===");
+
+// 18.1 Very long ASCII payee at max length is accepted (overflow prevention is via font-fitting)
+const longAscii = "A".repeat(MAX_PAYEE_CHARS);
+const longAsciiResult = validatePayee(longAscii);
+assert(longAsciiResult.valid, "max-length ASCII payee accepted (overflow handled by font-fitting)");
+
+// 18.2 Payee slightly over max length is rejected
+const overLong = "A".repeat(MAX_PAYEE_CHARS + 1);
+const overLongResult = validatePayee(overLong);
+assert(!overLongResult.valid, "payee exceeding max length rejected");
+
+// 18.3 Unicode payee that exceeds byte length but not char count
+const longUnicode = "कष्ट".repeat(Math.floor(MAX_PAYEE_CHARS / 4));
+const longUnicodeResult = validatePayee(longUnicode);
+assert(longUnicodeResult.valid, "long Unicode payee within char limit accepted");
+
+// 18.4 Empty after normalization
+const spacesOnly = "   \t\n  ";
+const spacesResult = validatePayee(spacesOnly);
+assert(!spacesResult.valid, "whitespace-only payee (with tabs/newlines) rejected");
+
+// 18.5 Payee with leading/trailing special whitespace characters
+const specialWs = "\u00A0Ram Bahadur\u00A0";
+const specialWsResult = validatePayee(specialWs);
+assert(specialWsResult.valid, "payee with non-breaking spaces trimmed and accepted");
+
+// ---------------------------------------------------------------------------
+// TEST GROUP 19: A/C PAYEE ONLY — RENDERING PRESERVATION (PART 2 requirement #6)
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 19: A/C PAYEE ONLY RENDERING PRESERVATION ===");
+
+// 19.1 Verify accountPayee field exists in every template
+for (const id of ["siddhartha", "nabil", "nicadc", "everest", "bankpokhara"]) {
+  const t = getTemplate(id);
+  const ap = t?.fields.accountPayee;
+  assert(ap !== undefined, `${id}: accountPayee field exists`);
+  assert(ap?.align === "center", `${id}: accountPayee is center-aligned`);
+  assert(ap?.x === 0, `${id}: accountPayee starts at x=0 (full-width centering)`);
+  assert(typeof ap?.y === "number" && ap.y > 0, `${id}: accountPayee has positive y-coordinate`);
+  assert(ap?.width === t?.widthMm, `${id}: accountPayee width equals cheque width (full-width centering)`);
+}
+
+// 19.2 Verify no template has accountPayee y=0 (would render at very top edge)
+for (const t of getAllTemplates()) {
+  const apY = t.fields.accountPayee?.y;
+  assert(typeof apY === "number" && apY > 0 && apY < t.heightMm, `${t.bankName}: accountPayee y (${apY}) is within cheque bounds`);
+}
+
+// 19.3 Verify accountPayee does not overlap with date field (date is at y~6)
+for (const t of getAllTemplates()) {
+  const apY = t.fields.accountPayee?.y ?? 0;
+  const dateY = t.fields.date?.y ?? 0;
+  assert(apY > dateY, `${t.bankName}: accountPayee (y=${apY}) is below date field (y=${dateY}) — no overlap`);
+}
+
+// ---------------------------------------------------------------------------
+// TEST GROUP 20: FINAL PRINT VALIDATION GATE (PART 2 requirement #7)
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 20: FINAL PRINT VALIDATION GATE ===");
+
+function simulateFinalPrintGate(
+  template,
+  date,
+  payee,
+  amount,
+  amountWords,
+  printMode,
+  cal,
+) {
+  // This mirrors the exact sequence in Workspace.handlePrint()
+  if (!date || !validateChequeDate(date).valid) return { valid: false, error: "Invalid date." };
+  const payeeCheck = validatePayee(payee);
+  if (!payeeCheck.valid) return { valid: false, error: "Payee name is required." };
+  const amountValidation = validateAmount(amount);
+  if (!amountValidation.valid) return { valid: false, error: "Invalid amount." };
+  if (amountValidation.paisa === 0) return { valid: false, error: "Amount must be greater than zero." };
+  if (!amountWords.trim()) return { valid: false, error: "Amount in words is required." };
+  const consistency = checkAmountWordsConsistency(amount, amountWords);
+  if (!consistency.consistent) return { valid: false, error: "Amount in words do not match." };
+  if (!template) return { valid: false, error: "No bank template selected." };
+  if (!printMode) return { valid: false, error: "Print mode not selected." };
+  const calError = validateCalibrationPair(cal.x, cal.y);
+  if (calError) return { valid: false, error: calError };
+  const profile = template.profiles[printMode];
+  if (!profile) return { valid: false, error: "Print profile not available." };
+  const geom = resolvePrintGeometry(template, printMode);
+  const geomErrors = validatePrintGeometry(geom, template, printMode);
+  if (geomErrors) return { valid: false, error: "Invalid layout." };
+  const boundsErrors = validateCalibratedBounds(template, printMode);
+  if (boundsErrors) return { valid: false, error: "Cheque off page." };
+  return { valid: true, error: "" };
+}
+
+// 20.1 Fully valid print data passes all checks
+const f1 = simulateFinalPrintGate(
+  siddhartha,
+  "2024-03-15",
+  "Ram Bahadur Thapa",
+  "25000.50",
+  "Twenty-Five Thousand Rupees and Fifty Paisa Only",
+  "custom_short",
+  { x: 0, y: 0 },
+);
+assert(f1.valid, "fully valid print data passes");
+
+// 20.2 Missing bank template
+const f2 = simulateFinalPrintGate(null, "2024-03-15", "Ram", "1000", "One Thousand Rupees Only", "custom_short", { x: 0, y: 0 });
+assert(!f2.valid, "missing template blocked");
+
+// 20.3 Future date blocked
+const f3 = simulateFinalPrintGate(siddhartha, "9999-12-31", "Ram", "1000", "One Thousand Rupees Only", "custom_short", { x: 0, y: 0 });
+assert(!f3.valid, "future date blocked");
+
+// 20.4 Invalid amount (malformed) blocked
+const f4 = simulateFinalPrintGate(siddhartha, "2024-03-15", "Ram", "abc", "One Thousand Rupees Only", "custom_short", { x: 0, y: 0 });
+assert(!f4.valid, "malformed amount blocked");
+
+// 20.5 Zero amount blocked
+const f5 = simulateFinalPrintGate(siddhartha, "2024-03-15", "Ram", "0", "Zero Rupees Only", "custom_short", { x: 0, y: 0 });
+assert(!f5.valid, "zero amount blocked");
+
+// 20.6 Empty words blocked
+const f6 = simulateFinalPrintGate(siddhartha, "2024-03-15", "Ram", "5000", "", "custom_short", { x: 0, y: 0 });
+assert(!f6.valid, "empty words blocked");
+
+// 20.7 Inconsistent words blocked
+const f7 = simulateFinalPrintGate(siddhartha, "2024-03-15", "Ram", "5000", "One Thousand Rupees Only", "custom_short", { x: 0, y: 0 });
+assert(!f7.valid, "inconsistent words blocked");
+
+// 20.8 Invalid date (Feb 30) blocked
+const f8 = simulateFinalPrintGate(siddhartha, "2026-02-30", "Ram", "1000", "One Thousand Rupees Only", "custom_short", { x: 0, y: 0 });
+assert(!f8.valid, "impossible date blocked");
+
+// 20.9 Out-of-range calibration blocked
+const f9 = simulateFinalPrintGate(siddhartha, "2024-03-15", "Ram", "1000", "One Thousand Rupees Only", "custom_short", { x: 99, y: 0 });
+assert(!f9.valid, "out-of-range calibration blocked");
+
+// 20.10 NaN calibration blocked
+const f10 = simulateFinalPrintGate(siddhartha, "2024-03-15", "Ram", "1000", "One Thousand Rupees Only", "custom_short", { x: NaN, y: 0 });
+assert(!f10.valid, "NaN calibration blocked");
+
+// 20.11 Empty payee blocked
+const f11 = simulateFinalPrintGate(siddhartha, "2024-03-15", "", "1000", "One Thousand Rupees Only", "custom_short", { x: 0, y: 0 });
+assert(!f11.valid, "empty payee blocked");
+
+// 20.12 A4 Carrier mode with valid data passes
+const f12 = simulateFinalPrintGate(siddhartha, "2024-06-01", "Sita Devi", "100.50", "One Hundred Rupees and Fifty Paisa Only", "a4_vertical", { x: 2.5, y: -1.0 });
+assert(f12.valid, "A4 Carrier valid data passes");
+
+// 20.13 All templates pass the final gate
+for (const t of getAllTemplates()) {
+  const result = simulateFinalPrintGate(
+    t, "2024-06-01", "Test Payee", "2500.00", "Two Thousand Five Hundred Rupees Only", "custom_short", { x: 0, y: 0 },
+  );
+  assert(result.valid, t.bankName + ": final print gate passes");
+}
+
 console.log("\n=== VALIDATION TEST SUMMARY ===");
 console.log("Passed: " + passed);
 console.log("Failed: " + failed);
