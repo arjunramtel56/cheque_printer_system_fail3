@@ -119,23 +119,22 @@ export function resolvePrintGeometry(template: BankTemplate, mode: ProfileKey): 
 /**
  * Inner-content placement for a rotated Direct-Feed container.
  *
- * CSS `rotate(90deg)` is clockwise and uses the element's top-left as origin by
- * default (transform-origin: 0 0 on the inner div). For a cheque of size
- * W×H rotated 90°, the rotated box becomes H×W. To make that rotated box fill
- * the page box (H×W) starting at the origin, the cheque's *pre-rotation* top-
- * left must be at (0, W): after rotation, the corner that was at (0, W) lands
- * at (W, 0)... equivalently, translate by `top = chequeH` so the rotated box
- * occupies [0, H] × [0, W].
+ * CSS `rotate(90deg)` rotates content clockwise by 90°. The PrintOutput
+ * component sets `transform-origin: 0 0` (top-left) on the rotated div, so the
+ * rotation is performed around the element's top-left corner.
  *
- * Concretely: with rotate=90 the page box is 88.9×190.5 and the cheque is
- * 190.5×88.9. The rotated cheque is 88.9×190.5 — identical to the page box —
- * so the correct offset is left=0, top=0 when transform-origin is the centre
- * (CSS default), OR left=0, top=chequeH when transform-origin is 0 0.
+ * For a cheque of size W×H rotated 90° CW with top-left origin:
+ *   - A point (x, y) maps to (y, -x) relative to the origin.
+ *   - The four corners of the cheque (0,0), (W,0), (W,H), (0,H) map to
+ *     (0,0), (0,-W), (H,-W), (H,0).
+ *   - The rotated bounding box is [0, H] × [-W, 0].
  *
- * We use the centre-origin convention (offset 0,0) because the PrintOutput sets
- * the rotation on the inner div without overriding transform-origin, so the
- * rotated bounding box already matches the container and no translation is
- * required. Returning 0,0 here fixes the previous negative-offset bug.
+ * To make this bounding box fill the page box [0, H] × [0, W], we shift the
+ * element down by W: offset = (left=0, top=chequeW).
+ *
+ * Concretely: with rotate=90 the page box is 88.9×190.5 (H×W) and the cheque
+ * is 190.5×88.9 (W×H). The offset (0, 190.5) positions the rotated bounding
+ * box to exactly fill the page box.
  */
 export function rotatedContentOffset(geom: PrintGeometry): { leftMm: number; topMm: number } {
   if (geom.rotate !== 90) return { leftMm: 0, topMm: 0 };

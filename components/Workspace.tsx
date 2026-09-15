@@ -5,11 +5,10 @@ import { getAllTemplates, getTemplate } from "@/lib/templates";
 import type { BankTemplate, ProfileKey, Calibration } from "@/lib/types";
 import { isDirectFeed } from "@/lib/types";
 import {
-  amountToWordsFromPaisa,
+    amountToWordsFromPaisa,
   formatDateDigits,
   formatAmountDisplay,
   validateAmount,
-  generateAmountWords,
   checkAmountWordsConsistency,
   validateChequeDate,
   validatePayee,
