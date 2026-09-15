@@ -129,10 +129,9 @@ for (const t of all) {
   // custom_long keeps same orientation
   if (dfShort.rotate !== 90) throw new Error(t.bankName + " custom_short should rotate 90");
   if (dfLong.rotate !== 0) throw new Error(t.bankName + " custom_long should rotate 0");
-  // Page sizes for direct feed should be close to standard A4 (since we inject actual @page size at print time)
-  // but the x/y offsets should place cheque within bounds
-  if (dfShort.x < 0 || dfShort.y < 0) throw new Error(t.bankName + " custom_short has negative offset");
-  if (dfLong.x < 0 || dfLong.y < 0) throw new Error(t.bankName + " custom_long has negative offset");
+  // Page sizes for direct feed should match cheque dimensions (page box = cheque)
+  if (dfShort.pageWidth !== 88.9 || dfShort.pageHeight !== 190.5) throw new Error(t.bankName + " custom_short page dimensions should match cheque height x width (88.9 x 190.5)");
+  if (dfLong.pageWidth !== 190.5 || dfLong.pageHeight !== 88.9) throw new Error(t.bankName + " custom_long page dimensions should match cheque size (190.5 x 88.9)");
 }
 console.log("TEST_20_DIRECT_FEED_PROFILES: OK");
 

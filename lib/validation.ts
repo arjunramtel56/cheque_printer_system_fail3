@@ -16,6 +16,8 @@
 import type { BankTemplate, ProfileKey, PrintProfile } from "./types.ts";
 import { isDirectFeed } from "./types.ts";
 import type { PrintGeometry } from "./printGeometry.ts";
+import { calibratedBounds } from "./printGeometry.ts";
+import { CALIBRATION_MAX_MM } from "./calibration.ts";
 
 export interface ValidationError {
   code: string;
@@ -118,10 +120,35 @@ export function validateBankTemplate(template: BankTemplate): ValidationResult {
     if (p.rotate !== 0 && p.rotate !== 90) {
       errors.push({ code: "PROFILE_ROTATE_INVALID", message: `${id}: profile '${key}' rotate must be 0 or 90 (got ${p.rotate}).`, path: ctx(`profiles.${key}.rotate`) });
     }
-    if (p.pageWidth <= 0 || p.pageHeight <= 0) {
-      errors.push({ code: "PROFILE_DIMENSION_INVALID", message: `${id}: profile '${key}' has non-positive page dimensions.`, path: ctx(`profiles.${key}`) });
-    }
-  }
+     if (p.pageWidth <= 0 || p.pageHeight <= 0) {
+       errors.push({ code: "PROFILE_DIMENSION_INVALID", message: `${id}: profile '${key}' has non-positive page dimensions.`, path: ctx(`profiles.${key}`) });
+     }
+
+     // 2b. Profile page dimensions must match the expected page size for the mode.
+     // Direct Feed: page box = cheque (swapped when rotate=90).
+     // A4 Carrier: page box = A4 portrait (210×297) or landscape (297×210).
+     if (isDirectFeed(key)) {
+       const expW = p.rotate === 90 ? heightMm : widthMm;
+       const expH = p.rotate === 90 ? widthMm : heightMm;
+       if (Math.abs(p.pageWidth - expW) > 0.05 || Math.abs(p.pageHeight - expH) > 0.05) {
+         errors.push({
+           code: "DF_PROFILE_DIM_MISMATCH",
+           message: `${id}: profile '${key}' page dimensions (${p.pageWidth}×${p.pageHeight}) should be ${expW}×${expH} for rotate ${p.rotate}.`,
+           path: ctx(`profiles.${key}`),
+         });
+       }
+     } else {
+       const expW = key === "a4_vertical" ? 210 : 297;
+       const expH = key === "a4_vertical" ? 297 : 210;
+       if (Math.abs(p.pageWidth - expW) > 0.05 || Math.abs(p.pageHeight - expH) > 0.05) {
+         errors.push({
+           code: "A4_PROFILE_DIM_MISMATCH",
+           message: `${id}: profile '${key}' page dimensions (${p.pageWidth}×${p.pageHeight}) should be ${expW}×${expH}.`,
+           path: ctx(`profiles.${key}`),
+         });
+       }
+     }
+   }
 
   // 3. Field coordinates
   const fieldLabels: Record<string, string> = {
@@ -236,9 +263,70 @@ export function validatePrintGeometry(geom: PrintGeometry, template: BankTemplat
     if (chequeY < -0.05) {
       errors.push({ code: "A4_CHEQUE_OFF_PAGE_TOP", message: `${mode}: cheque y is negative (${chequeY}).`, path: mode });
     }
-    if (chequeY + chequeH > pageH + 0.05) {
-      errors.push({ code: "A4_CHEQUE_OFF_PAGE_BOTTOM", message: `${mode}: cheque bottom edge (${(chequeY + chequeH).toFixed(2)}) exceeds page height (${pageH}).`, path: mode });
-    }
+     if (chequeY + chequeH > pageH + 0.05) {
+       errors.push({ code: "A4_CHEQUE_OFF_PAGE_BOTTOM", message: `${mode}: cheque bottom edge (${(chequeY + chequeH).toFixed(2)}) exceeds page height (${pageH}).`, path: mode });
+     }
+   }
+
+  return errors.length ? errors : null;
+}
+
+// ---------------------------------------------------------------------------
+// Calibrated geometry validation (A4 Carrier — cheque stays on page at max cal)
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate that, even at maximum calibration (±25 mm in each axis), the cheque
+ * never leaves the A4 page. This is the critical safety check: a template that
+ * fits at base position but is too close to an edge would be pushed off-page by
+ * calibration at print time.
+ *
+ * For Direct Feed the page box IS the cheque, so calibration does not move the
+ * cheque relative to the page — no edge check is needed (but finiteness is
+ * still confirmed).
+ *
+ * Returns null if safe, or a list of errors if the cheque can escape the page.
+ */
+export function validateCalibratedBounds(template: BankTemplate, mode: ProfileKey): ValidationResult {
+  const errors: ValidationError[] = [];
+
+  if (isDirectFeed(mode)) {
+    return null;
+  }
+
+  // A4 Carrier
+  const bounds = calibratedBounds(template, mode);
+  const profile = template.profiles[mode];
+  const pageW = profile.pageWidth;
+  const pageH = profile.pageHeight;
+
+  if (bounds.minX < -0.05) {
+    errors.push({
+      code: "A4_CAL_OVERFLOW_LEFT",
+      message: `${mode}: at max calibration (-${CALIBRATION_MAX_MM}mm), cheque would be ${Math.abs(bounds.minX).toFixed(1)}mm off the left edge.`,
+      path: mode,
+    });
+  }
+  if (bounds.maxRight > pageW + 0.05) {
+    errors.push({
+      code: "A4_CAL_OVERFLOW_RIGHT",
+      message: `${mode}: at max calibration (+${CALIBRATION_MAX_MM}mm), cheque right edge (${bounds.maxRight.toFixed(1)}mm) exceeds page width (${pageW}mm).`,
+      path: mode,
+    });
+  }
+  if (bounds.minY < -0.05) {
+    errors.push({
+      code: "A4_CAL_OVERFLOW_TOP",
+      message: `${mode}: at max calibration (-${CALIBRATION_MAX_MM}mm), cheque would be ${Math.abs(bounds.minY).toFixed(1)}mm off the top edge.`,
+      path: mode,
+    });
+  }
+  if (bounds.maxBottom > pageH + 0.05) {
+    errors.push({
+      code: "A4_CAL_OVERFLOW_BOTTOM",
+      message: `${mode}: at max calibration (+${CALIBRATION_MAX_MM}mm), cheque bottom edge (${bounds.maxBottom.toFixed(1)}mm) exceeds page height (${pageH}mm).`,
+      path: mode,
+    });
   }
 
   return errors.length ? errors : null;

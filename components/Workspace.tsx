@@ -16,8 +16,8 @@ import {
   isValidDate,
 } from "@/lib/amountWords";
 import { clampCalibration, validateCalibrationPair } from "@/lib/calibration";
-import { resolvePrintGeometry, rotatedContentOffset } from "@/lib/printGeometry";
-import { validatePrintGeometry } from "@/lib/validation";
+import { resolvePrintGeometry, rotatedContentOffset, calibratedBounds } from "@/lib/printGeometry";
+import { validatePrintGeometry, validateCalibratedBounds } from "@/lib/validation";
 
 // Global minimum font size floor to prevent unreadable output
 export const MIN_PAYEE_FONT_SIZE = 6;
@@ -1235,6 +1235,15 @@ export default function Workspace() {
     const geomErrors = validatePrintGeometry(geom, resolvedTemplate, printMode);
     if (geomErrors) {
       setPrintError(`Print geometry invalid: ${geomErrors.map((e) => e.message).join(" ")}`);
+      return;
+    }
+
+    // STEP 5c: CALIBRATED BOUNDS CHECK — verify the cheque stays within the
+    // page even at maximum ±25 mm calibration. This is the safety net that
+    // prevents printing a template whose base position is too close to an edge.
+    const calBoundsErrors = validateCalibratedBounds(resolvedTemplate, printMode);
+    if (calBoundsErrors) {
+      setPrintError(`Calibration would push cheque off page: ${calBoundsErrors.map((e) => e.message).join(" ")}`);
       return;
     }
     // STEP 6: ENTER PRINTING STATE

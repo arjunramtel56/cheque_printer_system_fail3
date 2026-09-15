@@ -19,8 +19,9 @@
 //   print time). Container = A4 box. Never reuses Direct Feed page positioning.
 // ---------------------------------------------------------------------------
 
-import type { BankTemplate, ProfileKey } from "./types.ts";
+import type { BankTemplate, ProfileKey, Calibration } from "./types.ts";
 import { isDirectFeed } from "./types.ts";
+import { CALIBRATION_MAX_MM } from "./calibration.ts";
 
 // ---------------------------------------------------------------------------
 // Canonical size constants — the ONLY definitions used across the engine.
@@ -142,4 +143,88 @@ export function rotatedContentOffset(geom: PrintGeometry): { leftMm: number; top
   // cheque). The rotated bounding box equals the container, so center origin
   // places it exactly — no offset needed.
   return { leftMm: 0, topMm: 0 };
+}
+
+/**
+ * Resolve geometry with calibration applied to the cheque's page position.
+ *
+ * For Direct Feed the cheque fills the entire page box, so calibration
+ * shifts the *field content* within the container (fields are offset by
+ * calX/calY relative to the cheque origin). The page box / container does
+ * not change.
+ *
+ * For A4 Carrier the cheque is inset on the A4 page; calibration shifts the
+ * cheque's top-left position (profile.x + calX, profile.y + calY).
+ *
+ * This is the SINGLE function both the screen preview and the print output
+ * use to compute the final cheque-on-page bounding box, guaranteeing
+ * preview == print output geometry.
+ */
+export function resolveCalibratedGeometry(
+  template: BankTemplate,
+  mode: ProfileKey,
+  calibration: Calibration,
+): PrintGeometry & {
+  /** Final cheque top-left on the carrier page (A4) in mm, with calibration applied */
+  finalChequeX: number;
+  /** Final cheque top-left on the carrier page (A4) in mm, with calibration applied */
+  finalChequeY: number;
+} {
+  const base = resolvePrintGeometry(template, mode);
+  return {
+    ...base,
+    chequeX: base.chequeX + calibration.x,
+    chequeY: base.chequeY + calibration.y,
+    finalChequeX: base.chequeX + calibration.x,
+    finalChequeY: base.chequeY + calibration.y,
+  };
+}
+
+/**
+ * Compute the worst-case calibrated bounding box for a template + mode.
+ *
+ * Returns the extreme positions the cheque can reach when calibration is
+ * pushed to ±CALIBRATION_MAX_MM in both axes. Used to guarantee that even
+ * at maximum calibration the cheque never leaves the page.
+ *
+ * - Direct Feed: the page box IS the cheque, so calibration does not move
+ *   the cheque relative to the page — the bounding box is the page itself.
+ *
+ * - A4 Carrier: cheque base position is profile.x/y; calibration can shift
+ *   it by ±MAX in X and Y. We compute the min and max achievable edges.
+ */
+export function calibratedBounds(
+  template: BankTemplate,
+  mode: ProfileKey,
+): {
+  minX: number;
+  minY: number;
+  maxRight: number;
+  maxBottom: number;
+} {
+  const profile = template.profiles[mode];
+  const chequeW = template.widthMm;
+  const chequeH = template.heightMm;
+  const cal = CALIBRATION_MAX_MM;
+
+  if (isDirectFeed(mode)) {
+    // Page box == cheque. Calibration only shifts field content inside the
+    // cheque box; the cheque bounding box on the page is always [0,0]..[pageW,pageH].
+    const geom = resolvePrintGeometry(template, mode);
+    return {
+      minX: 0,
+      minY: 0,
+      maxRight: geom.pageW,
+      maxBottom: geom.pageH,
+    };
+  }
+
+  // A4 Carrier — worst case: calibration pushes cheque in negative direction
+  // (minX = profile.x - cal) or positive direction (maxRight = profile.x + chequeW + cal).
+  return {
+    minX: profile.x - cal,
+    minY: profile.y - cal,
+    maxRight: profile.x + chequeW + cal,
+    maxBottom: profile.y + chequeH + cal,
+  };
 }

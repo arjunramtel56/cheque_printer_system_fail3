@@ -12,6 +12,8 @@ import {
   CALIBRATION_MIN_MM,
   CALIBRATION_MAX_MM,
 } from "../lib/calibration.ts";
+import { calibratedBounds } from "../lib/printGeometry.ts";
+import { validateBankTemplate, validatePrintGeometry, validateCalibratedBounds } from "../lib/validation.ts";
 
 let passed = 0;
 let failed = 0;
@@ -333,21 +335,59 @@ assert(validateCalibrationPair(NaN, 0) !== null, "NaN X rejected");
 assert(validateCalibrationPair(0, Infinity) !== null, "Infinity Y rejected");
 
 // 6.4 Range safety: even at max calibration the A4 cheque box stays printable
+//      AND: the base profile position leaves enough margin for ±25 mm calibration
 for (const t of getAllTemplates()) {
   for (const key of ["a4_vertical", "a4_horizontal"]) {
     const p = t.profiles[key];
-    // Cheque must still fit even when calibrated inward to the worst edge
+    // Base position fits page width (cheque right edge <= pageWidth)
     assert(p.x + t.widthMm <= p.pageWidth, t.bankName + " " + key + ": base position fits page width");
+    // Base position fits page height
     assert(p.y + t.heightMm <= p.pageHeight, t.bankName + " " + key + ": base position fits page height");
+    // At MAX calibration (+25mm right/bottom), cheque right/bottom must still be on page
+    assert(p.x + t.widthMm + CALIBRATION_MAX_MM <= p.pageWidth + 0.05, t.bankName + " " + key + ": max +X cal keeps cheque on page");
+    assert(p.y + t.heightMm + CALIBRATION_MAX_MM <= p.pageHeight + 0.05, t.bankName + " " + key + ": max +Y cal keeps cheque on page");
+    // At MIN calibration (-25mm left/top), cheque must not go off the left/top edge
+    assert(p.x - CALIBRATION_MAX_MM >= -0.05, t.bankName + " " + key + ": max -X cal keeps cheque on page");
+    assert(p.y - CALIBRATION_MAX_MM >= -0.05, t.bankName + " " + key + ": max -Y cal keeps cheque on page");
   }
 }
+
+// 6.5 Direct Feed profiles have correct page dimensions (cheque size, swapped for rotate=90)
+for (const t of getAllTemplates()) {
+  const cs = t.profiles.custom_short;
+  assert(cs.pageWidth === 88.9 && cs.pageHeight === 190.5, t.bankName + " custom_short: page dims = 88.9×190.5 (cheque H×W, swapped)");
+  assert(cs.rotate === 90, t.bankName + " custom_short: rotate=90");
+  assert(cs.x === 0 && cs.y === 0, t.bankName + " custom_short: x=y=0 (cheque fills page box)");
+
+  const cl = t.profiles.custom_long;
+  assert(cl.pageWidth === 190.5 && cl.pageHeight === 88.9, t.bankName + " custom_long: page dims = 190.5×88.9 (cheque W×H)");
+  assert(cl.rotate === 0, t.bankName + " custom_long: rotate=0");
+  assert(cl.x === 0 && cl.y === 0, t.bankName + " custom_long: x=y=0 (cheque fills page box)");
+}
+
+// 6.6 DF calibration does NOT affect A4 and vice versa — state independence
+//     (mirrors Workspace two-state model)
+function simulateCalIndependence() {
+  let dfCal = { x: 0, y: 0 };
+  let a4Cal = { x: 0, y: 0 };
+  dfCal = { x: clampCalibration(1.5), y: clampCalibration(0.7) };
+  const dfX = dfCal.x, dfY = dfCal.y;
+  a4Cal = { x: clampCalibration(-2.3), y: clampCalibration(1.1) };
+  const a4X = a4Cal.x, a4Y = a4Cal.y;
+  // DF values unchanged after A4 edit
+  assert(dfCal.x === dfX && dfCal.y === dfY, "DF calibration unchanged after A4 edit");
+  // A4 values changed
+  assert(a4X === -2.3 && a4Y === 1.1, "A4 calibration applied independently");
+  return { dfCal, a4Cal };
+}
+const indepResult = simulateCalIndependence();
+assert(indepResult.dfCal.x === 1.5 && indepResult.dfCal.y === 0.7, "DF calibration values preserved");
+assert(indepResult.a4Cal.x === -2.3 && indepResult.a4Cal.y === 1.1, "A4 calibration values applied");
 
 // ---------------------------------------------------------------------------
 // Test Group 7: Template + geometry validation (lib/validation.ts)
 // ---------------------------------------------------------------------------
 console.log("\n=== TEST GROUP 7: TEMPLATE & GEOMETRY VALIDATION ===");
-
-import { validateBankTemplate, validatePrintGeometry } from "../lib/validation.ts";
 
 // 7.1 All shipped templates pass validation at load (templates.ts throws otherwise)
 for (const t of getAllTemplates()) {
@@ -375,6 +415,40 @@ for (const t of getAllTemplates()) {
     assert(validatePrintGeometry(g, t, m) === null, t.id + " " + m + ": geometry validates clean");
   }
 }
+
+// 7.5 Calibrated bounds: all shipped templates keep cheque on page at ±25mm cal
+for (const t of getAllTemplates()) {
+  for (const m of ["custom_short", "custom_long", "a4_vertical", "a4_horizontal"]) {
+    const errs = validateCalibratedBounds(t, m);
+    assert(errs === null, t.id + " " + m + ": calibrated bounds safe (DF is no-op, A4 checked at ±25mm)");
+  }
+}
+
+// 7.6 A template that would go off-page at max calibration is flagged
+const tightA4 = JSON.parse(JSON.stringify(siddhartha));
+tightA4.profiles.a4_vertical.y = 190; // y + 88.9 + 25 = 303.9 > 297 → off bottom at max cal
+assert(validateCalibratedBounds(tightA4, "a4_vertical") !== null, "A4 portrait with cheque too close to bottom flagged at max cal");
+
+// 7.7 DF profiles with wrong page dims are flagged by validateBankTemplate
+const badDfProfile = JSON.parse(JSON.stringify(siddhartha));
+badDfProfile.profiles.custom_short.pageWidth = 210; // wrong — should be 88.9
+badDfProfile.profiles.custom_short.pageHeight = 297; // wrong — should be 190.5
+{
+  const errs = validateBankTemplate(badDfProfile);
+  assert(errs !== null && errs.some((e) => e.code === "DF_PROFILE_DIM_MISMATCH"), "DF profile wrong page dimensions flagged");
+}
+
+// 7.8 calibratedBounds returns correct worst-case for A4
+const siddA4vBounds = calibratedBounds(siddhartha, "a4_vertical");
+assert(siddA4vBounds.minX === 9.75 - CALIBRATION_MAX_MM, "A4 portrait minX = profile.x - 25 = " + (9.75 - CALIBRATION_MAX_MM));
+assert(siddA4vBounds.maxRight === 9.75 + 190.5 + CALIBRATION_MAX_MM, "A4 portrait maxRight = profile.x + chequeW + 25");
+assert(siddA4vBounds.minY === 20 - CALIBRATION_MAX_MM, "A4 portrait minY = profile.y - 25");
+assert(siddA4vBounds.maxBottom === 20 + 88.9 + CALIBRATION_MAX_MM, "A4 portrait maxBottom = profile.y + chequeH + 25");
+
+// 7.9 calibratedBounds for DF returns page box (calibration does not move cheque)
+const siddDfBounds = calibratedBounds(siddhartha, "custom_short");
+assert(siddDfBounds.minX === 0 && siddDfBounds.minY === 0, "DF short-edge minX/minY = 0 (cheque fills page)");
+assert(siddDfBounds.maxRight === 88.9 && siddDfBounds.maxBottom === 190.5, "DF short-edge maxRight/maxBottom = page box");
 
 console.log("\n=== TEST GROUP 8: PRINT CSS WIRING ===");
 

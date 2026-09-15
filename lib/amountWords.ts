@@ -108,9 +108,10 @@ export function parseNumericAmount(input: string): number | null {
   if (/[eE]/.test(trimmed)) return null;
 
   // Strip commas only at valid thousand-group positions.
-  // Valid: "1,000", "10,00,000", "100,000"
-  // Invalid: "1,00", "1,0000", "1,000,0", "10," etc.
-  const withoutCommas = trimAndStripCommas(trimmed);
+  // Valid: "1,000", "100,000", "1,000.50"
+  // Invalid: "1,00", "1,0000", "1,00,000" (Indian grouping not supported),
+  //          "10,", ",10", "1,000.50.00" etc.
+  const withoutCommas = stripValidCommas(trimmed);
   if (withoutCommas === null) return null;
 
   // At this point there must be no commas left.
@@ -154,37 +155,66 @@ export function parseNumericAmount(input: string): number | null {
 }
 
 /**
- * Strip commas only if they are valid thousand-grouping separators.
- * Returns the string with commas removed, or null if comma placement is invalid.
+ * Strip commas only if they are valid standard (Western) thousand-grouping
+ * separators. Returns the string with commas removed, or null if comma
+ * placement is invalid.
  *
  * Rules:
  *   - "1,000"        → valid
- *   - "10,00,000"    → valid (Indian grouping)
- *   - "1,000,000"    → valid
+ *   - "100,000"      → valid
+ *   - "1,000.50"     → valid (commas only in integer part)
  *   - "1,00"         → invalid (wrong group size)
  *   - "1,0000"       → invalid
  *   - "1000,"        → invalid
  *   - ",100"         → invalid
+ *   - "1,00,000"     → invalid (Indian grouping not supported)
+ *   - commas after decimal point → invalid
  */
-function trimAndStripCommas(s: string): string | null {
+function stripValidCommas(s: string): string | null {
   // Must not start or end with a comma
   if (s.startsWith(",") || s.endsWith(",")) return null;
 
-  const parts = s.split(",");
+  // At most one decimal point
+  const dotCount = (s.match(/\./g) || []).length;
+  if (dotCount > 1) return null;
 
-  // No comma case — return as-is
-  if (parts.length === 1) return s;
-
-  // Validate each group: first group can be 1–3 digits, subsequent groups must be exactly 3 digits
-  // This is the standard Western grouping. Indian grouping (2-digit thereafter) is also accepted
-  // by validating that every non-first group has exactly 3 digits.
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    if (!/^\d{1,3}$/.test(part)) return null;
+  // Split into integer part and optional fractional part
+  const dotIdx = s.indexOf(".");
+  let intStr: string;
+  let fracStr = "";
+  if (dotIdx !== -1) {
+    intStr = s.slice(0, dotIdx);
+    fracStr = s.slice(dotIdx + 1);
+    // Fractional part must be pure digits
+    if (!/^\d+$/.test(fracStr)) return null;
+  } else {
+    intStr = s;
   }
 
-  // All groups are 1-3 digits; re-strip commas
-  return parts.join("");
+  // Integer part must be pure digits or comma-separated digits
+  if (intStr === "") return null;
+  if (!/^[\d,]+$/.test(intStr)) return null;
+
+  const commaParts = intStr.split(",");
+
+  // No comma case — return with decimal intact
+  if (commaParts.length === 1) {
+    return dotIdx !== -1 ? intStr + "." + fracStr : intStr;
+  }
+
+  // Validate comma placement:
+  //   - First group: 1–3 digits
+  //   - All subsequent groups: EXACTLY 3 digits
+  for (let i = 0; i < commaParts.length; i++) {
+    if (i === 0) {
+      if (!/^\d{1,3}$/.test(commaParts[i])) return null;
+    } else {
+      if (!/^\d{3}$/.test(commaParts[i])) return null;
+    }
+  }
+
+  // Strip commas, reattach decimal
+  return dotIdx !== -1 ? commaParts.join("") + "." + fracStr : commaParts.join("");
 }
 
 /**
