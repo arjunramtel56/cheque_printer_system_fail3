@@ -11,6 +11,7 @@ import {
   validateAmount,
 } from "@/lib/amountWords";
 import { clampCalibration, validateCalibrationPair } from "@/lib/calibration";
+import { resolvePrintGeometry, rotatedContentOffset } from "@/lib/printGeometry";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
@@ -392,22 +393,33 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
   const calY = Number(offsetY ?? 0);
   const isDF = isDirectFeed(mode);
 
-  // Direct Feed: cheque container = cheque size, fields positioned relative to cheque origin
-  // A4 Carrier: outer container = A4 size, cheque inset positioned at profile.x/y + calibration
+  // Direct Feed: container = page box (cheque size, or swapped for short-edge
+  // first). For rotate 90 the cheque content is centered + rotated so it fills
+  // the page box; the physical paper rotation is done by the printer.
   if (isDF) {
-    const pw = template.widthMm;
-    const ph = template.heightMm;
+    const geom = resolvePrintGeometry(template, mode);
+    const off = rotatedContentOffset(geom);
     return (
       <div
         className="print-direct-feed"
         style={{
-          width: `${pw}mm`,
-          height: `${ph}mm`,
+          width: `${geom.containerW}mm`,
+          height: `${geom.containerH}mm`,
           position: "relative",
           background: "#fff",
           overflow: "hidden",
           fontFamily: '"Courier New", monospace',
           color: "#111",
+        }}
+      >
+      <div
+        style={{
+          position: "absolute",
+          left: `${off.leftMm}mm`,
+          top: `${off.topMm}mm`,
+          width: `${geom.chequeW}mm`,
+          height: `${geom.chequeH}mm`,
+          transform: geom.rotate === 90 ? "rotate(90deg)" : undefined,
         }}
       >
         {/* Bank name */}
@@ -540,10 +552,12 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
           ⑆ 000000000 ⑈ 000000 ⑆ 00
         </div>
       </div>
+      </div>
     );
   }
 
-  // A4 Carrier mode
+  // A4 Carrier mode — independent page model: full A4 box, cheque inset at
+  // profile.x/y plus the A4 calibration (never reusing Direct Feed geometry).
   const isPortrait = mode === "a4_vertical";
   const paperW = isPortrait ? A4_MM_WIDTH : A4_LANDSCAPE_WIDTH;
   const paperH = isPortrait ? A4_MM_HEIGHT : A4_LANDSCAPE_HEIGHT;
@@ -1022,6 +1036,10 @@ export default function Workspace() {
   }
 
   function handlePrint() {
+    // DUPLICATE-PRINT GUARD: ignore re-entries while a print cycle is open
+    // (before window.print() and its afterprint cleanup have completed).
+    if (isPrinting) return;
+
     setPrintError("");
 
     // STEP 1: VALIDATE DATA
@@ -1040,15 +1058,13 @@ export default function Workspace() {
     // STEP 3: VALIDATE PRINT MODE
     if (!printMode) { setPrintError("Print mode not selected."); return; }
 
-    // STEP 4: APPLY CALIBRATION
+    // STEP 4: APPLY CALIBRATION (independent per mode group; range + finiteness checked)
     const cal = isDirectFeed(printMode) ? dfCalibration : a4Calibration;
-    if (cal.x < -25 || cal.x > 25 || cal.y < -25 || cal.y > 25) {
-      setPrintError("Calibration values must be between -25 and 25 mm.");
-      return;
-    }
+    const calError = validateCalibrationPair(cal.x, cal.y);
+    if (calError) { setPrintError(calError); return; }
 
     // STEP 5: PREPARE PRINT LAYOUT
-    const profile = template.profiles[printMode];
+    const profile = resolvedTemplate.profiles[printMode];
     if (!profile) { setPrintError("Print layout not available for selected mode."); return; }
 
     setIsPrinting(true);
@@ -1062,57 +1078,25 @@ export default function Workspace() {
       printStyleRef.current = null;
     }
 
-    // STEP 6: HIDE NON-PRINT UI — inject @page + visibility rules BEFORE browser print dialog
-    const isPrintDF = isDirectFeed(printMode);
-    let css = "";
-    if (isPrintDF) {
-      const pw = template.widthMm;
-      const ph = template.heightMm;
-      const pageW = printMode === "custom_short" ? ph : pw;
-      const pageH = printMode === "custom_short" ? pw : ph;
-      css = `
+    // STEP 6: INJECT PAGE RULES — top-level @page (max browser compatibility)
+    // plus mode-specific container sizing before window.print() is called.
+    // Geometry comes from the same resolver the print DOM uses, so the @page
+    // size and the container box can never disagree.
+    const geom = resolvePrintGeometry(resolvedTemplate, printMode);
+    const containerSelector = isDirectFeed(printMode) ? ".print-direct-feed" : ".print-a4-carrier";
+    const css = `
+@page {
+  size: ${geom.pageW.toFixed(1)}mm ${geom.pageH.toFixed(1)}mm;
+  margin: 0;
+}
 @media print {
-  @page {
-    size: ${pageW.toFixed(1)}mm ${pageH.toFixed(1)}mm;
-    margin: 0;
-  }
-  .print-output-screen {
+  ${containerSelector} {
     display: block !important;
-  }
-  .print-direct-feed {
-    display: block !important;
-    width: ${pw}mm !important;
-    height: ${ph}mm !important;
-  }
-  .print-a4-carrier {
-    display: none !important;
+    width: ${geom.containerW}mm !important;
+    height: ${geom.containerH}mm !important;
   }
 }
-      `;
-    } else {
-      const isPortrait = printMode === "a4_vertical";
-      const pageW = isPortrait ? A4_MM_WIDTH : A4_LANDSCAPE_WIDTH;
-      const pageH = isPortrait ? A4_MM_HEIGHT : A4_LANDSCAPE_HEIGHT;
-      css = `
-@media print {
-  @page {
-    size: ${pageW}mm ${pageH}mm;
-    margin: 0;
-  }
-  .print-output-screen {
-    display: block !important;
-  }
-  .print-a4-carrier {
-    display: block !important;
-    width: ${pageW}mm !important;
-    height: ${pageH}mm !important;
-  }
-  .print-direct-feed {
-    display: none !important;
-  }
-}
-      `;
-    }
+`;
 
     const style = document.createElement("style");
     style.textContent = css;
@@ -1445,14 +1429,6 @@ export default function Workspace() {
           data-template-id={template.id}
           data-mode={printMode}
           className="print-output-screen"
-          style={{
-            position: "absolute",
-            left: "-9999px",
-            top: "-9999px",
-            width: 0,
-            height: 0,
-            overflow: "hidden",
-          }}
         >
           <PrintOutput
             key={printKeyRef.current}

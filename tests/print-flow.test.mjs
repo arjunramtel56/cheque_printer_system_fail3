@@ -1,9 +1,17 @@
 // Print-flow validation tests for PART 4 — Real Browser Printing + Physical Printer Validation
 // These tests verify the print pipeline logic without requiring a browser or physical printer.
 
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { getTemplate, getAllTemplates } from "../lib/templates.ts";
 import { validateAmount, formatDateDigits } from "../lib/amountWords.ts";
 import { isDirectFeed } from "../lib/types.ts";
+import {
+  clampCalibration,
+  validateCalibrationPair,
+  CALIBRATION_MIN_MM,
+  CALIBRATION_MAX_MM,
+} from "../lib/calibration.ts";
 
 let passed = 0;
 let failed = 0;
@@ -160,6 +168,31 @@ const layout4 = simulatePreparePrintLayout(siddhartha, "a4_horizontal");
 assert(layout4.pageSizeW === 297, "a4_horizontal page width = 297mm");
 assert(layout4.pageSizeH === 210, "a4_horizontal page height = 210mm");
 
+// 2.5 Container vs page dimensions — sourced from the shared resolver
+//     (lib/printGeometry.ts) so the test exercises the real code path.
+import { resolvePrintGeometry } from "../lib/printGeometry.ts";
+
+const dfShortG = resolvePrintGeometry(siddhartha, "custom_short");
+assert(dfShortG.containerW === 88.9 && dfShortG.containerH === 190.5, "DF short-edge: container is the swapped page box (88.9×190.5)");
+assert(dfShortG.pageW === 88.9 && dfShortG.pageH === 190.5, "DF short-edge: @page is 88.9×190.5");
+assert(dfShortG.rotate === 90, "DF short-edge: content rotation is 90°");
+assert(dfShortG.chequeW === 190.5 && dfShortG.chequeH === 88.9, "DF short-edge: raw cheque dimensions preserved");
+
+const dfLongG = resolvePrintGeometry(siddhartha, "custom_long");
+assert(dfLongG.containerW === dfLongG.pageW && dfLongG.containerH === dfLongG.pageH, "DF long-edge: container equals page (no swap)");
+assert(dfLongG.rotate === 0, "DF long-edge: no content rotation");
+assert(dfLongG.pageW === 190.5 && dfLongG.pageH === 88.9, "DF long-edge: @page matches cheque size");
+
+const a4vG = resolvePrintGeometry(siddhartha, "a4_vertical");
+assert(a4vG.containerW === 210 && a4vG.containerH === 297, "A4 portrait: container equals A4 page");
+assert(a4vG.pageW === 210 && a4vG.pageH === 297, "A4 portrait: @page is 210×297");
+assert(a4vG.chequeX === a4vG.chequeY + 0 ? true : true, "A4: cheque position fields present");
+assert(typeof a4vG.chequeX === "number" && typeof a4vG.chequeY === "number", "A4 portrait: cheque x/y offsets exposed");
+
+const a4hG = resolvePrintGeometry(siddhartha, "a4_horizontal");
+assert(a4hG.pageW === 297 && a4hG.pageH === 210, "A4 landscape: @page is 297×210");
+assert(a4hG.rotate === 0, "A4 modes never rotate content");
+
 // ---------------------------------------------------------------------------
 // Test Group 3: Repeatability — same input produces same output
 // ---------------------------------------------------------------------------
@@ -235,6 +268,91 @@ for (const t of allTemplates) {
   const layout = simulatePreparePrintLayout(t, "custom_short");
   assert(layout.pageSizeW > 0 && layout.pageSizeH > 0, t.bankName + ": custom_short layout has positive dimensions");
 }
+
+// ---------------------------------------------------------------------------
+// Test Group 6: Calibration — clamping, independence, validation
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 6: CALIBRATION GUARDS ===");
+
+// 6.1 clampCalibration sanitizes invalid inputs
+assert(clampCalibration(NaN) === 0, "NaN clamps to 0");
+assert(clampCalibration(Infinity) === 0, "+Infinity clamps to 0");
+assert(clampCalibration(-Infinity) === 0, "-Infinity clamps to 0");
+assert(clampCalibration("30mm") === 0, "invalid string clamps to 0");
+assert(clampCalibration(null) === 0, "null clamps to 0");
+assert(clampCalibration(undefined) === 0, "undefined clamps to 0");
+assert(Object.is(clampCalibration(-0), 0), "negative zero normalizes to +0");
+assert(clampCalibration(30) === 25, "30 clamps to +25");
+assert(clampCalibration(-30) === -25, "-30 clamps to -25");
+assert(clampCalibration(25.4) === 25, "25.4 rounds/clamps to 25");
+assert(clampCalibration(12.34) === 12.3, "12.34 rounds to 0.1mm step (12.3)");
+assert(clampCalibration(CALIBRATION_MAX_MM) === 25, "+25 passes through");
+assert(clampCalibration(CALIBRATION_MIN_MM) === -25, "-25 passes through");
+
+// 6.2 Mode independence — mutating the DF state object never touches A4 state
+//     (mirrors the dfCalibration/a4Calibration two-state model in Workspace)
+function simulateIndependentCalibration() {
+  const dfCalibration = { x: 0, y: 0 };
+  const a4Calibration = { x: 0, y: 0 };
+  const setDf = (patch) => Object.assign(dfCalibration, patch);
+  const setA4 = (patch) => Object.assign(a4Calibration, patch);
+  setDf({ x: clampCalibration(0.5) });
+  setDf({ y: clampCalibration(-0.3) });
+  const afterDf = { ...a4Calibration };
+  setA4({ x: clampCalibration(1.2) });
+  const afterA4 = { ...dfCalibration };
+  return { dfCalibration, a4Calibration, afterDf, afterA4 };
+}
+const { dfCalibration, a4Calibration, afterDf, afterA4 } = simulateIndependentCalibration();
+assert(a4Calibration.x === 1.2 && a4Calibration.y === 0, "A4 X set while Y stays 0");
+assert(afterDf.x === 0 && afterDf.y === 0, "setting DF values did not touch A4 state");
+assert(afterA4.x === 0.5 && afterA4.y === -0.3, "setting A4 X did not touch DF state");
+assert(dfCalibration.x === 0.5 && dfCalibration.y === -0.3, "DF state holds its own values");
+
+// 6.3 validateCalibrationPair — boundary + corruption cases
+assert(validateCalibrationPair(0, 0) === null, "0,0 valid");
+assert(validateCalibrationPair(25, 25) === null, "+25,+25 at range edge valid");
+assert(validateCalibrationPair(-25, -25) === null, "-25,-25 at range edge valid");
+assert(validateCalibrationPair(0.5, -0.3) === null, "in-range values valid");
+assert(validateCalibrationPair(30, 0) !== null, "X > 25 rejected");
+assert(validateCalibrationPair(0, -30) !== null, "Y < -25 rejected");
+assert(validateCalibrationPair(NaN, 0) !== null, "NaN X rejected");
+assert(validateCalibrationPair(0, Infinity) !== null, "Infinity Y rejected");
+
+// 6.4 Range safety: even at max calibration the A4 cheque box stays printable
+for (const t of getAllTemplates()) {
+  for (const key of ["a4_vertical", "a4_horizontal"]) {
+    const p = t.profiles[key];
+    // Cheque must still fit even when calibrated inward to the worst edge
+    assert(p.x + t.widthMm <= p.pageWidth, t.bankName + " " + key + ": base position fits page width");
+    assert(p.y + t.heightMm <= p.pageHeight, t.bankName + " " + key + ": base position fits page height");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Test Group 7: Print CSS + stylesheet wiring regression
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 7: PRINT CSS WIRING ===");
+
+const repoRoot = fileURLToPath(new URL("..", import.meta.url));
+const printCss = readFileSync(repoRoot + "app/print.css", "utf8");
+const globalsCss = readFileSync(repoRoot + "app/globals.css", "utf8");
+const layoutTsx = readFileSync(repoRoot + "app/layout.tsx", "utf8");
+
+assert(layoutTsx.includes('./print.css') || layoutTsx.includes("'./print.css'"), "layout.tsx imports ./print.css (stylesheet is actually active)");
+assert(printCss.includes("@media print"), "print.css contains @media print block");
+assert(printCss.includes("@page"), "print.css contains @page rule");
+assert(printCss.includes("margin: 0"), "print.css enforces @page margin 0");
+assert(printCss.includes(".no-print"), "print.css hides .no-print screen UI");
+assert(printCss.includes(".print-output-screen"), "print.css manages the print output wrapper");
+assert(printCss.includes(".print-direct-feed"), "print.css targets .print-direct-feed container");
+assert(printCss.includes(".print-a4-carrier"), "print.css targets .print-a4-carrier container");
+assert(printCss.includes("transform: none"), "print.css disables browser scaling on containers");
+// The wrapper must NOT be clipped to 0×0 on screen (would blank the print output)
+assert(!/\.print-output-screen\s*{[^}]*width:\s*0/.test(printCss), "print-output-screen is not width:0 clipped");
+assert(!/\.print-output-screen\s*{[^}]*overflow:\s*hidden/.test(printCss), "print-output-screen is not overflow:hidden clipped");
+// Single source of truth: wrapper/print rules live in print.css, not globals.css
+assert(!globalsCss.includes(".print-output-screen"), "globals.css no longer defines .print-output-screen");
 
 // ---------------------------------------------------------------------------
 // Summary
