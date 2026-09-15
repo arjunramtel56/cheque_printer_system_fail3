@@ -1714,7 +1714,7 @@ export default function Workspace() {
               ) : (
                 <div
                   className="cheque-preview"
-                  style={{ width: 456, height: 210 }}
+                  style={{ width: Math.round(190.5 * SCALE), height: Math.round(88.9 * SCALE) }}
                   role="img"
                   aria-label="No bank template selected — preview unavailable"
                 >

@@ -34,7 +34,7 @@
 
 **Geometry model:** Page box = 88.9 × 190.5 mm (cheque rotated 90°). CSS
 `rotate(90deg)` with `transform-origin: 0 0` (top-left) and an offset of
-`(0, 190.5mm)` fills the container exactly. Printer feeds along the 190.5 mm edge.
+(88.9mm, 0) fills the container exactly. Printer feeds along the 190.5 mm edge.
 
 | Field                 | Expected X (mm) | Expected Y (mm) | Actual X (mm) | Actual Y (mm) | Correction (mm) | Final Calibration X | Final Calibration Y |
 |-----------------------|-----------------|-----------------|---------------|---------------|-----------------|---------------------|---------------------|

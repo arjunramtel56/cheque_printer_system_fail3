@@ -18,6 +18,9 @@ import {
   MIN_PAYEE_FONT_SIZE,
 } from "../lib/amountWords.ts";
 import { getTemplate } from "../lib/templates.ts";
+import { validateCalibrationPair } from "../lib/calibration.ts";
+import { resolvePrintGeometry } from "../lib/printGeometry.ts";
+import { validatePrintGeometry, validateCalibratedBounds } from "../lib/validation.ts";
 
 let passed = 0;
 let failed = 0;
@@ -102,12 +105,12 @@ assertRejects("1000000000000.00", "rejects amount above max");
 assertRejects("999999999999.999", "rejects amount with 3 decimals even if under max");
 
 // Non-string inputs rejected (Infinity, NaN as actual values, numbers, null, undefined)
-assert(parseNumericAmount(Infinity as unknown as string) === null, "rejects Infinity value");
-assert(parseNumericAmount(-Infinity as unknown as string) === null, "rejects -Infinity value");
-assert(parseNumericAmount(NaN as unknown as string) === null, "rejects NaN value");
-assert(parseNumericAmount(123 as unknown as string) === null, "rejects number type");
-assert(parseNumericAmount(null as unknown as string) === null, "rejects null");
-assert(parseNumericAmount(undefined as unknown as string) === null, "rejects undefined");
+assert(parseNumericAmount(Infinity) === null, "rejects Infinity value");
+assert(parseNumericAmount(-Infinity) === null, "rejects -Infinity value");
+assert(parseNumericAmount(NaN) === null, "rejects NaN value");
+assert(parseNumericAmount(123) === null, "rejects number type");
+assert(parseNumericAmount(null) === null, "rejects null");
+assert(parseNumericAmount(undefined) === null, "rejects undefined");
 
 // Decimal precision — exactly 2 decimals OK, 3+ rejected
 assertAccepts("1.99", 199, "exactly 2 decimals accepted");
@@ -438,6 +441,88 @@ assert(!g7.valid, "gate rejects empty words");
 // 10.8 Future date
 const g8 = simulatePrintGate(null, "9999-12-31", "Ram", "1000", "One Thousand Rupees Only", "custom_short", { x: 0, y: 0 });
 assert(!g8.valid, "gate rejects future date");
+
+// 10.9 Print profile not available
+const g9 = simulatePrintGate(siddhartha, "2024-03-15", "Ram", "1000", "One Thousand Rupees Only", null, { x: 0, y: 0 });
+assert(!g9.valid, "gate rejects null print mode");
+
+// 10.10 Missing payee
+const g10 = simulatePrintGate(siddhartha, "2024-03-15", "", "1000", "One Thousand Rupees Only", "custom_short", { x: 0, y: 0 });
+assert(!g10.valid, "gate rejects empty payee");
+
+// 10.11 Out-of-range calibration
+const g11 = simulatePrintGate(siddhartha, "2024-03-15", "Ram", "1000", "One Thousand Rupees Only", "custom_short", { x: 30, y: 0 });
+assert(!g11.valid, "gate rejects out-of-range calibration");
+
+// 10.12 Full print gate with geometry & profile validation
+function simulateFullPrintGate(
+  template,
+  date,
+  payee,
+  amount,
+  amountWords,
+  printMode,
+  cal,
+) {
+  if (!template) return { valid: false, error: "No bank template selected." };
+  const dc = validateChequeDate(date);
+  if (!dc.valid) return { valid: false, error: dc.error ?? "Invalid date." };
+  const pc = validatePayee(payee);
+  if (!pc.valid) return { valid: false, error: pc.error ?? "Payee name is required." };
+  const ac = validateAmount(amount);
+  if (!ac.valid) return { valid: false, error: ac.error ?? "Invalid amount." };
+  if (ac.paisa === 0) return { valid: false, error: "Amount must be greater than zero." };
+  if (!amountWords.trim()) return { valid: false, error: "Amount in words is required." };
+  const consistency = checkAmountWordsConsistency(amount, amountWords);
+  if (!consistency.consistent) return { valid: false, error: "Amount in words does not match numeric amount." };
+  if (!printMode) return { valid: false, error: "Print mode not selected." };
+  const calError = validateCalibrationPair(cal.x, cal.y);
+  if (calError) return { valid: false, error: calError };
+  const profile = template.profiles[printMode];
+  if (!profile) return { valid: false, error: "Print layout not available for selected mode." };
+  const geom = resolvePrintGeometry(template, printMode);
+  const geomErrors = validatePrintGeometry(geom, template, printMode);
+  if (geomErrors) return { valid: false, error: "Template geometry invalid." };
+  const boundsErrors = validateCalibratedBounds(template, printMode);
+  if (boundsErrors) return { valid: false, error: "Calibration would push the cheque off the page." };
+  return { valid: true, error: "" };
+}
+
+const full1 = simulateFullPrintGate(
+  siddhartha,
+  "2024-06-01",
+  "Ram Bahadur",
+  "2500.00",
+  "Two Thousand Five Hundred Rupees Only",
+  "custom_short",
+  { x: 5, y: -3 },
+);
+assert(full1.valid, "full print gate passes for Direct Feed with calibration");
+
+const full2 = simulateFullPrintGate(
+  siddhartha,
+  "2024-06-01",
+  "Sita Devi",
+  "100.50",
+  "One Hundred Rupees and Fifty Paisa Only",
+  "a4_vertical",
+  { x: 2.5, y: -1.0 },
+);
+assert(full2.valid, "full print gate passes for A4 Carrier with calibration");
+
+// Print profile missing (simulate corrupt template)
+const corruptTemplate = JSON.parse(JSON.stringify(siddhartha));
+delete corruptTemplate.profiles.a4_vertical;
+const full3 = simulateFullPrintGate(
+  corruptTemplate,
+  "2024-06-01",
+  "Ram",
+  "1000",
+  "One Thousand Rupees Only",
+  "a4_vertical",
+  { x: 0, y: 0 },
+);
+assert(!full3.valid && full3.error.includes("layout"), "full print gate rejects missing print profile");
 
 console.log("\n=== TEST GROUP 11: A/C PAYEE POSITIONING PRESERVED ===");
 

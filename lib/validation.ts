@@ -13,7 +13,7 @@
 // No JSX. No React. Importable from tests and from the component layer.
 // ---------------------------------------------------------------------------
 
-import type { BankTemplate, ProfileKey, PrintProfile } from "./types.ts";
+import type { BankTemplate, ProfileKey } from "./types.ts";
 import { isDirectFeed } from "./types.ts";
 import type { PrintGeometry } from "./printGeometry.ts";
 
