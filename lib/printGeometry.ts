@@ -1,6 +1,11 @@
 // ---------------------------------------------------------------------------
-// Print geometry resolver — single source of truth shared by the React print
-// output and the injected @page CSS so the two can never disagree.
+// Print geometry resolver — SINGLE source of truth for:
+//   - standard cheque size (190.5 × 88.9 mm)
+//   - A4 page dimensions (portrait & landscape)
+//   - the @page size, print-container size, and rotated-content offset
+//
+// The React print output and the injected @page CSS both derive from
+// resolvePrintGeometry, so the two can never disagree.
 //
 // Direct Feed:
 //   The cheque is the paper. The container IS the page box.
@@ -10,44 +15,61 @@
 //     the physical paper rotation is performed by the printer itself.
 //
 // A4 Carrier:
-//   The paper is A4; the cheque sits at profile.x/y. Container = A4 box.
-//   Never reuses Direct Feed page positioning.
+//   The paper is A4; the cheque sits at profile.x/y (plus calibration at
+//   print time). Container = A4 box. Never reuses Direct Feed page positioning.
 // ---------------------------------------------------------------------------
 
-import type { BankTemplate, ProfileKey } from "./types";
+import type { BankTemplate, ProfileKey } from "./types.ts";
+import { isDirectFeed } from "./types.ts";
+
+// ---------------------------------------------------------------------------
+// Canonical size constants — the ONLY definitions used across the engine.
+// ---------------------------------------------------------------------------
+
+export const STANDARD_CHEQUE_W_MM = 190.5;
+export const STANDARD_CHEQUE_H_MM = 88.9;
 
 export const A4_PORTRAIT_W_MM = 210;
 export const A4_PORTRAIT_H_MM = 297;
+export const A4_LANDSCAPE_W_MM = A4_PORTRAIT_H_MM; // 297
+export const A4_LANDSCAPE_H_MM = A4_PORTRAIT_W_MM; // 210
 
 export interface PrintGeometry {
   /** @page width in mm */
   pageW: number;
   /** @page height in mm */
   pageH: number;
-  /** print container width in mm */
+  /** print container width in mm (always equals page box) */
   containerW: number;
-  /** print container height in mm */
+  /** print container height in mm (always equals page box) */
   containerH: number;
   /** CSS content rotation in degrees (0 or 90) */
   rotate: 0 | 90;
   /** raw cheque dimensions */
   chequeW: number;
   chequeH: number;
-  /** absolute cheque position on the carrier page (A4 mode) */
+  /** absolute cheque position on the carrier page (A4 mode) in mm */
   chequeX: number;
   chequeY: number;
 }
 
+/**
+ * Resolve the authoritative print geometry for a given template + profile.
+ *
+ * Direct Feed: page box = cheque (swapped when rotate=90).
+ * A4 Carrier:  page box = A4 (portrait/landscape); cheque at profile.x/y.
+ */
 export function resolvePrintGeometry(template: BankTemplate, mode: ProfileKey): PrintGeometry {
   const profile = template.profiles[mode];
-  const isDF = mode === "custom_short" || mode === "custom_long";
 
-  if (isDF) {
+  if (isDirectFeed(mode)) {
     const chequeW = template.widthMm;
     const chequeH = template.heightMm;
     const rotate = profile.rotate;
+
     if (rotate === 90) {
-      // Page box is swapped (short edge first); content rotates to fill it.
+      // Short Edge First: the page box is the cheque rotated 90°, i.e. swapped.
+      // After a 90° CSS rotation the cheque fills this box exactly.
       return {
         pageW: chequeH,
         pageH: chequeW,
@@ -60,6 +82,8 @@ export function resolvePrintGeometry(template: BankTemplate, mode: ProfileKey): 
         chequeY: 0,
       };
     }
+
+    // Long Edge First (rotate 0): page box == cheque, no swap.
     return {
       pageW: chequeW,
       pageH: chequeH,
@@ -73,9 +97,11 @@ export function resolvePrintGeometry(template: BankTemplate, mode: ProfileKey): 
     };
   }
 
+  // A4 Carrier — independent portrait / landscape page boxes.
   const portrait = mode === "a4_vertical";
-  const pageW = portrait ? A4_PORTRAIT_W_MM : A4_PORTRAIT_H_MM;
-  const pageH = portrait ? A4_PORTRAIT_H_MM : A4_PORTRAIT_W_MM;
+  const pageW = portrait ? A4_PORTRAIT_W_MM : A4_LANDSCAPE_W_MM;
+  const pageH = portrait ? A4_PORTRAIT_H_MM : A4_LANDSCAPE_H_MM;
+
   return {
     pageW,
     pageH,
@@ -90,14 +116,30 @@ export function resolvePrintGeometry(template: BankTemplate, mode: ProfileKey): 
 }
 
 /**
- * Inner-content placement for a rotated Direct Feed container.
- * For rotate 90 the 190.5×88.9 cheque is centered in the 88.9×190.5 page
- * box and rotated 90°; returns the absolute offsets in mm.
+ * Inner-content placement for a rotated Direct-Feed container.
+ *
+ * CSS `rotate(90deg)` is clockwise and uses the element's top-left as origin by
+ * default (transform-origin: 0 0 on the inner div). For a cheque of size
+ * W×H rotated 90°, the rotated box becomes H×W. To make that rotated box fill
+ * the page box (H×W) starting at the origin, the cheque's *pre-rotation* top-
+ * left must be at (0, W): after rotation, the corner that was at (0, W) lands
+ * at (W, 0)... equivalently, translate by `top = chequeH` so the rotated box
+ * occupies [0, H] × [0, W].
+ *
+ * Concretely: with rotate=90 the page box is 88.9×190.5 and the cheque is
+ * 190.5×88.9. The rotated cheque is 88.9×190.5 — identical to the page box —
+ * so the correct offset is left=0, top=0 when transform-origin is the centre
+ * (CSS default), OR left=0, top=chequeH when transform-origin is 0 0.
+ *
+ * We use the centre-origin convention (offset 0,0) because the PrintOutput sets
+ * the rotation on the inner div without overriding transform-origin, so the
+ * rotated bounding box already matches the container and no translation is
+ * required. Returning 0,0 here fixes the previous negative-offset bug.
  */
 export function rotatedContentOffset(geom: PrintGeometry): { leftMm: number; topMm: number } {
   if (geom.rotate !== 90) return { leftMm: 0, topMm: 0 };
-  return {
-    leftMm: (geom.containerW - geom.chequeW) / 2,
-    topMm: (geom.containerH - geom.chequeH) / 2,
-  };
+  // With rotate=90 the page box IS the rotated cheque (H×W container, W×H
+  // cheque). The rotated bounding box equals the container, so center origin
+  // places it exactly — no offset needed.
+  return { leftMm: 0, topMm: 0 };
 }

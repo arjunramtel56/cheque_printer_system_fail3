@@ -1,7 +1,18 @@
-import type { BankTemplate, ProfileKey } from "./types";
+import type { BankTemplate, ProfileKey } from "./types.ts";
+import { validateBankTemplate } from "./validation.ts";
 
-const STANDARD_WIDTH_MM = 190.5;
-const STANDARD_HEIGHT_MM = 88.9;
+export const STANDARD_WIDTH_MM = 190.5;
+export const STANDARD_HEIGHT_MM = 88.9;
+
+function assertNoTemplateErrors(template: BankTemplate): void {
+  const errs = validateBankTemplate(template);
+  if (errs) {
+    const detail = errs.map((e) => `${e.code}@${e.path}: ${e.message}`).join("; ");
+    // Fail loudly at module load so a corrupt template can never reach the
+    // print engine. This is the single validation point for templates.
+    throw new Error(`Invalid bank template '${template.id}': ${detail}`);
+  }
+}
 
 export const BANK_TEMPLATES: BankTemplate[] = [
   {
@@ -140,6 +151,8 @@ export const BANK_TEMPLATES: BankTemplate[] = [
     },
   },
 ];
+
+for (const t of BANK_TEMPLATES) assertNoTemplateErrors(t);
 
 export function getTemplate(id: string): BankTemplate | undefined {
   return BANK_TEMPLATES.find((t) => t.id === id);

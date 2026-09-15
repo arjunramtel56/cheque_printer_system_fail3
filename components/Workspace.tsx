@@ -12,6 +12,7 @@ import {
 } from "@/lib/amountWords";
 import { clampCalibration, validateCalibrationPair } from "@/lib/calibration";
 import { resolvePrintGeometry, rotatedContentOffset } from "@/lib/printGeometry";
+import { validatePrintGeometry } from "@/lib/validation";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
@@ -25,10 +26,6 @@ const PROFILE_LABELS: Record<ProfileKey, string> = {
 };
 
 const SCALE = 2.4;
-const A4_MM_WIDTH = 210;
-const A4_MM_HEIGHT = 297;
-const A4_LANDSCAPE_WIDTH = 297;
-const A4_LANDSCAPE_HEIGHT = 210;
 
 // Explicit workflow states — a single, unambiguous indicator of where the
 // user is in the print pipeline.  The UI renders state badges and the print
@@ -208,7 +205,7 @@ function DirectFeedPreview({ template, date, payee, amount, amountWords, account
   );
 }
 
-function A4CarrierPreview({ template, profile, date, payee, amount, amountWords, accountPayee, offsetX, offsetY }: PreviewProps & { profile: { x: number; y: number; pageWidth: number; pageHeight: number; rotate: 0 | 90 } }) {
+function A4CarrierPreview({ template, profile, mode, date, payee, amount, amountWords, accountPayee, offsetX, offsetY }: PreviewProps & { profile: { x: number; y: number; pageWidth: number; pageHeight: number; rotate: 0 | 90 }; mode: ProfileKey }) {
   const dateDigits = date ? formatDateDigits(date) : "";
   const amountPaisa = validateAmount(amount).paisa;
   const words = amountWords || (amountPaisa > 0 ? amountToWordsFromPaisa(amountPaisa) : "");
@@ -217,8 +214,11 @@ function A4CarrierPreview({ template, profile, date, payee, amount, amountWords,
   const calX = Number(offsetX ?? 0);
   const calY = Number(offsetY ?? 0);
 
-  const paperW = profile.pageWidth;
-  const paperH = profile.pageHeight;
+  // Page dimensions sourced from the single geometry resolver so the screen
+  // preview and the print @page can never disagree.
+  const geom = useMemo(() => resolvePrintGeometry(template, mode), [template, mode]);
+  const paperW = geom.pageW;
+  const paperH = geom.pageH;
   const displayPW = Math.round(paperW * SCALE);
   const displayPH = Math.round(paperH * SCALE);
 
@@ -574,11 +574,11 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
     );
   }
 
-  // A4 Carrier mode — independent page model: full A4 box, cheque inset at
-  // profile.x/y plus the A4 calibration (never reusing Direct Feed geometry).
-  const isPortrait = mode === "a4_vertical";
-  const paperW = isPortrait ? A4_MM_WIDTH : A4_LANDSCAPE_WIDTH;
-  const paperH = isPortrait ? A4_MM_HEIGHT : A4_LANDSCAPE_HEIGHT;
+  // A4 Carrier mode — page box from the shared geometry resolver (portrait or
+  // landscape), container = A4 box, cheque inset at profile.x/y + calibration.
+  const geom = resolvePrintGeometry(template, mode);
+  const paperW = geom.pageW;
+  const paperH = geom.pageH;
   const chequeX = profile.x + calX;
   const chequeY = profile.y + calY;
 
@@ -1154,6 +1154,16 @@ export default function Workspace() {
     const profile = resolvedTemplate.profiles[printMode];
     if (!profile) { setPrintError("Print layout not available for selected mode."); return; }
 
+    // STEP 5b: VALIDATE GEOMETRY (single source of truth guard) — confirms the
+    // resolved @page/container math, A4 cheque bounds under max calibration,
+    // NaN/Infinity safety, and Direct-Feed rotation sanity. Prevents printing a
+    // template whose geometry would place fields off-page.
+    const geom = resolvePrintGeometry(resolvedTemplate, printMode);
+    const geomErrors = validatePrintGeometry(geom, resolvedTemplate, printMode);
+    if (geomErrors) {
+      setPrintError(`Print geometry invalid: ${geomErrors.map((e) => e.message).join(" ")}`);
+      return;
+    }
     // STEP 6: ENTER PRINTING STATE
     setIsPrinting(true);
 
@@ -1170,7 +1180,6 @@ export default function Workspace() {
     // plus mode-specific container sizing before window.print() is called.
     // Geometry comes from the same resolver the print DOM uses, so the @page
     // size and the container box can never disagree.
-    const geom = resolvePrintGeometry(resolvedTemplate, printMode);
     const containerSelector = isDirectFeed(printMode) ? ".print-direct-feed" : ".print-a4-carrier";
     const css = `
 @page {
@@ -1516,17 +1525,18 @@ export default function Workspace() {
                     offsetY={dfCalibration.y}
                   />
                 ) : (
-                  <A4CarrierPreview
-                    template={template}
-                    profile={profile!}
-                    date={date}
-                    payee={payee}
-                    amount={amount}
-                    amountWords={amountWords}
-                    accountPayee={accountPayee}
-                    offsetX={a4Calibration.x}
-                    offsetY={a4Calibration.y}
-                  />
+                   <A4CarrierPreview
+                     template={template}
+                     profile={profile!}
+                     mode={printMode}
+                     date={date}
+                     payee={payee}
+                     amount={amount}
+                     amountWords={amountWords}
+                     accountPayee={accountPayee}
+                     offsetX={a4Calibration.x}
+                     offsetY={a4Calibration.y}
+                   />
                 )
               ) : (
                 <div

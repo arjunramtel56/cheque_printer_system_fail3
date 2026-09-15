@@ -193,6 +193,19 @@ const a4hG = resolvePrintGeometry(siddhartha, "a4_horizontal");
 assert(a4hG.pageW === 297 && a4hG.pageH === 210, "A4 landscape: @page is 297×210");
 assert(a4hG.rotate === 0, "A4 modes never rotate content");
 
+// 2.6 rotatedContentOffset — fixed math for short-edge-first rotation.
+//     Page box 88.9×190.5; cheque 190.5×88.9 rotated 90° -> bounding box
+//     88.9×190.5 == page box, so with centre-origin rotation the offset is 0.
+import { rotatedContentOffset } from "../lib/printGeometry.ts";
+const off90 = rotatedContentOffset(dfShortG);
+assert(off90.leftMm === 0 && off90.topMm === 0, "DF short-edge rotation offset is 0,0 (rotated box fills page box)");
+
+const off0 = rotatedContentOffset(dfLongG);
+assert(off0.leftMm === 0 && off0.topMm === 0, "DF long-edge rotation offset is 0,0 (no rotation)");
+
+const offA4 = rotatedContentOffset(a4vG);
+assert(offA4.leftMm === 0 && offA4.topMm === 0, "A4 modes do not rotate (offset 0,0)");
+
 // ---------------------------------------------------------------------------
 // Test Group 3: Repeatability — same input produces same output
 // ---------------------------------------------------------------------------
@@ -330,9 +343,40 @@ for (const t of getAllTemplates()) {
 }
 
 // ---------------------------------------------------------------------------
-// Test Group 7: Print CSS + stylesheet wiring regression
+// Test Group 7: Template + geometry validation (lib/validation.ts)
 // ---------------------------------------------------------------------------
-console.log("\n=== TEST GROUP 7: PRINT CSS WIRING ===");
+console.log("\n=== TEST GROUP 7: TEMPLATE & GEOMETRY VALIDATION ===");
+
+import { validateBankTemplate, validatePrintGeometry } from "../lib/validation.ts";
+
+// 7.1 All shipped templates pass validation at load (templates.ts throws otherwise)
+for (const t of getAllTemplates()) {
+  assert(validateBankTemplate(t) === null, t.bankName + ": template validates clean");
+}
+
+// 7.2 A template with NaN dimensions fails
+const corrupt = { ...siddhartha, widthMm: NaN, heightMm: 88.9 };
+assert(validateBankTemplate(corrupt) !== null, "NaN widthMm rejected");
+
+// 7.3 A field that overflows the cheque is flagged
+const badField = {
+  ...siddhartha,
+  fields: { ...siddhartha.fields, date: { ...siddhartha.fields.date, x: 300, width: 50 } },
+};
+{
+  const errs = validateBankTemplate(badField);
+  assert(errs !== null && errs.some((e) => e.code === "FIELD_OVERFLOW"), "field with right edge past cheque width flagged");
+}
+
+// 7.4 Geometry validation: valid for all templates/modes
+for (const t of getAllTemplates()) {
+  for (const m of ["custom_short", "custom_long", "a4_vertical", "a4_horizontal"]) {
+    const g = resolvePrintGeometry(t, m);
+    assert(validatePrintGeometry(g, t, m) === null, t.id + " " + m + ": geometry validates clean");
+  }
+}
+
+console.log("\n=== TEST GROUP 8: PRINT CSS WIRING ===");
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const printCss = readFileSync(repoRoot + "app/print.css", "utf8");
