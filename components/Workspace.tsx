@@ -415,10 +415,11 @@ interface PrintOutputProps {
 }
 
 function PrintOutput({ template, date, payee, amount, amountWords, accountPayee, offsetX, offsetY, mode, profile }: PrintOutputProps) {
-  const dateDigits = date ? formatDateDigits(date) : "";
+  const dateDigits = date ? safeFormatDate(date) : "";
   const amountPaisa = validateAmount(amount).paisa;
   const words = amountWords || (amountPaisa > 0 ? amountToWordsFromPaisa(amountPaisa) : "");
   const [words1, words2] = amountPaisa > 0 ? splitWordsToLines(words, template) : ["", ""];
+  const normalizedPayee = safeNormalizePayee(payee);
 
   const calX = Number(offsetX ?? 0);
   const calY = Number(offsetY ?? 0);
