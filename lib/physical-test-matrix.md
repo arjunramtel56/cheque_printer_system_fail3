@@ -71,7 +71,8 @@ profile x=9.75, y=20. Calibration ±25 mm applied after profile position.
 | Amount field          | 119.75          | 86.0            |               |               |                 |                     |                     |
 | A4 right margin       | 199.75          | —               |               |               |                 |                     |                     |
 | A4 bottom margin      | —               | 108.9           |               |               |                 |                     |                     |
-| **Calibrated safe range** | min −15.25 | min −20.0       | —             | —             | —               |                     |                     |
+| **Calibrated safe range X** | min −9.75  | max +9.75        | —             | —             | —               |                     |                     |
+| **Calibrated safe range Y** | min −20.0  | max +188.1       | —             | —             | —               |                     |                     |
 
 ### 4. A4 Carrier — Landscape (a4_horizontal)
 
@@ -87,7 +88,8 @@ profile x=20, y=50.75. Calibration ±25 mm applied after profile position.
 | Amount field          | 132.0           | 116.75          |               |               |                 |                     |                     |
 | A4 right margin       | 210.5           | —               |               |               |                 |                     |                     |
 | A4 bottom margin      | —               | 139.65          |               |               |                 |                     |                     |
-| **Calibrated safe range** | min −5.0  | min −25.0       | —             | —             | —               |                     |                     |
+| **Calibrated safe range X** | min −20.0  | max +86.5        | —             | —             | —               |                     |                     |
+| **Calibrated safe range Y** | min −50.75 | max +70.35       | —             | —             | —               |                     |                     |
 
 ---
 
@@ -139,3 +141,62 @@ Each mode group has its own calibration state. Editing DF X offset does
 > **Note:** Different paper sources on the G2010 (e.g. "Rear Tray" vs
 > "Manual Feed") may have different physical offsets. If so, maintain a
 > per-source calibration record. The ±25 mm range accommodates these offsets.
+
+---
+
+## Mathematical verification (software-side, pre-print)
+
+The following calculations have been verified against the geometry pipeline
+(`lib/printGeometry.ts`) and are the expected (zero-calibration) positions
+for a template with bank-default field coordinates (e.g. Siddhartha Bank):
+
+### Direct Feed — Short Edge First (custom_short)
+
+- **Page box:** 88.9 mm (W) × 190.5 mm (H)
+- **Cheque raw size:** 190.5 mm (W) × 88.9 mm (H)
+- **CSS rotation:** `rotate(90deg)`, `transform-origin: 0 0`
+- **Rotation matrix:** (x, y) → (-y, x) — clockwise 90° in Y-down coords
+- **Corner mapping** (cheque-local → page-box-local):
+  - (0, 0) → (0, 0)
+  - (190.5, 0) → (0, 190.5)
+  - (190.5, 88.9) → (-88.9, 190.5)
+  - (0, 88.9) → (-88.9, 0)
+- **Rotated bounding box:** X ∈ [-88.9, 0], Y ∈ [0, 190.5]
+- **Page box bounds:** X ∈ [0, 88.9], Y ∈ [0, 190.5]
+- **Required offset to fill page box:** (left=88.9mm, top=0mm)
+- **Verification:** `rotatedContentOffset()` returns `{ leftMm: 88.9, topMm: 0 }` ✓
+
+### Direct Feed — Long Edge First (custom_long)
+
+- **Page box:** 190.5 mm (W) × 88.9 mm (H)
+- **No rotation** — cheque fills page box directly
+- **Offset:** (0, 0) ✓
+
+### A4 Carrier — Portrait (a4_vertical)
+
+- **Page box:** 210 mm × 297 mm
+- **Cheque base position:** x=9.75, y=20 (from template profile)
+- **Cheque right edge:** 9.75 + 190.5 = 200.25 mm ≤ 210 ✓
+- **Cheque bottom edge:** 20 + 88.9 = 108.9 mm ≤ 297 ✓
+- **Horizontal margin (right):** 210 - 200.25 = 9.75 mm
+- **Vertical margin (bottom):** 297 - 108.9 = 177.1 mm
+- **Calibration safe range X:** [-9.75, +9.75] mm (clamped by `clampCalibrationValue`)
+- **Calibration safe range Y:** [-20.0, +188.1] mm (clamped by `clampCalibrationValue`)
+- **Note:** The ±25 mm input clamp is further clamped at runtime by `resolveCalibratedGeometry` to keep the cheque on-page.
+
+### A4 Carrier — Landscape (a4_horizontal)
+
+- **Page box:** 297 mm × 210 mm
+- **Cheque base position:** x=20, y=50.75 (from template profile)
+- **Cheque right edge:** 20 + 190.5 = 210.5 mm ≤ 297 ✓
+- **Cheque bottom edge:** 50.75 + 88.9 = 139.65 mm ≤ 210 ✓
+- **Horizontal margin (right):** 297 - 210.5 = 86.5 mm
+- **Vertical margin (bottom):** 210 - 139.65 = 59.35 mm
+- **Calibration safe range X:** [-20.0, +86.5] mm (clamped by `clampCalibrationValue`)
+- **Calibration safe range Y:** [-50.75, +70.35] mm (clamped by `clampCalibrationValue`)
+
+---
+
+## Physical printer validation status
+
+**Physical printer validation is pending.** No actual printer (Canon G2010 or otherwise) has been tested with this software build. The mathematical verification above confirms that the geometry pipeline produces correct page dimensions, rotation offsets, and bounding-box containment at zero calibration. Real-sheet testing with the Canon G2010 is required to fill in the "Actual X / Actual Y" columns and determine final per-mode calibration values.

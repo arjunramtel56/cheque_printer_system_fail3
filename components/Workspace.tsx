@@ -878,6 +878,19 @@ function CalibrationControl({ label, value, onChange, disabled }: CalibrationCon
   const decrease = () => onChange(clampCalibration(value - step));
   const reset = () => onChange(0);
 
+  // Strictly parse the input: only accept strings that are valid numbers
+  // (optionally with leading +/-, decimal point, but NOT "30mm" → 30).
+  // Invalid strings are rejected — the value stays unchanged.
+  function parseCalibrationInput(raw: string): number | null {
+    const trimmed = raw.trim();
+    if (trimmed === "") return null;
+    // Must be a valid number: integer or decimal, optionally signed
+    if (!/^[-+]?\d*\.?\d*$/.test(trimmed)) return null;
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed)) return null;
+    return parsed;
+  }
+
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
       <b style={{ minWidth: 18, textAlign: "center", color: "var(--text-secondary)" }}>{label}</b>
@@ -898,7 +911,13 @@ function CalibrationControl({ label, value, onChange, disabled }: CalibrationCon
           min={-25}
           max={25}
           value={value}
-          onChange={(e) => onChange(clampCalibration(parseFloat(e.target.value)))}
+          onChange={(e) => {
+            const parsed = parseCalibrationInput(e.target.value);
+            if (parsed !== null) {
+              onChange(clampCalibration(parsed));
+            }
+            // Invalid input: value stays unchanged (not silently coerced)
+          }}
           disabled={disabled}
           style={{ borderRadius: "0 var(--radius-control) var(--radius-control) 0 !important", textAlign: "center", fontVariantNumeric: "tabular-nums" }}
         />
@@ -1234,74 +1253,81 @@ export default function Workspace() {
   }
 
   function handlePrint() {
-     // DUPLICATE-PRINT GUARD: synchronously lock to prevent double-click from
-     // triggering duplicate print attempts. The ref is set immediately on the
-     // first invocation, so the second click is blocked even before React
-     // re-renders with isPrinting=true.
-     if (printLockRef.current || isPrinting) return;
-     printLockRef.current = true;
-     setIsPrinting(true);
+    // DUPLICATE-PRINT GUARD: synchronously lock to prevent double-click from
+    // triggering duplicate print attempts. The ref is set immediately on the
+    // first invocation, so the second click is blocked even before React
+    // re-renders with isPrinting=true.
+    if (printLockRef.current || isPrinting) return;
+    printLockRef.current = true;
+    setIsPrinting(true);
 
-     setPrintError("");
-     setPrintCompleted(false);
+    setPrintError("");
+    setPrintCompleted(false);
 
-     // STEP 1: VALIDATE DATA
+    // STEP 1: VALIDATE DATA
     const dateCheck = validateChequeDate(date);
-    if (!dateCheck.valid) { setPrintError(dateCheck.error ?? "Invalid date."); return; }
+    if (!dateCheck.valid) { setPrintError(dateCheck.error ?? "Invalid date."); printLockRef.current = false; setIsPrinting(false); return; }
     const payeeCheck = validatePayee(payee);
-    if (!payeeCheck.valid) { setPrintError(payeeCheck.error ?? "Payee name is required."); return; }
+    if (!payeeCheck.valid) { setPrintError(payeeCheck.error ?? "Payee name is required."); printLockRef.current = false; setIsPrinting(false); return; }
     const amountValidation = validateAmount(amount);
-    if (!amountValidation.valid) { setPrintError(amountValidation.error ?? "Invalid amount."); return; }
-    if (amountValidation.paisa === 0) { setPrintError("Amount must be greater than zero."); return; }
-    if (!amountWords.trim()) { setPrintError("Amount in words is required."); return; }
+    if (!amountValidation.valid) { setPrintError(amountValidation.error ?? "Invalid amount."); printLockRef.current = false; setIsPrinting(false); return; }
+    if (amountValidation.paisa === 0) { setPrintError("Amount must be greater than zero."); printLockRef.current = false; setIsPrinting(false); return; }
+    if (!amountWords.trim()) { setPrintError("Amount in words is required."); printLockRef.current = false; setIsPrinting(false); return; }
 
     // Amount-to-words consistency: prevent printing when numeric amount and
     // printed words represent different values.
     const consistency = checkAmountWordsConsistency(amount, amountWords);
     if (!consistency.consistent) {
       setPrintError("Amount in words does not match the numeric amount. Regenerate or correct it before printing.");
+      printLockRef.current = false;
+      setIsPrinting(false);
       return;
     }
 
     // STEP 2: VALIDATE BANK TEMPLATE
-    if (!template) { setPrintError("No bank template selected."); return; }
+    if (!template) { setPrintError("No bank template selected."); printLockRef.current = false; setIsPrinting(false); return; }
     const resolvedTemplate = template; // narrow for closure safety
 
     // STEP 3: VALIDATE PRINT MODE
-    if (!printMode) { setPrintError("Print mode not selected."); return; }
+    if (!printMode) { setPrintError("Print mode not selected."); printLockRef.current = false; setIsPrinting(false); return; }
 
     // STEP 4: APPLY CALIBRATION (independent per mode group; range + finiteness checked)
     const cal = isDirectFeed(printMode) ? dfCalibration : a4Calibration;
-     const calError = validateCalibrationPair(cal.x, cal.y);
-     if (calError) { setPrintError(sanitizeError(calError)); return; }
+    const calError = validateCalibrationPair(cal.x, cal.y);
+    if (calError) { setPrintError(sanitizeError(calError)); printLockRef.current = false; setIsPrinting(false); return; }
 
-     // STEP 5: PREPARE PRINT LAYOUT
-     const profile = resolvedTemplate.profiles[printMode];
-     if (!profile) { setPrintError("Print layout not available for selected mode."); return; }
+    // STEP 5: PREPARE PRINT LAYOUT
+    const profile = resolvedTemplate.profiles[printMode];
+    if (!profile) { setPrintError("Print layout not available for selected mode."); printLockRef.current = false; setIsPrinting(false); return; }
 
-     // STEP 5b: VALIDATE GEOMETRY (single source of truth guard) — confirms the
-     // resolved @page/container math, A4 cheque bounds under max calibration,
-     // NaN/Infinity safety, and Direct-Feed rotation sanity. Prevents printing a
-     // template whose geometry would place fields off-page.
-     const geom = resolvePrintGeometry(resolvedTemplate, printMode);
-     const geomErrors = validatePrintGeometry(geom, resolvedTemplate, printMode);
-     if (geomErrors) {
-       setPrintError("The selected template has an invalid layout. Please choose a different bank template.");
-       return;
-     }
+    // STEP 5b: VALIDATE GEOMETRY (single source of truth guard) — confirms the
+    // resolved @page/container math, A4 cheque bounds under max calibration,
+    // NaN/Infinity safety, and Direct-Feed rotation sanity. Prevents printing a
+    // template whose geometry would place fields off-page.
+    const geom = resolvePrintGeometry(resolvedTemplate, printMode);
+    const geomErrors = validatePrintGeometry(geom, resolvedTemplate, printMode);
+    if (geomErrors) {
+      setPrintError("The selected template has an invalid layout. Please choose a different bank template.");
+      printLockRef.current = false;
+      setIsPrinting(false);
+      return;
+    }
 
-     // STEP 5c: CALIBRATED BOUNDS CHECK — verify the cheque stays within the
-     // page even at maximum ±25 mm calibration. This is the safety net that
-     // prevents printing a template whose base position is too close to an edge.
-     const calBoundsErrors = validateCalibratedBounds(resolvedTemplate, printMode);
-     if (calBoundsErrors) {
-       setPrintError("Calibration would push the cheque off the page. Adjust the X/Y offset values.");
-       return;
-     }
-    // STEP 6: ENTER PRINTING STATE
-    setIsPrinting(true);
+    // STEP 5c: CALIBRATED BOUNDS CHECK — verify the cheque stays within the
+    // page even at maximum ±25 mm calibration. This is the safety net that
+    // prevents printing a template whose base position is too close to an edge.
+    const calBoundsErrors = validateCalibratedBounds(resolvedTemplate, printMode);
+    if (calBoundsErrors) {
+      setPrintError("Calibration would push the cheque off the page. Adjust the X/Y offset values.");
+      printLockRef.current = false;
+      setIsPrinting(false);
+      return;
+    }
 
-    // Increment print key to force deterministic render on each print trigger
+    // STEP 6: INJECT PAGE RULES — top-level @page (max browser compatibility)
+    // plus mode-specific container sizing before window.print() is called.
+    // Geometry comes from the same resolver the print DOM uses, so the @page
+    // size and the container box can never disagree.
     const currentPrintKey = ++printKeyRef.current;
 
     // Remove any previous injected style
@@ -1310,10 +1336,6 @@ export default function Workspace() {
       printStyleRef.current = null;
     }
 
-    // STEP 6: INJECT PAGE RULES — top-level @page (max browser compatibility)
-    // plus mode-specific container sizing before window.print() is called.
-    // Geometry comes from the same resolver the print DOM uses, so the @page
-    // size and the container box can never disagree.
     const containerSelector = isDirectFeed(printMode) ? ".print-direct-feed" : ".print-a4-carrier";
     const css = `
 @page {
@@ -1346,27 +1368,32 @@ export default function Workspace() {
       }
     }
 
-     function onAfterPrint() {
-       if (printStyleRef.current) {
-         printStyleRef.current.remove();
-         printStyleRef.current = null;
-       }
-       setIsPrinting(false);
-       setPrintCompleted(true);
-       window.removeEventListener("beforeprint", onBeforePrint);
-       window.removeEventListener("afterprint", onAfterPrint);
-     }
-
-      window.addEventListener("beforeprint", onBeforePrint);
-      window.addEventListener("afterprint", onAfterPrint);
-      try {
-        window.print();
-      } catch (err) {
-        setPrintError(sanitizeError(err));
-        setIsPrinting(false);
+    function onAfterPrint() {
+      window.removeEventListener("beforeprint", onBeforePrint);
+      window.removeEventListener("afterprint", onAfterPrint);
+      window.removeEventListener("pagehide", onAfterPrint);
+      if (printStyleRef.current) {
+        printStyleRef.current.remove();
+        printStyleRef.current = null;
       }
-      // afterprint fires asynchronously when the dialog closes or print is cancelled
+      printLockRef.current = false;
+      setIsPrinting(false);
+      setPrintCompleted(true);
     }
+
+    window.addEventListener("beforeprint", onBeforePrint);
+    window.addEventListener("afterprint", onAfterPrint);
+    // Fallback for browsers that don't fire afterprint (e.g. some mobile browsers)
+    window.addEventListener("pagehide", onAfterPrint);
+    try {
+      window.print();
+    } catch (err) {
+      setPrintError(sanitizeError(err));
+      printLockRef.current = false;
+      setIsPrinting(false);
+    }
+    // afterprint fires asynchronously when the dialog closes or print is cancelled
+  }
 
   function handleClear() {
     // Preserve system configuration (printMode is a persistent UI preference);

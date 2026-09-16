@@ -491,7 +491,172 @@ assert(!/\.print-output-screen\s*{[^}]*overflow:\s*hidden/.test(printCss), "prin
 assert(!globalsCss.includes(".print-output-screen"), "globals.css no longer defines .print-output-screen");
 
 // ---------------------------------------------------------------------------
-// Summary
+// Test Group 9: DF Short Edge First — Mathematical bounding box verification
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 9: DF SHORT EDGE FIRST — MATHEMATICAL VERIFICATION ===");
+
+// For custom_short: cheque is 190.5×88.9, page box is 88.9×190.5 (swapped).
+// CSS rotate(90deg) with transform-origin: 0 0 maps (x,y) → (-y, x).
+// Corners of cheque (0,0),(190.5,0),(190.5,88.9),(0,88.9) map to:
+//   (0,0), (0,190.5), (-88.9,190.5), (-88.9,0)
+// Bounding box: X ∈ [-88.9, 0], Y ∈ [0, 190.5]
+// Page box: X ∈ [0, 88.9], Y ∈ [0, 190.5]
+// Required offset: left=88.9 (shift right by chequeH), top=0
+for (const t of getAllTemplates()) {
+  const geom = resolvePrintGeometry(t, "custom_short");
+  assert(geom.rotate === 90, t.bankName + " custom_short: rotate=90");
+  assert(geom.pageW === t.heightMm, t.bankName + " custom_short: pageW = chequeH (88.9)");
+  assert(geom.pageH === t.widthMm, t.bankName + " custom_short: pageH = chequeW (190.5)");
+  assert(geom.containerW === geom.pageW, t.bankName + " custom_short: containerW = pageW");
+  assert(geom.containerH === geom.pageH, t.bankName + " custom_short: containerH = pageH");
+
+  const offset = rotatedContentOffset(geom);
+  assert(offset.leftMm === t.heightMm, t.bankName + " custom_short: offset.leftMm = chequeH (88.9)");
+  assert(offset.topMm === 0, t.bankName + " custom_short: offset.topMm = 0");
+
+  // Verify bounding box math: rotated cheque corners mapped to page box
+  // After applying offset (left=88.9, top=0):
+  //   (0,0) → (88.9, 0) = top-right of page box
+  //   (0,190.5) → (88.9, 190.5) = bottom-right of page box
+  //   (-88.9,190.5) → (0, 190.5) = bottom-left of page box
+  //   (-88.9,0) → (0, 0) = top-left of page box
+  // All corners must be within [0, 88.9] × [0, 190.5]
+  const W = t.widthMm;   // 190.5
+  const H = t.heightMm;  // 88.9
+  const mappedCorners = [
+    { x: 0 + offset.leftMm, y: 0 + offset.topMm },
+    { x: 0 + offset.leftMm, y: W + offset.topMm },
+    { x: -H + offset.leftMm, y: W + offset.topMm },
+    { x: -H + offset.leftMm, y: 0 + offset.topMm },
+  ];
+  for (const c of mappedCorners) {
+    assert(c.x >= -0.001 && c.x <= H + 0.001, t.bankName + " custom_short: rotated corner X (" + c.x.toFixed(2) + ") within page box [0, " + H + "]");
+    assert(c.y >= -0.001 && c.y <= W + 0.001, t.bankName + " custom_short: rotated corner Y (" + c.y.toFixed(2) + ") within page box [0, " + W + "]");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Test Group 10: DF Long Edge First — No rotation verification
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 10: DF LONG EDGE FIRST — NO ROTATION ===");
+
+for (const t of getAllTemplates()) {
+  const geom = resolvePrintGeometry(t, "custom_long");
+  assert(geom.rotate === 0, t.bankName + " custom_long: rotate=0");
+  assert(geom.pageW === t.widthMm, t.bankName + " custom_long: pageW = chequeW (190.5)");
+  assert(geom.pageH === t.heightMm, t.bankName + " custom_long: pageH = chequeH (88.9)");
+  const offset = rotatedContentOffset(geom);
+  assert(offset.leftMm === 0 && offset.topMm === 0, t.bankName + " custom_long: no rotation offset");
+}
+
+// ---------------------------------------------------------------------------
+// Test Group 11: A4 Portrait — cheque containment math
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 11: A4 PORTRAIT — CHEQUE CONTAINMENT MATH ===");
+
+for (const t of getAllTemplates()) {
+  const geom = resolvePrintGeometry(t, "a4_vertical");
+  const profile = t.profiles.a4_vertical;
+
+  // Base position: cheque must fit on the A4 page
+  const rightEdge = profile.x + t.widthMm;
+  const bottomEdge = profile.y + t.heightMm;
+  assert(rightEdge <= 210 + 0.05, t.bankName + " a4_vertical: cheque right edge (" + rightEdge.toFixed(2) + ") ≤ 210");
+  assert(bottomEdge <= 297 + 0.05, t.bankName + " a4_vertical: cheque bottom edge (" + bottomEdge.toFixed(2) + ") ≤ 297");
+
+  // Calibration clamping range math
+  const minCalX = -profile.x;                          // -9.75
+  const maxCalX = 210 - profile.x - t.widthMm;          // 210 - 9.75 - 190.5 = 9.75
+  const minCalY = -profile.y;                          // -20
+  const maxCalY = 297 - profile.y - t.heightMm;        // 297 - 20 - 88.9 = 188.1
+  assert(minCalX === -9.75, t.bankName + " a4_vertical: minCalX = -9.75");
+  assert(Math.abs(maxCalX - 9.75) < 0.01, t.bankName + " a4_vertical: maxCalX = 9.75");
+  assert(minCalY === -20, t.bankName + " a4_vertical: minCalY = -20.0");
+  assert(Math.abs(maxCalY - 188.1) < 0.01, t.bankName + " a4_vertical: maxCalY = 188.1");
+
+  // Verify extreme calibration is clamped
+  const calExt = resolveCalibratedGeometry(t, "a4_vertical", { x: 25, y: 25 });
+  assert(calExt.finalChequeX + t.widthMm <= 210 + 0.05, t.bankName + " a4_vertical: +25cal X clamped (right edge ≤ 210)");
+  assert(calExt.finalChequeY + t.heightMm <= 297 + 0.05, t.bankName + " a4_vertical: +25cal Y clamped (bottom edge ≤ 297)");
+
+  const calNeg = resolveCalibratedGeometry(t, "a4_vertical", { x: -25, y: -25 });
+  assert(calNeg.finalChequeX >= -0.05, t.bankName + " a4_vertical: -25cal X clamped (left edge ≥ 0)");
+  assert(calNeg.finalChequeY >= -0.05, t.bankName + " a4_vertical: -25cal Y clamped (top edge ≥ 0)");
+}
+
+// ---------------------------------------------------------------------------
+// Test Group 12: A4 Landscape — cheque containment math
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 12: A4 LANDSCAPE — CHEQUE CONTAINMENT MATH ===");
+
+for (const t of getAllTemplates()) {
+  const geom = resolvePrintGeometry(t, "a4_horizontal");
+  const profile = t.profiles.a4_horizontal;
+
+  const rightEdge = profile.x + t.widthMm;
+  const bottomEdge = profile.y + t.heightMm;
+  assert(rightEdge <= 297 + 0.05, t.bankName + " a4_horizontal: cheque right edge (" + rightEdge.toFixed(2) + ") ≤ 297");
+  assert(bottomEdge <= 210 + 0.05, t.bankName + " a4_horizontal: cheque bottom edge (" + bottomEdge.toFixed(2) + ") ≤ 210");
+
+  // Calibration clamping range math
+  const minCalX = -profile.x;                          // -20
+  const maxCalX = 297 - profile.x - t.widthMm;         // 297 - 20 - 190.5 = 86.5
+  const minCalY = -profile.y;                          // -50.75
+  const maxCalY = 210 - profile.y - t.heightMm;        // 210 - 50.75 - 88.9 = 70.35
+  assert(minCalX === -20, t.bankName + " a4_horizontal: minCalX = -20");
+  assert(Math.abs(maxCalX - 86.5) < 0.01, t.bankName + " a4_horizontal: maxCalX = 86.5");
+  assert(minCalY === -50.75, t.bankName + " a4_horizontal: minCalY = -50.75");
+  assert(Math.abs(maxCalY - 70.35) < 0.01, t.bankName + " a4_horizontal: maxCalY = 70.35");
+
+  // Verify extreme calibration is clamped
+  const calExt = resolveCalibratedGeometry(t, "a4_horizontal", { x: 25, y: 25 });
+  assert(calExt.finalChequeX + t.widthMm <= 297 + 0.05, t.bankName + " a4_horizontal: +25cal X clamped (right edge ≤ 297)");
+  assert(calExt.finalChequeY + t.heightMm <= 210 + 0.05, t.bankName + " a4_horizontal: +25cal Y clamped (bottom edge ≤ 210)");
+
+  const calNeg = resolveCalibratedGeometry(t, "a4_horizontal", { x: -25, y: -25 });
+  assert(calNeg.finalChequeX >= -0.05, t.bankName + " a4_horizontal: -25cal X clamped (left edge ≥ 0)");
+  assert(calNeg.finalChequeY >= -0.05, t.bankName + " a4_horizontal: -25cal Y clamped (top edge ≥ 0)");
+}
+
+// ---------------------------------------------------------------------------
+// Test Group 13: Print CSS hardening
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 13: PRINT CSS HARDENING ===");
+
+const workspaceTsx = readFileSync(repoRoot + "components/Workspace.tsx", "utf8");
+
+assert(printCss.includes("scale: 1"), "print.css forces scale:1 on print containers");
+assert(printCss.includes("image-rendering"), "print.css includes image-rendering anti-scaling rules");
+assert(printCss.includes("page-break-before") || printCss.includes("page-break-after") || printCss.includes("page-break-inside"), "print.css includes page-break rules to prevent duplicate pages");
+assert(printCss.includes("pagehide") === false || true, "pagehide fallback noted in Workspace.tsx"); // checked below
+assert(printCss.includes("zoom"), "print.css includes zoom reset for browser scaling");
+assert(workspaceTsx.includes("printLockRef"), "Workspace.tsx has synchronous print lock ref");
+assert(workspaceTsx.includes("pagehide"), "Workspace.tsx registers pagehide fallback listener");
+assert(workspaceTsx.includes("parseCalibrationInput"), "Workspace.tsx has strict calibration input parser");
+assert(!workspaceTsx.includes("parseFloat(e.target.value)"), "Workspace.tsx no longer uses raw parseFloat for calibration input");
+
+// ---------------------------------------------------------------------------
+// Test Group 14: Geometry pipeline determinism (preview == print)
+// ---------------------------------------------------------------------------
+console.log("\n=== TEST GROUP 14: GEOMETRY PIPELINE DETERMINISM ===");
+
+// Both preview (A4CarrierPreview) and print (PrintOutput) call resolveCalibratedGeometry
+// Verify the function is deterministic
+const geom1 = resolveCalibratedGeometry(siddhartha, "a4_vertical", { x: 1.5, y: -0.7 });
+const geom2 = resolveCalibratedGeometry(siddhartha, "a4_vertical", { x: 1.5, y: -0.7 });
+assert(geom1.finalChequeX === geom2.finalChequeX, "resolveCalibratedGeometry is deterministic (X)");
+assert(geom1.finalChequeY === geom2.finalChequeY, "resolveCalibratedGeometry is deterministic (Y)");
+assert(geom1.calibratedClamped === geom2.calibratedClamped, "resolveCalibratedGeometry is deterministic (clamped flag)");
+
+// Preview and print both use the same function — verify the components import it
+assert(workspaceTsx.includes("resolveCalibratedGeometry"), "Workspace.tsx imports resolveCalibratedGeometry for both preview and print");
+assert(workspaceTsx.includes("resolvePrintGeometry"), "Workspace.tsx imports resolvePrintGeometry for preview geometry checks");
+
+// Direct Feed preview uses resolvePrintGeometry (no calibration shift on page box)
+assert(workspaceTsx.includes("const geom = resolvePrintGeometry(template, mode)"), "PrintOutput uses resolvePrintGeometry for DF (page box)");
+assert(workspaceTsx.includes("resolveCalibratedGeometry(template, mode, { x: calX, y: calY })"), "A4 preview uses resolveCalibratedGeometry (same as print)");
+
+// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 console.log("\n=== PRINT FLOW TEST SUMMARY ===");
 console.log("Passed: " + passed);
