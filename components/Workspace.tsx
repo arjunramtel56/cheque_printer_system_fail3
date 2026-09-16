@@ -139,23 +139,23 @@ function DirectFeedPreview({ template, date, payee, amount, amountWords, account
   const displayW = Math.round(template.widthMm * SCALE);
   const displayH = Math.round(template.heightMm * SCALE);
 
-   function pos(fieldX: number, fieldY: number) {
-     return { x: (fieldX + calX) * SCALE, y: (fieldY + calY) * SCALE };
-   }
+  function pos(fieldX: number, fieldY: number) {
+    return { x: (fieldX + calX) * SCALE, y: (fieldY + calY) * SCALE };
+  }
 
-   type FieldCoords = { x: number; y: number; width: number; fontSize?: number; minFontSize?: number; letterSpacing?: number; align?: string };
-   function renderField(key: string, text: string, coords: FieldCoords, extraClass = "") {
-     if (!text) return null;
-     const p = pos(coords.x, coords.y);
-     const fs = fitFontSize(text, coords);
-     const style: React.CSSProperties = {
-       position: "absolute",
-       left: `${p.x}px`,
-       top: `${p.y}px`,
-       width: `${coords.width * SCALE}px`,
-       fontSize: `${fs * SCALE}px`,
-       letterSpacing: `${(coords.letterSpacing ?? 0) * SCALE}px`,
-       textAlign: (coords.align as any) || "left",
+  type FieldCoords = { x: number; y: number; width: number; fontSize?: number; minFontSize?: number; letterSpacing?: number; align?: "left" | "center" | "right" };
+  function renderField(key: string, text: string, coords: FieldCoords, extraClass = "") {
+    if (!text) return null;
+    const p = pos(coords.x, coords.y);
+    const fs = fitFontSize(text, coords);
+    const style: React.CSSProperties = {
+      position: "absolute",
+      left: `${p.x}px`,
+      top: `${p.y}px`,
+      width: `${coords.width * SCALE}px`,
+      fontSize: `${fs * SCALE}px`,
+      letterSpacing: `${(coords.letterSpacing ?? 0) * SCALE}px`,
+      textAlign: coords.align ?? "left",
       fontFamily: '"Courier New", monospace',
       whiteSpace: "nowrap",
       overflow: "hidden",
@@ -275,23 +275,23 @@ function A4CarrierPreview({ template, profile, mode, date, payee, amount, amount
   const chequeW = template.widthMm;
   const chequeH = template.heightMm;
 
-   function pos(fieldX: number, fieldY: number) {
-     return { x: (chequeX + fieldX) * SCALE, y: (chequeY + fieldY) * SCALE };
-   }
+  function pos(fieldX: number, fieldY: number) {
+    return { x: (chequeX + fieldX) * SCALE, y: (chequeY + fieldY) * SCALE };
+  }
 
-   type FieldCoords = { x: number; y: number; width: number; fontSize?: number; minFontSize?: number; letterSpacing?: number; align?: string };
-   function renderField(key: string, text: string, coords: FieldCoords, extraClass = "") {
-     if (!text) return null;
-     const p = pos(coords.x, coords.y);
-     const fs = fitFontSize(text, coords);
-     const style: React.CSSProperties = {
-       position: "absolute",
-       left: `${p.x}px`,
-       top: `${p.y}px`,
-       width: `${coords.width * SCALE}px`,
-       fontSize: `${fs * SCALE}px`,
-       letterSpacing: `${(coords.letterSpacing ?? 0) * SCALE}px`,
-       textAlign: (coords.align as any) || "left",
+  type FieldCoords = { x: number; y: number; width: number; fontSize?: number; minFontSize?: number; letterSpacing?: number; align?: "left" | "center" | "right" };
+  function renderField(key: string, text: string, coords: FieldCoords, extraClass = "") {
+    if (!text) return null;
+    const p = pos(coords.x, coords.y);
+    const fs = fitFontSize(text, coords);
+    const style: React.CSSProperties = {
+      position: "absolute",
+      left: `${p.x}px`,
+      top: `${p.y}px`,
+      width: `${coords.width * SCALE}px`,
+      fontSize: `${fs * SCALE}px`,
+      letterSpacing: `${(coords.letterSpacing ?? 0) * SCALE}px`,
+      textAlign: coords.align ?? "left",
       fontFamily: '"Courier New", monospace',
       whiteSpace: "nowrap",
       overflow: "hidden",
@@ -808,7 +808,7 @@ interface PrintFieldProps {
   width: number;
   fontSize?: number;
   letterSpacing?: number;
-  align?: string;
+  align?: "left" | "center" | "right";
   offsetX?: number;
   offsetY?: number;
 }
@@ -827,7 +827,7 @@ function PrintField({ text, x, y, width, fontSize, letterSpacing, align, offsetX
         width: `${width}mm`,
         fontSize: `${fs}pt`,
         letterSpacing: `${letterSpacing ?? 0}mm`,
-        textAlign: (align as any) || "left",
+        textAlign: align ?? "left",
         fontFamily: '"Courier New", monospace',
         whiteSpace: "nowrap",
         overflow: "hidden",
@@ -1152,7 +1152,7 @@ export default function Workspace() {
   const printOutputRef = useRef<HTMLDivElement | null>(null);
   const printKeyRef = useRef(0);
   const printLockRef = useRef(false);
-   const [printError, setPrintError] = useState("");
+  const [printError, setPrintError] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
   const [printCompleted, setPrintCompleted] = useState(false);
 
@@ -1188,32 +1188,32 @@ export default function Workspace() {
   // Explicit workflow state + print-readiness (single source of truth for
   // the disabled reason the print button surfaces).
   // -----------------------------------------------------------------------
-   const printReadiness = useMemo<PrintReadiness>(() => {
-     if (!template) return { ready: false, reason: "Select a bank template" };
-     if (!date || !validateChequeDate(date).valid) {
-       const dc = date ? validateChequeDate(date) : { valid: false, error: "Enter cheque date" };
-       return { ready: false, reason: dc.error ?? "Enter cheque date" };
-     }
-     const payeeVal = validatePayee(payee);
-     if (!payeeVal.valid) return { ready: false, reason: payeeVal.error ?? "Enter payee name" };
-     const amountVal = validateAmount(amount);
-     if (!amountVal.valid) return { ready: false, reason: amountVal.error ?? "Enter a valid amount" };
-     if (amountVal.paisa === 0) return { ready: false, reason: "Enter an amount greater than zero" };
-     if (amountWords.trim() === "") return { ready: false, reason: "Enter amount in words" };
-     const consistency = checkAmountWordsConsistency(amount, amountWords);
-     if (!consistency.consistent) {
-       return { ready: false, reason: "Amount and words do not match" };
-     }
-     if (!printMode) return { ready: false, reason: "Select print mode" };
-     const cal = isDF ? dfCalibration : a4Calibration;
-     if (validateCalibrationPair(cal.x, cal.y) !== null) {
-       return { ready: false, reason: "Correct calibration" };
-     }
-     return { ready: true, reason: null };
-   }, [template, date, payee, amount, amountWords, amountWords, printMode, isDF, dfCalibration, a4Calibration]);
+  const printReadiness = useMemo<PrintReadiness>(() => {
+        if (!template) return { ready: false, reason: "Select a bank template" };
+        if (!date || !validateChequeDate(date).valid) {
+          const dc = date ? validateChequeDate(date) : { valid: false, error: "Enter cheque date" };
+          return { ready: false, reason: dc.error ?? "Enter cheque date" };
+        }
+        const payeeVal = validatePayee(payee);
+        if (!payeeVal.valid) return { ready: false, reason: payeeVal.error ?? "Enter payee name" };
+        const amountVal = validateAmount(amount);
+        if (!amountVal.valid) return { ready: false, reason: amountVal.error ?? "Enter a valid amount" };
+        if (amountVal.paisa === 0) return { ready: false, reason: "Enter an amount greater than zero" };
+        if (amountWords.trim() === "") return { ready: false, reason: "Enter amount in words" };
+        const consistency = checkAmountWordsConsistency(amount, amountWords);
+        if (!consistency.consistent) {
+          return { ready: false, reason: "Amount and words do not match" };
+        }
+        if (!printMode) return { ready: false, reason: "Select print mode" };
+        const cal = isDF ? dfCalibration : a4Calibration;
+        if (validateCalibrationPair(cal.x, cal.y) !== null) {
+          return { ready: false, reason: "Correct calibration" };
+        }
+        return { ready: true, reason: null };
+      }, [template, date, payee, amount, amountWords, printMode, isDF, dfCalibration, a4Calibration]);
 
-   // Derive the explicit form state for the state badge.
-    const derivedFormState = useMemo<FormState>(() => {
+  // Derive the explicit form state for the state badge.
+  const derivedFormState = useMemo<FormState>(() => {
       if (isPrinting) return "printing";
       if (printCompleted) return "done";
       if (!template) return "empty";
