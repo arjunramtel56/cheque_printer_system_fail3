@@ -157,17 +157,12 @@
     scale: 1 !important;
   }
 
-  /* Ensure responsive/mobile screen rules (in globals.css) NEVER alter
-     physical print dimensions. The print output uses absolute mm units;
-     here we explicitly lock it to natural size during print. */
-  .print-output-screen {
-    position: static !important;
-    left: auto !important;
-    top: auto !important;
-    transform: none !important;
-    scale: 1 !important;
-    zoom: 1 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
+   /* Debug measurement guides — screen only, stripped from print output.
+      These render page boundaries, cheque boundaries, origin markers, center
+      lines, physical dimensions, calibration offsets and rotation state for
+      development/admin calibration. They must NEVER appear on the printed cheque. */
+   .debug-guides {
+     display: none !important;
+   }
+
 }

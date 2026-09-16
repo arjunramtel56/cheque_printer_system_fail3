@@ -1806,46 +1806,103 @@ export default function Workspace() {
               </label>
             </div>
 
-            {/* Calibration — mode-aware heading */}
-            <div className="field" style={{ marginTop: 8 }}>
-              <span>
-                Calibration (mm offset) ·{" "}
-                <b style={{ color: isDF ? "var(--brand-blue)" : "var(--brand-teal)" }}>
-                  {isDF ? "Direct Feed" : "A4 Carrier"}
-                </b>
-              </span>
-              <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
-                <CalibrationGroup
-                  dfCalibration={dfCalibration}
-                  a4Calibration={a4Calibration}
-                  currentCalibration={currentCalibration}
-                  setCurrentCalibration={setCurrentCalibration}
-                  template={template}
-                />
-              </div>
-              <small>
-                Fine adjustment in 0.1 mm steps. ±25 mm range. Calibration is independent per print mode — changing A4 Carrier values will not affect Direct Feed calibration and vice versa.
-              </small>
-            </div>
-
-            {/* Current calibration summary */}
+            {/* Print Settings / Size Management */}
             {template && (
-              <div className="template-summary" aria-label="Selected template info">
-                <div><span>Bank · </span><b>{template.bankName}</b></div>
-                <div><span>Size · </span><b>{template.widthMm} × {template.heightMm} mm</b></div>
-                <div><span>Mode · </span><b>{PROFILE_LABELS[printMode]}</b></div>
-                {profile && (
-                  <div><span>Page · </span><b>{profile.pageWidth} × {profile.pageHeight} mm</b></div>
-                )}
-                <div><span>Calibration · </span><b>X: {currentCalibration.x.toFixed(1)} mm · Y: {currentCalibration.y.toFixed(1)} mm</b></div>
-                <div><span>Mode calibrations · </span>
-                  <b>
-                    DF X:{dfCalibration.x.toFixed(1)} Y:{dfCalibration.y.toFixed(1)} ·
-                    A4 X:{a4Calibration.x.toFixed(1)} Y:{a4Calibration.y.toFixed(1)}
-                  </b>
+              <div className="field" style={{ marginTop: 16, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
+                <h3 style={{ margin: "0 0 10px 0", fontSize: "0.82rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                  Print Settings / Size Management
+                </h3>
+                <div style={{ display: "grid", gap: 10, fontSize: "0.85rem" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
+                    <span style={{ color: "var(--text-muted)" }}>PRINT MODE</span>
+                    <b style={{ color: isDF ? "var(--brand-blue)" : "var(--brand-teal)" }}>
+                      {isDF ? "Custom Cheque Size" : "A4 Carrier"}
+                    </b>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
+                    <span style={{ color: "var(--text-muted)" }}>CHEQUE SIZE</span>
+                    <b>{template.widthMm} mm × {template.heightMm} mm</b>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
+                    <span style={{ color: "var(--text-muted)" }}>PAPER</span>
+                    <b>{isDF ? "Custom Cheque" : "A4"}</b>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
+                    <span style={{ color: "var(--text-muted)" }}>ORIENTATION</span>
+                    <b>{PRINT_MODE_LABELS[printMode].orientation} for {isDF ? "Custom Cheque" : "A4 Carrier"}</b>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
+                    <span style={{ color: "var(--text-muted)" }}>CALIBRATION</span>
+                    <b>X: {currentCalibration.x.toFixed(1)} mm · Y: {currentCalibration.y.toFixed(1)} mm</b>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
+                    <span style={{ color: "var(--text-muted)" }}>SCALE</span>
+                    <b>100% / Actual Size</b>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
+                    <span style={{ color: "var(--text-muted)" }}>MODE CALIBRATIONS (independent)</span>
+                    <b style={{ fontSize: "0.8rem" }}>
+                      DF: X:{dfCalibration.x.toFixed(1)} Y:{dfCalibration.y.toFixed(1)} · A4: X:{a4Calibration.x.toFixed(1)} Y:{a4Calibration.y.toFixed(1)}
+                    </b>
+                  </div>
+                </div>
+
+                {/* Debug mode toggle */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingLeft: 2 }}>
+                  <label htmlFor="debug-toggle" style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: "0.82rem" }}>
+                    <input
+                      id="debug-toggle"
+                      type="checkbox"
+                      checked={debugMode}
+                      onChange={(e) => setDebugMode(e.target.checked)}
+                    />
+                    <span style={{ color: "var(--text-muted)" }}>Show debug measurement guides</span>
+                  </label>
+                  <small style={{ color: "var(--text-muted)" }}>Dev/admin only</small>
                 </div>
               </div>
             )}
+
+             {/* Calibration — mode-aware heading */}
+             <div className="field" style={{ marginTop: 8 }}>
+               <span>
+                 Calibration (mm offset) ·{" "}
+                 <b style={{ color: isDF ? "var(--brand-blue)" : "var(--brand-teal)" }}>
+                   {isDF ? "Direct Feed" : "A4 Carrier"}
+                 </b>
+               </span>
+               <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
+                 <CalibrationGroup
+                   dfCalibration={dfCalibration}
+                   a4Calibration={a4Calibration}
+                   currentCalibration={currentCalibration}
+                   setCurrentCalibration={setCurrentCalibration}
+                   template={template}
+                 />
+               </div>
+               <small>
+                 Fine adjustment in 0.1 mm steps. ±25 mm range. Calibration is independent per print mode — changing A4 Carrier values will not affect Direct Feed calibration and vice versa.
+               </small>
+             </div>
+
+             {/* Current calibration summary */}
+             {template && (
+               <div className="template-summary" aria-label="Selected template info">
+                 <div><span>Bank · </span><b>{template.bankName}</b></div>
+                 <div><span>Size · </span><b>{template.widthMm} × {template.heightMm} mm</b></div>
+                 <div><span>Mode · </span><b>{PROFILE_LABELS[printMode]}</b></div>
+                 {profile && (
+                   <div><span>Page · </span><b>{profile.pageWidth} × {profile.pageHeight} mm</b></div>
+                 )}
+                 <div><span>Calibration · </span><b>X: {currentCalibration.x.toFixed(1)} mm · Y: {currentCalibration.y.toFixed(1)} mm</b></div>
+                 <div><span>Mode calibrations · </span>
+                   <b>
+                     DF X:{dfCalibration.x.toFixed(1)} Y:{dfCalibration.y.toFixed(1)} ·
+                     A4 X:{a4Calibration.x.toFixed(1)} Y:{a4Calibration.y.toFixed(1)}
+                   </b>
+                 </div>
+               </div>
+             )}
 
 
             <PrepChecklist
@@ -1914,29 +1971,31 @@ export default function Workspace() {
             <div className="preview-stage" id="preview-stage" tabIndex={-1}>
               {template ? (
                 isDirectFeed(printMode) ? (
-                  <DirectFeedPreview
-                    template={template}
-                    date={date}
-                    payee={payee}
-                    amount={amount}
-                    amountWords={amountWords}
-                    accountPayee={accountPayee}
-                    offsetX={dfCalibration.x}
-                    offsetY={dfCalibration.y}
-                  />
-                ) : (
-                   <A4CarrierPreview
+                   <DirectFeedPreview
                      template={template}
-                     profile={profile!}
-                     mode={printMode}
                      date={date}
                      payee={payee}
                      amount={amount}
                      amountWords={amountWords}
                      accountPayee={accountPayee}
-                     offsetX={a4Calibration.x}
-                     offsetY={a4Calibration.y}
+                     offsetX={dfCalibration.x}
+                     offsetY={dfCalibration.y}
+                     debugMode={debugMode}
                    />
+                 ) : (
+                    <A4CarrierPreview
+                      template={template}
+                      profile={profile!}
+                      mode={printMode}
+                      date={date}
+                      payee={payee}
+                      amount={amount}
+                      amountWords={amountWords}
+                      accountPayee={accountPayee}
+                      offsetX={a4Calibration.x}
+                      offsetY={a4Calibration.y}
+                      debugMode={debugMode}
+                    />
                 )
               ) : (
                 <div

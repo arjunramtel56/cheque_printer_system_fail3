@@ -103,33 +103,17 @@ export function resolvePrintGeometry(template: BankTemplate, mode: ProfileKey): 
 }
 
 /**
- * Inner-content placement for a rotated Direct-Feed container.
+ * Content offset for Direct-Feed mode.
  *
- * CSS `rotate(90deg)` rotates content clockwise by 90° in screen coordinates
- * (Y-down). The rotation matrix [0 -1; 1 0] maps a point (x, y) to (-y, x).
- * The PrintOutput component sets `transform-origin: 0 0` (top-left) on the
- * rotated div, so rotation is performed around the element's top-left corner.
- *
- * For a cheque of size W×H (W=190.5, H=88.9) rotated 90° CW about origin:
- *   - The four corners (0,0), (W,0), (W,H), (0,H) map to
- *     (0,0), (0,W), (-H,W), (-H,0).
- *   - The rotated bounding box is [-H, 0] × [0, W].
- *
- * The page box (container) for Short Edge First is H×W = [0, H] × [0, W].
- * To translate the rotated bounding box into the page box, we shift right by H:
- *   offset = (left=chequeH, top=0).
- *
- * Concretely: with rotate=90 the page box is 88.9×190.5 (H×W) and the cheque
- * is 190.5×88.9 (W×H). The offset (88.9, 0) positions the rotated bounding
- * box to exactly fill the page box.
+ * Direct Feed no longer applies CSS rotation — content is rendered flat
+ * in a landscape 190.5×88.9 mm page box. Short Edge First vs Long Edge First
+ * is a printer paper-feed setting, not a CSS transform. This function is
+ * retained for API compatibility and always returns zero offset.
  */
 export function rotatedContentOffset(geom: PrintGeometry): { leftMm: number; topMm: number } {
-  if (geom.rotate !== 90) return { leftMm: 0, topMm: 0 };
-  // Short Edge First: page box is H×W, cheque is W×H. CSS rotate(90deg)
-  // clockwise (matrix [0 -1; 1 0]) maps (x,y) → (-y, x). Corners map to
-  // (0,0), (0,W), (-H,W), (-H,0) → bounding box [-H,0] × [0,W].
-  // To fill page box [0,H] × [0,W], shift right by chequeH: left=chequeH, top=0.
-  return { leftMm: geom.chequeH, topMm: 0 };
+  // No CSS rotation is applied. Content fills the page box directly.
+  // Always returns zero — kept for backward compatibility.
+  return { leftMm: 0, topMm: 0 };
 }
 
 /**

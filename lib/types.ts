@@ -28,7 +28,10 @@ export interface PrintProfile {
   y: number;
   pageWidth: number;
   pageHeight: number;
-  rotate: 0 | 90;
+  /** CSS rotation of content. Always 0 for Direct Feed (feed direction is
+   *  a printer setting, not a CSS transform). Retained as a type for
+   *  future extensibility but the engine no longer rotates content. */
+  rotate: 0;
 }
 
 export interface BankTemplate {

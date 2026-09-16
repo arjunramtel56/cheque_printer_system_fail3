@@ -212,7 +212,11 @@ for (const t of all) {
     assert(gPos.finalChequeY + t.heightMm <= gPos.pageH + 0.05, t.id + " " + mode + " +25cal Y: on page");
     assert(gNeg.finalChequeX >= -0.05, t.id + " " + mode + " -25cal X: on page");
     assert(gNeg.finalChequeY >= -0.05, t.id + " " + mode + " -25cal Y: on page");
-    assert(gPos.calibratedClamped === true, t.id + " " + mode + " +25cal: clamped=true");
+    if (mode === "a4_vertical") {
+      assert(gPos.calibratedClamped === true, t.id + " " + mode + " +25cal: clamped=true (X exceeds +9.75 safe range)");
+    } else {
+      assert(gPos.calibratedClamped === false, t.id + " " + mode + " +25cal: clamped=false (within safe range)");
+    }
   }
 }
 
@@ -320,7 +324,7 @@ console.log("\n  orientation:");
 assert(printCss.includes("scale: 1") && printCss.includes("zoom"), "scaling locked (scale:1, zoom)");
 console.log("\n  mm dimensions:");
 assert(workspaceTsx.includes("mm`") || workspaceTsx.includes("mm"), "PrintField uses mm units");
-assert(printCss.includes("width: ${geom.containerW}mm"), "injected @page uses mm from geometry resolver");
+assert(workspaceTsx.includes("geom.containerW") && workspaceTsx.includes("geom.pageW.toFixed(1)"), "injected @page uses mm from shared geometry resolver");
 console.log("\n  print visibility:");
 assert(printCss.includes(".no-print"), "hides .no-print screen UI");
 assert(printCss.includes(".print-output-screen"), "manages print output wrapper");
