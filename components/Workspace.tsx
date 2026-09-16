@@ -1132,6 +1132,7 @@ export default function Workspace() {
   const printStyleRef = useRef<HTMLStyleElement | null>(null);
   const printOutputRef = useRef<HTMLDivElement | null>(null);
   const printKeyRef = useRef(0);
+  const printLockRef = useRef(false);
    const [printError, setPrintError] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
   const [printCompleted, setPrintCompleted] = useState(false);
@@ -1233,12 +1234,16 @@ export default function Workspace() {
   }
 
   function handlePrint() {
-    // DUPLICATE-PRINT GUARD: ignore re-entries while a print cycle is open
-    // (before window.print() and its afterprint cleanup have completed).
-    if (isPrinting) return;
+     // DUPLICATE-PRINT GUARD: synchronously lock to prevent double-click from
+     // triggering duplicate print attempts. The ref is set immediately on the
+     // first invocation, so the second click is blocked even before React
+     // re-renders with isPrinting=true.
+     if (printLockRef.current || isPrinting) return;
+     printLockRef.current = true;
+     setIsPrinting(true);
 
-    setPrintError("");
-    setPrintCompleted(false);
+     setPrintError("");
+     setPrintCompleted(false);
 
      // STEP 1: VALIDATE DATA
     const dateCheck = validateChequeDate(date);

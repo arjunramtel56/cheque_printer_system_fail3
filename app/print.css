@@ -25,9 +25,16 @@
 @page {
   size: auto;
   margin: 0;
+  /* Prevent browser from scaling or centering the print output */
+  /* size: auto means browser decides; the injected @page rule sets the
+     exact page dimensions at print time. */
 }
 
+/* Prevent any second page from being generated */
 @media print {
+  @page {
+    margin: 0;
+  }
   html, body {
     background: #fff !important;
     margin: 0 !important;
@@ -35,6 +42,10 @@
     width: auto !important;
     height: auto !important;
     overflow: hidden !important;
+    /* Disable browser scaling and fit-to-page */
+    zoom: 1 !important;
+    transform: none !important;
+    scale: 1 !important;
   }
 
   /* Hide all application UI — screen-only elements */
@@ -68,14 +79,18 @@
   }
 
   /* -------------------------------------------------------
-     Print output wrapper — back in normal flow at page top.
-     Only the active mode's container has content; the other
-     (if present) is display:none via injected rules.
-     ------------------------------------------------------- */
+      Print output wrapper — back in normal flow at page top.
+      Only the active mode's container has content; the other
+      (if present) is display:none via injected rules.
+      ------------------------------------------------------- */
   .print-output-screen {
     position: static !important;
     left: auto !important;
     top: auto !important;
+    /* Prevent any second page or bleed-through from screen positioning */
+    page-break-before: avoid;
+    page-break-after: avoid;
+    page-break-inside: avoid;
   }
 
   /* -------------------------------------------------------
@@ -122,9 +137,22 @@
     padding: 0 !important;
   }
 
-  /* Force exact dimensions — no browser scaling */
+  /* Force exact dimensions — no browser scaling, no fit-to-page */
   .print-direct-feed,
   .print-a4-carrier {
+    transform: none !important;
+    scale: 1 !important;
+    /* image-rendering prevents any interpolation-based scaling */
+    image-rendering: -webkit-optimize-contrast !important;
+    image-rendering: crisp-edges !important;
+  }
+
+  /* Prevent any element from forcing a second page */
+  .print-direct-feed *,
+  .print-a4-carrier * {
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
     transform: none !important;
     scale: 1 !important;
   }

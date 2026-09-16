@@ -434,11 +434,19 @@ export function validatePayee(raw: string): { valid: boolean; error?: string; pa
     return { valid: false, error: "Invalid payee name.", payee: "" };
   }
 
-  // Normalize whitespace: trim leading/trailing, collapse repeated spaces
+   // Normalize whitespace: trim leading/trailing (including non-breaking spaces),
+  // collapse repeated whitespace (including tabs/newlines) into single spaces.
   const trimmed = raw.trim().replace(/\s+/g, " ");
 
   if (trimmed === "") {
     return { valid: false, error: "Payee name is required.", payee: "" };
+  }
+
+  // Reject emoji and other pictographic/symbol characters that are not valid
+  // in a payee name. This uses Unicode property escapes to catch the broad
+  // set of emoji, symbols, and formatting characters.
+  if (/\p{Extended_Pictographic}/u.test(trimmed)) {
+    return { valid: false, error: "Payee name contains invalid characters (emoji not allowed).", payee: trimmed };
   }
 
   // Guard against excessively long payee names that would overflow field

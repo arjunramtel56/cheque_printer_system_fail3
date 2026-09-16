@@ -17,7 +17,7 @@ import {
   MAX_PAYEE_CHARS,
   MIN_PAYEE_FONT_SIZE,
 } from "../lib/amountWords.ts";
-import { getTemplate } from "../lib/templates.ts";
+import { getTemplate, getAllTemplates } from "../lib/templates.ts";
 import { validateCalibrationPair } from "../lib/calibration.ts";
 import { resolvePrintGeometry } from "../lib/printGeometry.ts";
 import { validatePrintGeometry, validateCalibratedBounds } from "../lib/validation.ts";
