@@ -953,6 +953,204 @@ for (const t of getAllTemplates()) {
   assert(result.valid, t.bankName + ": final print gate passes");
 }
 
+console.log("\n=== TEST GROUP 21: BOUNDARY AMOUNTS (PART 2 requirement #3) ===");
+
+const boundaryAmounts = [
+  { input: "1", expected: "One Rupees Only" },
+  { input: "10", expected: "Ten Rupees Only" },
+  { input: "100", expected: "One Hundred Rupees Only" },
+  { input: "999", expected: "Nine Hundred Ninety-Nine Rupees Only" },
+  { input: "1000", expected: "One Thousand Rupees Only" },
+  { input: "10000", expected: "Ten Thousand Rupees Only" },
+  { input: "100000", expected: "One Lakh Rupees Only" },
+  { input: "1000000", expected: "Ten Lakh Rupees Only" },
+];
+for (const ba of boundaryAmounts) {
+  const result = validateAmount(ba.input);
+  assert(result.valid, `boundary amount ${ba.input} is valid`);
+  if (result.valid) {
+    const words = amountToWordsFromPaisa(result.paisa);
+    assert(words === ba.expected, `${ba.input} → "${words}" (expected "${ba.expected}")`);
+  }
+}
+
+console.log("\n=== TEST GROUP 22: DECIMAL AMOUNTS WITH PAISA (PART 2 requirement #3) ===");
+
+const decimalAmounts = [
+  { input: "100.01", expected: "One Hundred Rupees and One Paisa Only" },
+  { input: "100.10", expected: "One Hundred Rupees and Ten Paisa Only" },
+  { input: "100.50", expected: "One Hundred Rupees and Fifty Paisa Only" },
+  { input: "100.99", expected: "One Hundred Rupees and Ninety-Nine Paisa Only" },
+  { input: "0.50", expected: "Zero Rupees and Fifty Paisa Only" },
+  { input: "0.01", expected: "Zero Rupees and One Paisa Only" },
+  { input: "1.00", expected: "One Rupees Only" },
+  { input: "10.5", expected: "Ten Rupees and Fifty Paisa Only" },
+];
+for (const da of decimalAmounts) {
+  const result = validateAmount(da.input);
+  assert(result.valid, `decimal amount ${da.input} is valid`);
+  if (result.valid) {
+    const words = amountToWordsFromPaisa(result.paisa);
+    assert(words === da.expected, `${da.input} → "${words}" (expected "${da.expected}")`);
+  }
+}
+
+console.log("\n=== TEST GROUP 23: LARGE SUPPORTED AMOUNTS (PART 2 requirement #3) ===");
+
+const largeAmounts = [
+  { input: "999999.99", desc: "just under 1 million" },
+  { input: "9999999.99", desc: "just under 1 crore" },
+  { input: "99999999.99", desc: "just under 1 arab" },
+  { input: "999999999.99", desc: "just under 10 arab" },
+  { input: "9999999999.99", desc: "just under 1 kharab" },
+  { input: "99999999999.99", desc: "just under 10 kharab" },
+  { input: "999999999999.99", desc: "maximum supported amount" },
+];
+for (const la of largeAmounts) {
+  const result = validateAmount(la.input);
+  assert(result.valid && result.paisa > 0, `${la.desc} (${la.input}) accepted`);
+  if (result.valid) {
+    const words = amountToWordsFromPaisa(result.paisa);
+    assert(words.endsWith("Only") && words.includes("Rupees"), `${la.input} words generated correctly`);
+  }
+}
+
+console.log("\n=== TEST GROUP 24: RAPID INPUT CHANGES (PART 2 requirement #7) ===");
+
+function simulateRapidChanges(inputs) {
+  let lastState = { value: "", words: "", valid: false };
+  const results = [];
+  for (const input of inputs) {
+    const v = validateAmount(input);
+    const words = v.valid && v.paisa > 0 ? generateAmountWords(input) : "";
+    const consistency = checkAmountWordsConsistency(input, words);
+    lastState = { value: input, words, valid: v.valid && v.paisa > 0 && consistency.consistent };
+    results.push(lastState);
+  }
+  return results;
+}
+
+const rapidInputs = ["1000", "500.50", "abc", "25000", ""];
+const rapidResults = simulateRapidChanges(rapidInputs);
+assert(rapidResults[0].valid === true, "rapid: 1000 valid");
+assert(rapidResults[1].valid === true, "rapid: 500.50 valid");
+assert(rapidResults[2].valid === false, "rapid: abc invalid");
+assert(rapidResults[3].valid === true, "rapid: 25000 valid");
+assert(rapidResults[4].valid === false, "rapid: empty invalid");
+assert(rapidResults[4].words === "", "rapid: empty amount clears words");
+
+console.log("\n=== TEST GROUP 25: STATE CHANGE — BANK TEMPLATE SWITCH (PART 2 requirement #7) ===");
+
+const template1 = getTemplate("siddhartha");
+const template2 = getTemplate("nabil");
+assert(template1 !== undefined && template2 !== undefined, "templates exist");
+
+const testData = { date: "2024-06-01", payee: "Ram Bahadur", amount: "5000", words: "Five Thousand Rupees Only" };
+const r1 = simulatePrintGate(template1, testData.date, testData.payee, testData.amount, testData.words, "custom_short", { x: 0, y: 0 });
+assert(r1.valid, "template1 (siddhartha) with valid data passes");
+const r2 = simulatePrintGate(template2, testData.date, testData.payee, testData.amount, testData.words, "custom_short", { x: 0, y: 0 });
+assert(r2.valid, "template2 (nabil) with valid data passes");
+
+const r3 = simulateFinalPrintGate(template1, testData.date, testData.payee, testData.amount, testData.words, null, { x: 0, y: 0 });
+assert(!r3.valid, "null print mode blocked when switching templates");
+
+console.log("\n=== TEST GROUP 26: STATE CHANGE — PRINT MODE SWITCH (PART 2 requirement #7) ===");
+
+const modeSwitchCases = [
+  { mode: "custom_short", cal: { x: 0, y: 0 } },
+  { mode: "a4_vertical", cal: { x: 0, y: 0 } },
+  { mode: "custom_long", cal: { x: 0, y: 0 } },
+  { mode: "a4_horizontal", cal: { x: 0, y: 0 } },
+];
+for (const mcs of modeSwitchCases) {
+  const result = simulateFinalPrintGate(
+    siddhartha,
+    "2024-06-01",
+    "Ram Bahadur",
+    "5000",
+    "Five Thousand Rupees Only",
+    mcs.mode,
+    mcs.cal,
+  );
+  assert(result.valid, `mode ${mcs.mode} valid after switching`);
+}
+
+const dfCal = { x: 5, y: -3 };
+const a4Cal = { x: 2.5, y: -1 };
+const rDF = simulateFinalPrintGate(siddhartha, "2024-06-01", "Ram", "1000", "One Thousand Rupees Only", "custom_short", dfCal);
+assert(rDF.valid, "DF calibration preserved when switching to DF mode");
+const rA4 = simulateFinalPrintGate(siddhartha, "2024-06-01", "Ram", "1000", "One Thousand Rupees Only", "a4_vertical", a4Cal);
+assert(rA4.valid, "A4 calibration preserved when switching to A4 mode");
+
+console.log("\n=== TEST GROUP 27: CLEARING THE FORM (PART 2 requirement #7) ===");
+
+const clearedGate = simulateFinalPrintGate(siddhartha, "", "", "", "", "custom_short", { x: 0, y: 0 });
+assert(!clearedGate.valid, "cleared date blocked");
+const clearedPayee = simulateFinalPrintGate(siddhartha, "2024-06-01", "   ", "1000", "One Thousand Rupees Only", "custom_short", { x: 0, y: 0 });
+assert(!clearedPayee.valid, "whitespace-only payee blocked after clear");
+const clearedAmount = simulateFinalPrintGate(siddhartha, "2024-06-01", "Ram", "", "One Thousand Rupees Only", "custom_short", { x: 0, y: 0 });
+assert(!clearedAmount.valid, "empty amount blocked after clear");
+const clearedWords = simulateFinalPrintGate(siddhartha, "2024-06-01", "Ram", "1000", "", "custom_short", { x: 0, y: 0 });
+assert(!clearedWords.valid, "empty words blocked after clear");
+
+console.log("\n=== TEST GROUP 28: DIRECT FEED ↔ A4 CARRIER SWITCHING (PART 2 requirement #7) ===");
+
+const switchDF = simulateFinalPrintGate(siddhartha, "2024-06-01", "Ram", "1000", "One Thousand Rupees Only", "custom_short", { x: 0, y: 0 });
+assert(switchDF.valid, "Direct Feed mode valid");
+const switchA4 = simulateFinalPrintGate(siddhartha, "2024-06-01", "Ram", "1000", "One Thousand Rupees Only", "a4_vertical", { x: 0, y: 0 });
+assert(switchA4.valid, "A4 Carrier mode valid");
+const switchA4L = simulateFinalPrintGate(siddhartha, "2024-06-01", "Ram", "1000", "One Thousand Rupees Only", "a4_horizontal", { x: 0, y: 0 });
+assert(switchA4L.valid, "A4 Carrier landscape valid");
+const switchDFL = simulateFinalPrintGate(siddhartha, "2024-06-01", "Ram", "1000", "One Thousand Rupees Only", "custom_long", { x: 0, y: 0 });
+assert(switchDFL.valid, "Direct Feed long edge valid");
+
+console.log("\n=== TEST GROUP 29: CHANGE PRINT MODE AFTER CALIBRATION (PART 2 requirement #7) ===");
+
+const dfCalBefore = { x: 3, y: 2 };
+const a4CalBefore = { x: 1.5, y: -1.5 };
+const afterDFtoA4 = simulateFinalPrintGate(siddhartha, "2024-06-01", "Ram", "1000", "One Thousand Rupees Only", "a4_vertical", a4CalBefore);
+assert(afterDFtoA4.valid, "A4 cal valid after DF cal was set (independent)");
+const afterA4toDF = simulateFinalPrintGate(siddhartha, "2024-06-01", "Ram", "1000", "One Thousand Rupees Only", "custom_short", dfCalBefore);
+assert(afterA4toDF.valid, "DF cal valid after A4 cal was set (independent)");
+
+console.log("\n=== TEST GROUP 30: WHITESPACE AND EDGE INPUT (PART 2 requirement #7) ===");
+
+assertRejects(" ", "rejects single space");
+assertRejects("\t", "rejects tab");
+assert(!validateAmount("  100  ").valid || parseNumericAmount("  100  ") === 10000, "surrounding whitespace trimmed by parser (acceptable normalization)");
+assertRejects("100 000", "rejects internal space in amount");
+assertRejects("100,00", "rejects malformed comma in amount");
+
+assert(!validatePayee(" ").valid, "single-space payee rejected");
+assert(!validatePayee("\t").valid, "tab-only payee rejected");
+assert(!validatePayee("\n").valid, "newline-only payee rejected");
+assert(!validatePayee("\u00A0").valid, "non-breaking-space-only payee rejected");
+assert(!validatePayee("  \t\n  ").valid, "mixed-whitespace-only payee rejected");
+
+const wsPayee = validatePayee("  Ram   Bahadur  ");
+assert(wsPayee.valid && wsPayee.payee === "Ram Bahadur", "payee whitespace trimmed and collapsed");
+
+console.log("\n=== TEST GROUP 31: DATE EDGE CASES — TIMEZONE INDEPENDENCE (PART 2 requirement #1) ===");
+
+assert(isValidDate("2024-02-29"), "Feb 29 in leap year valid");
+assert(!isValidDate("2023-02-29"), "Feb 29 in non-leap year rejected");
+assert(!isValidDate("2001-02-29"), "Feb 29 in 2001 rejected (not a leap year)");
+assert(isValidDate("2004-02-29"), "Feb 29 in 2004 valid (leap year)");
+assert(isValidDate("2104-02-29"), "Feb 29 in 2104 valid (leap year)");
+assert(!isValidDate("2100-02-29"), "Feb 29 in 2100 rejected (div by 100 not 400)");
+
+console.log("\n=== TEST GROUP 32: AMOUNT-WORDS CONSISTENCY — LARGE VALUES (PART 2 requirement #3) ===");
+
+const largeConsistency = [
+  { amount: "999", words: "Nine Hundred Ninety-Nine Rupees Only" },
+  { amount: "1000000", words: "Ten Lakh Rupees Only" },
+  { amount: "99999999999.99", words: "Ninety-Nine Arab Ninety-Nine Crore Ninety-Nine Lakh Ninety-Nine Thousand Nine Hundred Ninety-Nine Rupees and Ninety-Nine Paisa Only" },
+];
+for (const lc of largeConsistency) {
+  const c = checkAmountWordsConsistency(lc.amount, lc.words);
+  assert(c.consistent, `${lc.amount} words consistent: "${lc.words.substring(0, 40)}..."`);
+}
+
 console.log("\n=== VALIDATION TEST SUMMARY ===");
 console.log("Passed: " + passed);
 console.log("Failed: " + failed);

@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "tsx tests/workspace.test.mjs && tsx tests/print-flow.test.mjs && tsx tests/validation.test.mjs"
+    "test": "tsx tests/workspace.test.mjs && tsx tests/print-flow.test.mjs && tsx tests/validation.test.mjs && tsx tests/print-verification.mjs"
   },
   "dependencies": {
     "next": "^16.3.5",

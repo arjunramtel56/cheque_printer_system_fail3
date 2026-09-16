@@ -619,7 +619,7 @@ Always perform a plain-paper overlay test before using a new bank template or pr
 | Profile               | Paper / Cheque Size | Orientation  |
 | --------------------- | ------------------- | ------------ |
 | Custom Short          | 88.9 × 190.5 mm     | 90° rotation |
-| Custom Long           | 190.5 × 89 mm       | No rotation  |
+| Custom Long           | 190.5 × 88.9 mm     | No rotation  |
 | A4 Vertical Carrier   | 210 × 297 mm        | Portrait     |
 | A4 Horizontal Carrier | 210 × 297 mm        | Landscape    |
 
