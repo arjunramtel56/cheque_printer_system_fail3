@@ -33,13 +33,13 @@ export const BANK_TEMPLATES: BankTemplate[] = [
        sig1: { x: 12, y: 78, width: 55, height: 8 },
        sig2: { x: 72, y: 78, width: 55, height: 8 },
      },
-     profiles: {
-       custom_short: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
-       custom_long: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
-       a4_vertical: { x: 9.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
-       a4_horizontal: { x: 20, y: 50.75, pageWidth: 297, pageHeight: 210, rotate: 0 },
-     },
-  },
+      profiles: {
+        custom_short: { x: 0, y: 0, pageWidth: STANDARD_CHEQUE_H_MM, pageHeight: STANDARD_CHEQUE_W_MM, rotate: 90 },
+        custom_long: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
+        a4_vertical: { x: 9.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
+        a4_horizontal: { x: 20, y: 50.75, pageWidth: 297, pageHeight: 210, rotate: 0 },
+      },
+   },
   {
     id: "nabil",
     bankName: "Nabil Bank Limited",

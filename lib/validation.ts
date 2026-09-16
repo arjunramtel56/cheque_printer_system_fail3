@@ -228,21 +228,12 @@ export function validatePrintGeometry(geom: PrintGeometry, template: BankTemplat
   }
 
   if (isDirectFeed(mode)) {
-    // For Direct Feed the container IS the cheque (optionally swapped).
-    const expectedW = rotate === 90 ? chequeH : chequeW;
-    const expectedH = rotate === 90 ? chequeW : chequeH;
-    if (containerW !== expectedW || containerH !== expectedH) {
+    // For Direct Feed the container IS the cheque — no rotation, no swap.
+    // The @page is landscape 190.5×88.9; content is rendered flat.
+    if (containerW !== chequeW || containerH !== chequeH) {
       errors.push({
         code: "DF_GEOMETRY_MISMATCH",
-        message: `${mode}: container ${containerW}×${containerH} != expected ${expectedW}×${expectedH} for rotate ${rotate}.`,
-        path: mode,
-      });
-    }
-    // After rotation, the rotated cheque must fill the container exactly.
-    if (rotate === 90 && (chequeW !== expectedH || chequeH !== expectedW)) {
-      errors.push({
-        code: "DF_ROTATION_CHEQUE_SIZE",
-        message: `${mode}: rotate=90 but cheque dimensions ${chequeW}×${chequeH} do not swap to ${expectedW}×${expectedH}.`,
+        message: `${mode}: container ${containerW}×${containerH} != cheque ${chequeW}×${chequeH}.`,
         path: mode,
       });
     }
