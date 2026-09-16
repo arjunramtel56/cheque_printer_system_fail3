@@ -41,22 +41,6 @@ export interface BankTemplate {
   profiles: Record<ProfileKey, PrintProfile>;
 }
 
-export interface ChequeFormData {
-  templateId: string;
-  date: string;
-  payee: string;
-  amount: string;
-  amountWords: string;
-  accountPayee: boolean;
-  printMode: ProfileKey;
-  offsetX: number;
-  offsetY: number;
-}
-
-export interface TemplateWithFields extends BankTemplate {
-  fields: Record<string, ChequeFieldCoords>;
-}
-
 export const DIRECT_FEED_MODES: ProfileKey[] = ["custom_short", "custom_long"];
 export const A4_CARRIER_MODES: ProfileKey[] = ["a4_vertical", "a4_horizontal"];
 

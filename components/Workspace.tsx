@@ -1152,6 +1152,8 @@ export default function Workspace() {
   const printOutputRef = useRef<HTMLDivElement | null>(null);
   const printKeyRef = useRef(0);
   const printLockRef = useRef(false);
+  const afterPrintRef = useRef<(() => void) | null>(null);
+  const beforePrintRef = useRef<(() => void) | null>(null);
   const [printError, setPrintError] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
   const [printCompleted, setPrintCompleted] = useState(false);
@@ -1236,15 +1238,30 @@ export default function Workspace() {
     }, [template, isPrinting, printCompleted, date, payee, hasAmount, amountWords, printMode, isDF, dfCalibration, a4Calibration]);
 
   // Reset terminal states (printCompleted, printError, isPrinting) when the
-  // bank template changes independently. This keeps the state machine
-  // deterministic — selecting a new bank returns the flow to the data-entry
+  // bank template changes. This keeps the state machine deterministic —
+  // selecting a new bank (or clearing) returns the flow to the data-entry
   // phase rather than lingering in "Print Finished".
+  // Also aborts any in-progress print cycle: removes injected print styles,
+  // removes lingering beforeprint/afterprint/pagehide listeners, and releases
+  // the print lock so a new print can proceed without stale DOM/CSS state.
   useEffect(() => {
-    if (templateId === "") {
-      setPrintCompleted(false);
-      setPrintError("");
-      setIsPrinting(false);
+    if (printStyleRef.current) {
+      printStyleRef.current.remove();
+      printStyleRef.current = null;
     }
+    if (beforePrintRef.current) {
+      window.removeEventListener("beforeprint", beforePrintRef.current);
+      beforePrintRef.current = null;
+    }
+    if (afterPrintRef.current) {
+      window.removeEventListener("afterprint", afterPrintRef.current);
+      window.removeEventListener("pagehide", afterPrintRef.current);
+      afterPrintRef.current = null;
+    }
+    setPrintCompleted(false);
+    setPrintError("");
+    setIsPrinting(false);
+    printLockRef.current = false;
   }, [templateId]);
 
   // Auto-sync words when amount changes.
@@ -1375,7 +1392,7 @@ export default function Workspace() {
     document.head.appendChild(style);
     printStyleRef.current = style;
 
-    // STEP 7: TRIGGER BROWSER PRINT via beforeprint event for deterministic timing
+     // STEP 7: TRIGGER BROWSER PRINT via beforeprint event for deterministic timing
     function onBeforePrint() {
       // Ensure print output is synced to current state
       if (printOutputRef.current) {
@@ -1391,6 +1408,8 @@ export default function Workspace() {
       window.removeEventListener("beforeprint", onBeforePrint);
       window.removeEventListener("afterprint", onAfterPrint);
       window.removeEventListener("pagehide", onAfterPrint);
+      beforePrintRef.current = null;
+      afterPrintRef.current = null;
       if (printStyleRef.current) {
         printStyleRef.current.remove();
         printStyleRef.current = null;
@@ -1400,6 +1419,8 @@ export default function Workspace() {
       setPrintCompleted(true);
     }
 
+    beforePrintRef.current = onBeforePrint;
+    afterPrintRef.current = onAfterPrint;
     window.addEventListener("beforeprint", onBeforePrint);
     window.addEventListener("afterprint", onAfterPrint);
     // Fallback for browsers that don't fire afterprint (e.g. some mobile browsers)
@@ -1410,6 +1431,12 @@ export default function Workspace() {
       setPrintError(sanitizeError(err));
       printLockRef.current = false;
       setIsPrinting(false);
+      // Remove listeners on catch since afterprint won't fire
+      window.removeEventListener("beforeprint", onBeforePrint);
+      window.removeEventListener("afterprint", onAfterPrint);
+      window.removeEventListener("pagehide", onAfterPrint);
+      beforePrintRef.current = null;
+      afterPrintRef.current = null;
     }
     // afterprint fires asynchronously when the dialog closes or print is cancelled
   }
@@ -1443,6 +1470,14 @@ export default function Workspace() {
     setA4Calibration({ x: 0, y: 0 });
     setPrintError("");
     setPrintCompleted(false);
+    // Also clean up any stale print DOM/CSS and release the lock so the
+    // next print cycle starts from a clean slate.
+    if (printStyleRef.current) {
+      printStyleRef.current.remove();
+      printStyleRef.current = null;
+    }
+    printLockRef.current = false;
+    printKeyRef.current = 0;
   }
 
   function handleModeChange(newMode: ProfileKey) {
