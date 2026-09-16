@@ -1188,45 +1188,64 @@ export default function Workspace() {
   // Explicit workflow state + print-readiness (single source of truth for
   // the disabled reason the print button surfaces).
   // -----------------------------------------------------------------------
-  const printReadiness = useMemo<PrintReadiness>(() => {
-    if (!template) return { ready: false, reason: "Select a bank template" };
-    if (!isValidDate(date) || date === "") return { ready: false, reason: "Enter cheque date" };
-    const payeeVal = validatePayee(payee);
-    if (!payeeVal.valid) return { ready: false, reason: payeeVal.error ?? "Enter payee name" };
-    if (!hasAmount) return { ready: false, reason: "Enter valid amount" };
-    if (amountWords.trim() === "") return { ready: false, reason: "Enter amount in words" };
-    const consistency = checkAmountWordsConsistency(amount, amountWords);
-    if (!consistency.consistent) {
-      return { ready: false, reason: "Amount and words do not match" };
-    }
-    if (!printMode) return { ready: false, reason: "Select print mode" };
-    const cal = isDF ? dfCalibration : a4Calibration;
-    if (validateCalibrationPair(cal.x, cal.y) !== null) {
-      return { ready: false, reason: "Correct calibration" };
-    }
-    return { ready: true, reason: null };
-  }, [template, date, payee, hasAmount, amountWords, amount, printMode, isDF, dfCalibration, a4Calibration]);
+   const printReadiness = useMemo<PrintReadiness>(() => {
+     if (!template) return { ready: false, reason: "Select a bank template" };
+     if (!date || !validateChequeDate(date).valid) {
+       const dc = date ? validateChequeDate(date) : { valid: false, error: "Enter cheque date" };
+       return { ready: false, reason: dc.error ?? "Enter cheque date" };
+     }
+     const payeeVal = validatePayee(payee);
+     if (!payeeVal.valid) return { ready: false, reason: payeeVal.error ?? "Enter payee name" };
+     const amountVal = validateAmount(amount);
+     if (!amountVal.valid) return { ready: false, reason: amountVal.error ?? "Enter a valid amount" };
+     if (amountVal.paisa === 0) return { ready: false, reason: "Enter an amount greater than zero" };
+     if (amountWords.trim() === "") return { ready: false, reason: "Enter amount in words" };
+     const consistency = checkAmountWordsConsistency(amount, amountWords);
+     if (!consistency.consistent) {
+       return { ready: false, reason: "Amount and words do not match" };
+     }
+     if (!printMode) return { ready: false, reason: "Select print mode" };
+     const cal = isDF ? dfCalibration : a4Calibration;
+     if (validateCalibrationPair(cal.x, cal.y) !== null) {
+       return { ready: false, reason: "Correct calibration" };
+     }
+     return { ready: true, reason: null };
+   }, [template, date, payee, amount, amountWords, amountWords, printMode, isDF, dfCalibration, a4Calibration]);
 
    // Derive the explicit form state for the state badge.
-   const derivedFormState = useMemo<FormState>(() => {
-     if (isPrinting) return "printing";
-     if (printCompleted) return "done";
-     if (!template) return "empty";
-     const cal = isDF ? dfCalibration : a4Calibration;
-     const calOk = validateCalibrationPair(cal.x, cal.y) === null;
-     const hasDate = isValidDate(date);
-     const hasPayee = validatePayee(payee).valid;
-     const hasAmountVal = hasAmount;
-     const hasWords = amountWords.trim() !== "";
-     const hasMode = !!printMode;
-     if (!printReadiness.ready) {
-       if (!hasDate || !hasPayee || !hasAmountVal || !hasWords || !hasMode || !calOk) {
-         return "data-entering";
-       }
-       return "ready-preview";
-     }
-     return "ready-print";
-   }, [template, printReadiness, isPrinting, printCompleted, date, payee, hasAmount, amountWords, printMode, isDF, dfCalibration, a4Calibration]);
+    const derivedFormState = useMemo<FormState>(() => {
+      if (isPrinting) return "printing";
+      if (printCompleted) return "done";
+      if (!template) return "empty";
+      // Bank SELECTED but no data yet — shows the user template is chosen
+      // but no cheque data has been entered (or any that was, has been cleared).
+      const hasDate = isValidDate(date) && validateChequeDate(date).valid;
+      const hasPayee = validatePayee(payee).valid;
+      const hasAmountVal = hasAmount;
+      const hasWords = amountWords.trim() !== "";
+      if (!hasDate && !hasPayee && !hasAmountVal && !hasWords) {
+        return "template-selected";
+      }
+      const cal = isDF ? dfCalibration : a4Calibration;
+      const calOk = validateCalibrationPair(cal.x, cal.y) === null;
+      const hasMode = !!printMode;
+      if (!hasDate || !hasPayee || !hasAmountVal || !hasWords || !hasMode || !calOk) {
+        return "data-entering";
+      }
+      return "ready-print";
+    }, [template, isPrinting, printCompleted, date, payee, hasAmount, amountWords, printMode, isDF, dfCalibration, a4Calibration]);
+
+  // Reset terminal states (printCompleted, printError, isPrinting) when the
+  // bank template changes independently. This keeps the state machine
+  // deterministic — selecting a new bank returns the flow to the data-entry
+  // phase rather than lingering in "Print Finished".
+  useEffect(() => {
+    if (templateId === "") {
+      setPrintCompleted(false);
+      setPrintError("");
+      setIsPrinting(false);
+    }
+  }, [templateId]);
 
   // Auto-sync words when amount changes.
   // - When amount is valid & > 0: regenerate words (clears stale words automatically).
@@ -1509,7 +1528,8 @@ export default function Workspace() {
                   onChange={(e) => handleModeChange(e.target.value as ProfileKey)}
                   disabled={!template}
                   aria-required={true}
-                  aria-describedby="print-mode-help"
+                  aria-describedby={template ? "print-mode-help" : "field-disabled-bank"}
+                  aria-disabled={!template}
                 >
                   <optgroup label="Direct Feed (actual-size cheque)">
                     <option value="custom_short">{PROFILE_LABELS.custom_short}</option>
@@ -1532,6 +1552,8 @@ export default function Workspace() {
                   onChange={(e) => setDate(e.target.value)}
                   disabled={!template}
                   aria-required={true}
+                  aria-describedby={template ? undefined : "field-disabled-bank"}
+                  aria-disabled={!template}
                 />
               </div>
             </div>
@@ -1539,20 +1561,27 @@ export default function Workspace() {
             {/* Payee */}
             <div className="field">
               <label htmlFor="payee-input">Payee Name</label>
-              <input
-                id="payee-input"
-                type="text"
-                maxLength={120}
-                placeholder="e.g. Ram Bahadur Thapa"
-                value={payee}
-                onChange={(e) => setPayee(e.target.value.slice(0, 120))}
-                disabled={!template}
-              />
-              {(() => {
-                const pc = validatePayee(payee);
-                return !pc.valid && payee !== "" ? <span className="error-state" id="payee-error" role="alert">{pc.error}</span> : null;
-              })()}
-               <small>Leading/trailing spaces are trimmed automatically. Up to 120 characters.</small>
+               <input
+                 id="payee-input"
+                 type="text"
+                 maxLength={120}
+                 placeholder={template ? "e.g. Ram Bahadur Thapa" : ""}
+                 value={payee}
+                 onChange={(e) => setPayee(e.target.value.slice(0, 120))}
+                 disabled={!template}
+                 aria-describedby={template ? "payee-help" : "field-disabled-bank"}
+                 aria-disabled={!template}
+               />
+               {(() => {
+                 const pc = validatePayee(payee);
+                 return !pc.valid && payee !== "" ? <span className="error-state" id="payee-error" role="alert">{pc.error}</span> : null;
+               })()}
+                <small id="payee-help">Leading/trailing spaces are trimmed automatically. Up to 120 characters.</small>
+                {!template && (
+                  <span id="field-disabled-bank" className="sr-only">
+                    Select a bank template to enable this field.
+                  </span>
+                )}
              </div>
 
             {/* Amount + Amount in Words */}
@@ -1562,47 +1591,50 @@ export default function Workspace() {
                 <div className="input-prefix">
                   <b aria-hidden="true">Rs.</b>
                   <label htmlFor="amount-input" className="sr-only">Amount</label>
-                  <input
-                    id="amount-input"
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0.00"
-                    value={amount}
-                    onChange={(e) => handleAmountChange(e.target.value)}
-                    disabled={!template}
-                    aria-invalid={!!amountError}
-                    aria-describedby={amountError ? "amount-error" : undefined}
-                    aria-required={true}
-                  />
-                </div>
-                {amountError && <span className="error-state" id="amount-error" role="alert">{amountError}</span>}
-                <small>Enter whole numbers or decimals up to 2 places.</small>
+                   <input
+                     id="amount-input"
+                     type="text"
+                     inputMode="decimal"
+                     placeholder={template ? "0.00" : ""}
+                     value={amount}
+                     onChange={(e) => handleAmountChange(e.target.value)}
+                     disabled={!template}
+                     aria-invalid={!!amountError}
+                     aria-describedby={amountError ? "amount-error" : template ? undefined : "field-disabled-bank"}
+                     aria-required={true}
+                   />
+                 </div>
+                 {amountError && <span className="error-state" id="amount-error" role="alert">{amountError}</span>}
+                 <small>Enter whole numbers or decimals up to 2 places.</small>
               </div>
               <div className="field">
                 <label htmlFor="words-input">Amount in Words</label>
                 <textarea
-                  id="words-input"
-                  rows={3}
-                  maxLength={240}
-                  placeholder="Auto-generated"
-                  value={amountWords}
-                  onChange={(e) => handleWordEdit(e.target.value)}
-                  disabled={!template}
-                  aria-describedby="words-help"
-                />
-                <small id="words-help">You may edit the generated wording before printing.</small>
-              </div>
-            </div>
+                   id="words-input"
+                   rows={3}
+                   maxLength={240}
+                   placeholder={template ? "Auto-generated" : ""}
+                   value={amountWords}
+                   onChange={(e) => handleWordEdit(e.target.value)}
+                   disabled={!template}
+                   aria-describedby={template ? "words-help" : "field-disabled-bank"}
+                   aria-disabled={!template}
+                 />
+                 <small id="words-help">You may edit the generated wording before printing.</small>
+               </div>
+             </div>
 
             {/* A/C Payee Only */}
             <div className="field check">
-              <input
-                id="ac-payee"
-                type="checkbox"
-                checked={accountPayee}
-                onChange={(e) => setAccountPayee(e.target.checked)}
-                disabled={!template}
-              />
+               <input
+                 id="ac-payee"
+                 type="checkbox"
+                 checked={accountPayee}
+                 onChange={(e) => setAccountPayee(e.target.checked)}
+                 disabled={!template}
+                 aria-describedby={template ? undefined : "field-disabled-bank"}
+                 aria-disabled={!template}
+               />
               <label htmlFor="ac-payee" style={{ margin: 0, fontWeight: 600, fontSize: "0.88rem", color: "var(--text-secondary)" }}>
                 Print <b>A/C PAYEE ONLY</b>
                 <span style={{ fontWeight: 400, fontSize: "0.8rem", color: "var(--text-muted)" }}>
@@ -1697,11 +1729,11 @@ export default function Workspace() {
             {printError && (
               <p className="error-state" style={{ marginTop: 8 }} role="alert" aria-live="assertive">{printError}</p>
             )}
-            {isPrinting && (
-              <p className="info-state" style={{ marginTop: 8 }} aria-live="polite">
-                Opening print dialog� Please confirm <b>Actual Size (100%)</b> in your printer settings.
-              </p>
-            )}
+               {isPrinting && (
+               <p className="info-state" style={{ marginTop: 8 }} aria-live="polite">
+                 Opening print dialog. Please confirm <b>Actual Size (100%)</b> in your printer settings.
+               </p>
+             )}
           </form>
 
           {/* ---------- RIGHT: Preview (stays outside no-print scope during print) ---------- */}
