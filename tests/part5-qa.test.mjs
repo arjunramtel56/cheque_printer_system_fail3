@@ -73,7 +73,7 @@ assert(validatePayee("Ram Bahadur Thapa").valid, "normal payee");
 assert(validatePayee("  Ram  Bahadur  ").payee === "Ram Bahadur", "payee trimmed");
 assert(!validatePayee("").valid, "empty payee rejected");
 assert(!validatePayee("   ").valid, "whitespace-only payee rejected");
-assert(!validatePayee("Ram 🎉 Bahadur").valid, "emoji payee rejected");
+assert(!validatePayee("Ram " + String.fromCodePoint(0x1F389) + " Bahadur").valid, "emoji payee rejected");
 assert(!validatePayee("A".repeat(121)).valid, "overlong payee rejected");
 
 console.log("\n=== DATA QA: malformed amounts ===");

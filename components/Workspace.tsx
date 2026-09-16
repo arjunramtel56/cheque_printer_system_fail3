@@ -34,6 +34,13 @@ const PROFILE_LABELS: Record<ProfileKey, string> = {
 
 const SCALE = 2.4;
 
+export const PRINT_MODE_LABELS: Record<ProfileKey, { mode: string; paper: string; orientation: string }> = {
+  custom_short: { mode: "Custom Cheque Size", paper: "Custom Cheque", orientation: "Landscape" },
+  custom_long: { mode: "Custom Cheque Size", paper: "Custom Cheque", orientation: "Portrait" },
+  a4_vertical: { mode: "A4 Carrier", paper: "A4", orientation: "Portrait" },
+  a4_horizontal: { mode: "A4 Carrier", paper: "A4", orientation: "Landscape" },
+};
+
 // Explicit workflow states — a single, unambiguous indicator of where the
 // user is in the print pipeline. The UI renders a state badge and the print
 // button surfaces the concrete reason it is blocked.
@@ -125,9 +132,10 @@ interface PreviewProps {
   accountPayee: boolean;
   offsetX: number;
   offsetY: number;
+  debugMode?: boolean;
 }
 
-function DirectFeedPreview({ template, date, payee, amount, amountWords, accountPayee, offsetX, offsetY }: PreviewProps) {
+function DirectFeedPreview({ template, date, payee, amount, amountWords, accountPayee, offsetX, offsetY, debugMode = false }: PreviewProps) {
   const dateDigits = date ? safeFormatDate(date) : "";
   const amountPaisa = validateAmount(amount).paisa;
   const words = amountWords || (amountPaisa > 0 ? amountToWordsFromPaisa(amountPaisa) : "");
@@ -246,11 +254,20 @@ function DirectFeedPreview({ template, date, payee, amount, amountWords, account
       }}>
         ⑆ 000000000 ⑈ 000000 ⑆ 00
       </div>
+
+      {debugMode && (
+        <DebugGuides
+          template={template}
+          mode="custom_long"
+          calibration={{ x: calX, y: calY }}
+          scale={SCALE}
+        />
+      )}
     </div>
   );
 }
 
-function A4CarrierPreview({ template, profile, mode, date, payee, amount, amountWords, accountPayee, offsetX, offsetY }: PreviewProps & { profile: { x: number; y: number; pageWidth: number; pageHeight: number; rotate: 0 | 90 }; mode: ProfileKey }) {
+function A4CarrierPreview({ template, profile, mode, date, payee, amount, amountWords, accountPayee, offsetX, offsetY, debugMode = false }: PreviewProps & { profile: { x: number; y: number; pageWidth: number; pageHeight: number; rotate: 0 | 90 }; mode: ProfileKey }) {
   const dateDigits = date ? safeFormatDate(date) : "";
   const amountPaisa = validateAmount(amount).paisa;
   const words = amountWords || (amountPaisa > 0 ? amountToWordsFromPaisa(amountPaisa) : "");
@@ -413,6 +430,127 @@ function A4CarrierPreview({ template, profile, mode, date, payee, amount, amount
       <div style={{ position: "absolute", bottom: 4, right: 6, fontSize: 9 * SCALE, color: "#888", fontFamily: "monospace" }}>
         {paperW}×{paperH} mm
       </div>
+
+      {debugMode && (
+        <DebugGuides
+          template={template}
+          mode={mode}
+          calibration={{ x: calX, y: calY }}
+          scale={SCALE}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DebugGuides — Visual measurement overlays for development/admin calibration.
+// Shown only when debugMode is enabled. Renders:
+// - page boundary
+// - cheque boundary
+// - X/Y origin
+// - center line
+// - physical width/height
+// - calibration offset
+// - rotation state
+// Never affects the actual printed cheque (screen-only, no-print class).
+// ---------------------------------------------------------------------------
+
+interface DebugGuidesProps {
+  template: BankTemplate;
+  mode: ProfileKey;
+  calibration: Calibration;
+  scale: number;
+}
+
+function DebugGuides({ template, mode, calibration, scale }: DebugGuidesProps) {
+  if (!template) return null;
+  const geom = useMemo(() => resolveCalibratedGeometry(template, mode, calibration), [template, mode, calibration]);
+  const isDF = isDirectFeed(mode);
+  const { pageW, pageH, chequeW, chequeH, chequeX, chequeY, finalChequeX, finalChequeY, rotate } = geom;
+
+  const pageLeft = 0;
+  const pageTop = 0;
+  const pageRight = pageW;
+  const pageBottom = pageH;
+
+  // For DF, the cheque fills the page box (offset by rotation origin). For A4, cheque is inset.
+  const cx = isDF ? 0 : finalChequeX;
+  const cy = isDF ? 0 : finalChequeY;
+  const cRight = cx + chequeW;
+  const cBottom = cy + chequeH;
+
+  // Center lines — relative to the page box
+  const hCenterX = (pageW / 2) * scale;
+  const vCenterY = (pageH / 2) * scale;
+
+  // Label positions
+  const labelStyle: React.CSSProperties = {
+    position: "absolute",
+    fontSize: `${8 * scale}px`,
+    fontFamily: '"Courier New", monospace',
+    color: "#dc2626",
+    fontWeight: 700,
+    pointerEvents: "none",
+    whiteSpace: "nowrap",
+  };
+
+  return (
+    <div className="debug-guides no-print" style={{ position: "absolute", inset: 0, pointerEvents: "none", border: "none" }}>
+      {/* Page boundary */}
+      <div style={{
+        position: "absolute", left: `${pageLeft * scale}px`, top: `${pageTop * scale}px`,
+        width: `${(pageRight - pageLeft) * scale}px`, height: `${(pageBottom - pageTop) * scale}px`,
+        border: "1px dashed #ef4444", boxSizing: "border-box",
+      }} />
+      <span style={{ ...labelStyle, left: `${pageLeft * scale}px`, top: `${pageTop * scale}px` }}>PAGE BOUNDARY</span>
+
+      {/* Cheque boundary */}
+      <div style={{
+        position: "absolute", left: `${cx * scale}px`, top: `${cy * scale}px`,
+        width: `${chequeW * scale}px`, height: `${chequeH * scale}px`,
+        border: "1px dashed #2563eb", boxSizing: "border-box",
+      }} />
+      <span style={{ ...labelStyle, left: `${cx * scale}px`, top: `${(cy - 6) * scale}px`, color: "#2563eb" }}>CHEQUE BOUNDARY</span>
+
+      {/* X/Y origin */}
+      <div style={{
+        position: "absolute", left: `${cx * scale}px`, top: `${cy * scale}px`,
+        width: `${scale}px`, height: `${scale}px`, background: "#dc2626", borderRadius: "2px",
+      }} />
+      <div style={{ ...labelStyle, left: `${(cx + 4) * scale}px`, top: `${cy * scale}px`, color: "#dc2626" }}>X={cx.toFixed(1)}, Y={cy.toFixed(1)}</div>
+
+      {/* Horizontal center line */}
+      <div style={{
+        position: "absolute", left: `${pageLeft * scale}px`, top: `${vCenterY}px`,
+        width: `${pageW * scale}px`, height: `${scale}px`, background: "#f59e0b", opacity: 0.5,
+      }} />
+      <span style={{ ...labelStyle, left: `${pageLeft * scale}px`, top: `${(vCenterY + 4) * scale}px`, color: "#f59e0b" }}>CENTER LINE (H)</span>
+
+      {/* Vertical center line */}
+      <div style={{
+        position: "absolute", left: `${hCenterX}px`, top: `${pageTop * scale}px`,
+        width: `${scale}px`, height: `${pageH * scale}px`, background: "#f59e0b", opacity: 0.5,
+      }} />
+      <span style={{ ...labelStyle, left: `${(hCenterX + 4) * scale}px`, top: `${pageTop * scale}px`, color: "#f59e0b" }}>CENTER LINE (V)</span>
+
+      {/* Physical dimensions */}
+      <span style={{ ...labelStyle, left: `${pageLeft * scale}px`, top: `${(pageBottom + 2) * scale}px` }}>
+        PAGE: {pageW.toFixed(1)}×{pageH.toFixed(1)} mm
+      </span>
+      <span style={{ ...labelStyle, left: `${cx * scale}px`, top: `${(cBottom + 2) * scale}px`, color: "#2563eb" }}>
+        CHEQUE: {chequeW.toFixed(1)}×{chequeH.toFixed(1)} mm
+      </span>
+
+      {/* Calibration offset */}
+      <span style={{ ...labelStyle, left: `${pageRight * scale - 60}px`, top: `${pageTop * scale}px`, color: "#be185d" }}>
+        CAL: X={calibration.x.toFixed(1)} Y={calibration.y.toFixed(1)} mm
+      </span>
+
+      {/* Rotation state */}
+      <span style={{ ...labelStyle, left: `${pageRight * scale - 60}px`, top: `${(pageTop + 12) * scale}px`, color: "#059769" }}>
+        ROT: {rotate}° ({isDF ? "Direct Feed" : "A4"})
+      </span>
     </div>
   );
 }
@@ -463,26 +601,12 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
   const calY = Number(offsetY ?? 0);
   const isDF = isDirectFeed(mode);
 
-  // Direct Feed: container = page box (cheque size, or swapped for short-edge
-  // first). For rotate 90 the cheque content is rotated so it fills the page box;
-  // the physical paper rotation is done by the printer.
-  //
-  // Calibration direction consistency (preview == print):
-  //   The screen preview renders the cheque unrotated, where calX = rightward
-  //   and calY = downward on the cheque. For Short Edge First (rotate 90° CW),
-  //   the CSS rotation maps cheque-local (x,y) → page (-y, x). To make the
-  //   same calibration values produce the same on-paper direction as the
-  //   preview, we swap+sign-compensate the calibration before it is baked
-  //   into the cheque's local coordinates:
-  //     printX = chequeX + calY      (calY drives rightward movement on paper)
-  //     printY = chequeY - calX      (calX drives downward movement on paper)
-  //   For Long Edge First (rotate 0) no compensation is needed.
+  // Direct Feed (Custom Cheque Size): the @page is landscape 190.5×88.9 mm.
+  // Content is rendered unrotated (rotate is always 0) — Short Edge First
+  // vs Long Edge First is a printer hardware setting, not a CSS transform.
+  // Calibration shifts fields within the cheque's local coordinate space.
   if (isDF) {
     const geom = resolvePrintGeometry(template, mode);
-    const off = rotatedContentOffset(geom);
-    // Rotation-compensated calibration for Short Edge First
-    const pCalX = geom.rotate === 90 ? calY : calX;
-    const pCalY = geom.rotate === 90 ? -calX : calY;
     return (
       <div
         className="print-direct-feed"
@@ -494,17 +618,6 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
           overflow: "hidden",
           fontFamily: '"Courier New", monospace',
           color: "#111",
-        }}
-      >
-      <div
-        style={{
-          position: "absolute",
-          left: `${off.leftMm}mm`,
-          top: `${off.topMm}mm`,
-          width: `${geom.chequeW}mm`,
-          height: `${geom.chequeH}mm`,
-          transform: geom.rotate === 90 ? "rotate(90deg)" : undefined,
-          transformOrigin: "0 0",
         }}
       >
         {/* Bank name */}
@@ -522,8 +635,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
             width={template.widthMm}
             fontSize={template.fields.accountPayee?.fontSize ?? 9}
             align="center"
-            offsetX={pCalX}
-            offsetY={pCalY}
+            offsetX={calX}
+            offsetY={calY}
           />
         )}
 
@@ -532,8 +645,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
           <PrintField
             key="date"
             text={dateDigits}
-            x={(template.fields.date?.x ?? 128) + pCalX}
-            y={(template.fields.date?.y ?? 6) + pCalY}
+            x={(template.fields.date?.x ?? 128) + calX}
+            y={(template.fields.date?.y ?? 6) + calY}
             width={template.fields.date?.width ?? 52}
             fontSize={template.fields.date?.fontSize}
             letterSpacing={template.fields.date?.letterSpacing}
@@ -543,8 +656,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
         {/* Pay label */}
         <div style={{
           position: "absolute",
-          left: `${((template.structural?.payLabel?.x ?? 12) + pCalX)}mm`,
-          top: `${((template.structural?.payLabel?.y ?? 24) + pCalY)}mm`,
+          left: `${(template.structural?.payLabel?.x ?? 12) + calX}mm`,
+          top: `${(template.structural?.payLabel?.y ?? 24) + calY}mm`,
           fontSize: "7pt",
           color: "#555",
         }}>
@@ -556,8 +669,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
           <PrintField
             key="payee"
             text={normalizedPayee}
-            x={(template.fields.payee?.x ?? 12) + pCalX}
-            y={(template.fields.payee?.y ?? 28) + pCalY}
+            x={(template.fields.payee?.x ?? 12) + calX}
+            y={(template.fields.payee?.y ?? 28) + calY}
             width={template.fields.payee?.width ?? 90}
             fontSize={template.fields.payee?.fontSize}
             letterSpacing={template.fields.payee?.letterSpacing}
@@ -567,8 +680,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
         {/* Or Bearer */}
         <div style={{
           position: "absolute",
-          left: `${((template.structural?.orBearer?.x ?? 100) + pCalX)}mm`,
-          top: `${((template.structural?.orBearer?.y ?? 24) + pCalY)}mm`,
+          left: `${(template.structural?.orBearer?.x ?? 100) + calX}mm`,
+          top: `${(template.structural?.orBearer?.y ?? 24) + calY}mm`,
           fontSize: "7pt",
           color: "#555",
         }}>
@@ -580,8 +693,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
           <PrintField
             key="words1"
             text={words1}
-            x={(template.fields.words1?.x ?? 12) + pCalX}
-            y={(template.fields.words1?.y ?? 44) + pCalY}
+            x={(template.fields.words1?.x ?? 12) + calX}
+            y={(template.fields.words1?.y ?? 44) + calY}
             width={template.fields.words1?.width ?? 150}
             fontSize={template.fields.words1?.fontSize}
             letterSpacing={template.fields.words1?.letterSpacing}
@@ -591,8 +704,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
           <PrintField
             key="words2"
             text={words2}
-            x={(template.fields.words2?.x ?? 12) + pCalX}
-            y={(template.fields.words2?.y ?? 54) + pCalY}
+            x={(template.fields.words2?.x ?? 12) + calX}
+            y={(template.fields.words2?.y ?? 54) + calY}
             width={template.fields.words2?.width ?? 150}
             fontSize={template.fields.words2?.fontSize}
             letterSpacing={template.fields.words2?.letterSpacing}
@@ -604,8 +717,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
           <PrintField
             key="amount"
             text={`Rs. ${formatAmountDisplay(amountPaisa)}`}
-            x={(template.fields.amount?.x ?? 110) + pCalX}
-            y={(template.fields.amount?.y ?? 66) + pCalY}
+            x={(template.fields.amount?.x ?? 110) + calX}
+            y={(template.fields.amount?.y ?? 66) + calY}
             width={template.fields.amount?.width ?? 65}
             fontSize={template.fields.amount?.fontSize}
           />
@@ -613,14 +726,14 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
 
         {/* Signature boxes */}
         <PrintSignatureBox
-          x={(template.structural?.sig1?.x ?? 12) + pCalX}
-          y={(template.structural?.sig1?.y ?? 78) + pCalY}
+          x={(template.structural?.sig1?.x ?? 12) + calX}
+          y={(template.structural?.sig1?.y ?? 78) + calY}
           w={template.structural?.sig1?.width ?? 55}
           h={template.structural?.sig1?.height ?? 8}
         />
         <PrintSignatureBox
-          x={(template.structural?.sig2?.x ?? 72) + pCalX}
-          y={(template.structural?.sig2?.y ?? 78) + pCalY}
+          x={(template.structural?.sig2?.x ?? 72) + calX}
+          y={(template.structural?.sig2?.y ?? 78) + calY}
           w={template.structural?.sig2?.width ?? 55}
           h={template.structural?.sig2?.height ?? 8}
         />
@@ -629,7 +742,7 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
         <div style={{
           position: "absolute",
           bottom: "2mm",
-          left: `${8 + pCalX}mm`,
+          left: `${8 + calX}mm`,
           fontSize: "6pt",
           color: "#444",
           letterSpacing: "0.12em",
@@ -637,7 +750,6 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
         }}>
           ⑆ 000000000 ⑈ 000000 ⑆ 00
         </div>
-      </div>
       </div>
     );
   }
@@ -1157,9 +1269,11 @@ export default function Workspace() {
   const [accountPayee, setAccountPayee] = useState(true);
   const [printMode, setPrintMode] = useState<ProfileKey>("custom_short");
 
-  // Independent calibrations per mode group
+   // Independent calibrations per mode group
   const [dfCalibration, setDfCalibration] = useState<Calibration>({ x: 0, y: 0 });
   const [a4Calibration, setA4Calibration] = useState<Calibration>({ x: 0, y: 0 });
+
+  const [debugMode, setDebugMode] = useState(false);
 
   const wordOverrideRef = useRef(false);
   const printStyleRef = useRef<HTMLStyleElement | null>(null);
