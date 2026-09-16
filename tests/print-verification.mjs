@@ -295,6 +295,52 @@ assert(workspaceCode.includes("parseCalibrationInput"), "Workspace.tsx has stric
 assert(workspaceCode.includes("resolveCalibratedGeometry"), "Workspace.tsx uses resolveCalibratedGeometry for preview+print consistency");
 
 // ============================================================================
+// SECTION 12: Direct Feed Short Edge First — Calibration axis compensation
+// ---------------------------------------------------------------------------
+// For Short Edge First (rotate 90° CW), the PrintOutput compensates calibration
+// axes so that the on-paper movement matches the preview direction:
+//   preview calX (right) → print: calY drives X in cheque-local space
+//   preview calY (down)  → print: -calX drives Y in cheque-local space
+// This is verified by checking the source code uses pCalX/pCalY compensation.
+// ============================================================================
+console.log("\n--- SECTION 12: DF Short Edge First Calibration Compensation ---");
+
+// Verify the print output code swaps calibration axes for rotate=90
+assert(workspaceCode.includes("pCalX") && workspaceCode.includes("pCalY"), "PrintOutput uses rotation-compensated calibration variables (pCalX/pCalY)");
+assert(workspaceCode.includes("geom.rotate === 90 ? calY"), "Short Edge First uses calY for X compensation");
+assert(workspaceCode.includes("geom.rotate === 90 ? -calX"), "Short Edge First uses -calX for Y compensation");
+
+// Verify the compensation is only applied for DF rotate=90, not rotate=0
+const dfLongCompensation = workspaceCode.match(/geom\.rotate === 90 \? calY : calX/);
+assert(dfLongCompensation !== null, "Long Edge First (rotate=0) uses calX directly (no swap)");
+
+// Verify the DirectFeedPreview uses the uncompensated calX/calY directly (matches
+// the physical cheque orientation the user sees)
+const previewSection = workspaceCode.match(/function DirectFeedPreview[\s\S]*?^}/m);
+assert(previewSection !== null, "DirectFeedPreview function exists in source");
+assert(previewSection[0].includes("(fieldX + calX)"), "DirectFeedPreview applies calX to X (no compensation needed for screen preview)");
+assert(previewSection[0].includes("(fieldY + calY)"), "DirectFeedPreview applies calY to Y (no compensation needed for screen preview)");
+
+// ============================================================================
+// SECTION 13: Preview/Print geometry source-of-truth alignment
+// ---------------------------------------------------------------------------
+// Both preview and print must derive page dimensions from the same resolver.
+// A4CarrierPreview uses resolveCalibratedGeometry; PrintOutput also uses it.
+// DirectFeedPreview uses resolvePrintGeometry (page box = cheque, no cal shift).
+// ============================================================================
+console.log("\n--- SECTION 13: Preview/Print Source-of-Truth Alignment ---");
+
+assert(workspaceCode.includes("resolvePrintGeometry(template, printMode)"), "PrepChecklist uses resolvePrintGeometry for validity checks");
+assert(workspaceCode.includes("resolveCalibratedGeometry(template, mode"), "A4CarrierPreview uses resolveCalibratedGeometry");
+assert(workspaceCode.includes("resolveCalibratedGeometry(template, mode, { x: calX, y: calY })"), "PrintOutput A4 path uses resolveCalibratedGeometry with current calibration");
+
+// Verify the @page injection uses the same geometry resolver
+assert(workspaceCode.includes("geom.pageW.toFixed(1)"), "Injected @page size uses resolved pageW from shared geometry");
+assert(workspaceCode.includes("geom.pageH.toFixed(1)"), "Injected @page size uses resolved pageH from shared geometry");
+assert(workspaceCode.includes("geom.containerW"), "Injected @page container width uses shared geometry");
+assert(workspaceCode.includes("geom.containerH"), "Injected @page container height uses shared geometry");
+
+// ============================================================================
 // SUMMARY
 // ============================================================================
 console.log("\n=== VERIFICATION SUMMARY ===");

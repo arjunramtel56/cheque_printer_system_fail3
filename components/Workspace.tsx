@@ -464,11 +464,25 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
   const isDF = isDirectFeed(mode);
 
   // Direct Feed: container = page box (cheque size, or swapped for short-edge
-  // first). For rotate 90 the cheque content is centered + rotated so it fills
-  // the page box; the physical paper rotation is done by the printer.
+  // first). For rotate 90 the cheque content is rotated so it fills the page box;
+  // the physical paper rotation is done by the printer.
+  //
+  // Calibration direction consistency (preview == print):
+  //   The screen preview renders the cheque unrotated, where calX = rightward
+  //   and calY = downward on the cheque. For Short Edge First (rotate 90° CW),
+  //   the CSS rotation maps cheque-local (x,y) → page (-y, x). To make the
+  //   same calibration values produce the same on-paper direction as the
+  //   preview, we swap+sign-compensate the calibration before it is baked
+  //   into the cheque's local coordinates:
+  //     printX = chequeX + calY      (calY drives rightward movement on paper)
+  //     printY = chequeY - calX      (calX drives downward movement on paper)
+  //   For Long Edge First (rotate 0) no compensation is needed.
   if (isDF) {
     const geom = resolvePrintGeometry(template, mode);
     const off = rotatedContentOffset(geom);
+    // Rotation-compensated calibration for Short Edge First
+    const pCalX = geom.rotate === 90 ? calY : calX;
+    const pCalY = geom.rotate === 90 ? -calX : calY;
     return (
       <div
         className="print-direct-feed"
@@ -508,8 +522,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
             width={template.widthMm}
             fontSize={template.fields.accountPayee?.fontSize ?? 9}
             align="center"
-            offsetX={calX}
-            offsetY={calY}
+            offsetX={pCalX}
+            offsetY={pCalY}
           />
         )}
 
@@ -518,8 +532,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
           <PrintField
             key="date"
             text={dateDigits}
-            x={(template.fields.date?.x ?? 128) + calX}
-            y={(template.fields.date?.y ?? 6) + calY}
+            x={(template.fields.date?.x ?? 128) + pCalX}
+            y={(template.fields.date?.y ?? 6) + pCalY}
             width={template.fields.date?.width ?? 52}
             fontSize={template.fields.date?.fontSize}
             letterSpacing={template.fields.date?.letterSpacing}
@@ -529,8 +543,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
         {/* Pay label */}
         <div style={{
           position: "absolute",
-          left: `${((template.structural?.payLabel?.x ?? 12) + calX)}mm`,
-          top: `${((template.structural?.payLabel?.y ?? 24) + calY)}mm`,
+          left: `${((template.structural?.payLabel?.x ?? 12) + pCalX)}mm`,
+          top: `${((template.structural?.payLabel?.y ?? 24) + pCalY)}mm`,
           fontSize: "7pt",
           color: "#555",
         }}>
@@ -542,8 +556,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
           <PrintField
             key="payee"
             text={normalizedPayee}
-            x={(template.fields.payee?.x ?? 12) + calX}
-            y={(template.fields.payee?.y ?? 28) + calY}
+            x={(template.fields.payee?.x ?? 12) + pCalX}
+            y={(template.fields.payee?.y ?? 28) + pCalY}
             width={template.fields.payee?.width ?? 90}
             fontSize={template.fields.payee?.fontSize}
             letterSpacing={template.fields.payee?.letterSpacing}
@@ -553,8 +567,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
         {/* Or Bearer */}
         <div style={{
           position: "absolute",
-          left: `${((template.structural?.orBearer?.x ?? 100) + calX)}mm`,
-          top: `${((template.structural?.orBearer?.y ?? 24) + calY)}mm`,
+          left: `${((template.structural?.orBearer?.x ?? 100) + pCalX)}mm`,
+          top: `${((template.structural?.orBearer?.y ?? 24) + pCalY)}mm`,
           fontSize: "7pt",
           color: "#555",
         }}>
@@ -566,8 +580,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
           <PrintField
             key="words1"
             text={words1}
-            x={(template.fields.words1?.x ?? 12) + calX}
-            y={(template.fields.words1?.y ?? 44) + calY}
+            x={(template.fields.words1?.x ?? 12) + pCalX}
+            y={(template.fields.words1?.y ?? 44) + pCalY}
             width={template.fields.words1?.width ?? 150}
             fontSize={template.fields.words1?.fontSize}
             letterSpacing={template.fields.words1?.letterSpacing}
@@ -577,8 +591,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
           <PrintField
             key="words2"
             text={words2}
-            x={(template.fields.words2?.x ?? 12) + calX}
-            y={(template.fields.words2?.y ?? 54) + calY}
+            x={(template.fields.words2?.x ?? 12) + pCalX}
+            y={(template.fields.words2?.y ?? 54) + pCalY}
             width={template.fields.words2?.width ?? 150}
             fontSize={template.fields.words2?.fontSize}
             letterSpacing={template.fields.words2?.letterSpacing}
@@ -590,8 +604,8 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
           <PrintField
             key="amount"
             text={`Rs. ${formatAmountDisplay(amountPaisa)}`}
-            x={(template.fields.amount?.x ?? 110) + calX}
-            y={(template.fields.amount?.y ?? 66) + calY}
+            x={(template.fields.amount?.x ?? 110) + pCalX}
+            y={(template.fields.amount?.y ?? 66) + pCalY}
             width={template.fields.amount?.width ?? 65}
             fontSize={template.fields.amount?.fontSize}
           />
@@ -599,14 +613,14 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
 
         {/* Signature boxes */}
         <PrintSignatureBox
-          x={(template.structural?.sig1?.x ?? 12) + calX}
-          y={(template.structural?.sig1?.y ?? 78) + calY}
+          x={(template.structural?.sig1?.x ?? 12) + pCalX}
+          y={(template.structural?.sig1?.y ?? 78) + pCalY}
           w={template.structural?.sig1?.width ?? 55}
           h={template.structural?.sig1?.height ?? 8}
         />
         <PrintSignatureBox
-          x={(template.structural?.sig2?.x ?? 72) + calX}
-          y={(template.structural?.sig2?.y ?? 78) + calY}
+          x={(template.structural?.sig2?.x ?? 72) + pCalX}
+          y={(template.structural?.sig2?.y ?? 78) + pCalY}
           w={template.structural?.sig2?.width ?? 55}
           h={template.structural?.sig2?.height ?? 8}
         />
@@ -615,7 +629,7 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
         <div style={{
           position: "absolute",
           bottom: "2mm",
-          left: `${8 + calX}mm`,
+          left: `${8 + pCalX}mm`,
           fontSize: "6pt",
           color: "#444",
           letterSpacing: "0.12em",
