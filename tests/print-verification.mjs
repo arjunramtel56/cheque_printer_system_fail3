@@ -298,23 +298,22 @@ assert(workspaceCode.includes("resolveCalibratedGeometry"), "Workspace.tsx uses 
 //   preview calY (down)  → print: -calX drives Y in cheque-local space
 // This is verified by checking the source code uses pCalX/pCalY compensation.
 // ============================================================================
-console.log("\n--- SECTION 12: DF Short Edge First Calibration Compensation ---");
-
-// Verify the print output code swaps calibration axes for rotate=90
-assert(workspaceCode.includes("pCalX") && workspaceCode.includes("pCalY"), "PrintOutput uses rotation-compensated calibration variables (pCalX/pCalY)");
-assert(workspaceCode.includes("geom.rotate === 90 ? calY"), "Short Edge First uses calY for X compensation");
-assert(workspaceCode.includes("geom.rotate === 90 ? -calX"), "Short Edge First uses -calX for Y compensation");
-
-// Verify the compensation is only applied for DF rotate=90, not rotate=0
-const dfLongCompensation = workspaceCode.match(/geom\.rotate === 90 \? calY : calX/);
-assert(dfLongCompensation !== null, "Long Edge First (rotate=0) uses calX directly (no swap)");
-
-// Verify the DirectFeedPreview uses the uncompensated calX/calY directly (matches
-// the physical cheque orientation the user sees)
-const previewSection = workspaceCode.match(/function DirectFeedPreview[\s\S]*?^}/m);
-assert(previewSection !== null, "DirectFeedPreview function exists in source");
-assert(previewSection[0].includes("(fieldX + calX)"), "DirectFeedPreview applies calX to X (no compensation needed for screen preview)");
-assert(previewSection[0].includes("(fieldY + calY)"), "DirectFeedPreview applies calY to Y (no compensation needed for screen preview)");
+console.log("\n--- SECTION 12: DF Short Edge First — No CSS Rotation ---");
+console.log("  Short Edge First vs Long Edge First is a printer paper-feed setting,\n  not a CSS transform. No rotation compensation exists in the source.");
+assert(!workspaceCode.includes("pCalX") || !workspaceCode.includes("pCalY"), "PrintOutput does NOT use rotation-compensated calibration variables (no pCalX/pCalY)");
+assert(!workspaceCode.includes("geom.rotate === 90 ? calY"), "No axis-swap compensation string present");
+assert(!workspaceCode.includes("geom.rotate === 90 ? -calX"), "No negative axis-swap compensation string present");
+assert(!workspaceCode.includes("geom.rotate"), "No rotate reference in PrintOutput geometry logic");
+{
+  const dfLongCompensation = workspaceCode.match(/geom\.rotate === 90 \? calY : calX/);
+  assert(dfLongCompensation === null, "No ternary rotate-compensation expression (rotation-free model)");
+}
+{
+  const previewSection = workspaceCode.match(/function DirectFeedPreview[\s\S]*?^}/m);
+  assert(previewSection !== null, "DirectFeedPreview function exists in source");
+  assert(previewSection[0].includes("(fieldX + calX)"), "DirectFeedPreview applies calX to X (no compensation needed for screen preview)");
+  assert(previewSection[0].includes("(fieldY + calY)"), "DirectFeedPreview applies calY to Y (no compensation needed for screen preview)");
+}
 
 // ============================================================================
 // SECTION 13: Preview/Print geometry source-of-truth alignment

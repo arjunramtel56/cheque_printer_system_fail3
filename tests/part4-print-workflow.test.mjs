@@ -456,11 +456,11 @@ assert(DIRECT_FEED_MODES.every((m) => !A4_CARRIER_MODES.includes(m)), "Mode grou
   const gDfLong = resolvePrintGeometry(siddhartha, "custom_long");
   const gA4v = resolvePrintGeometry(siddhartha, "a4_vertical");
   const gA4h = resolvePrintGeometry(siddhartha, "a4_horizontal");
-  assert(gDfShort.pageW === 88.9 && gDfShort.pageH === 190.5, "DF short page = 88.9x190.5 (swapped)");
+  assert(gDfShort.pageW === 190.5 && gDfShort.pageH === 88.9, "DF short page = 190.5x88.9 (cheque physical size, no rotation)");
   assert(gDfLong.pageW === 190.5 && gDfLong.pageH === 88.9, "DF long page = 190.5x88.9");
   assert(gA4v.pageW === 210 && gA4v.pageH === 297, "A4 v page = 210x297");
   assert(gA4h.pageW === 297 && gA4h.pageH === 210, "A4 h page = 297x210");
-  assert(gDfShort.rotate === 90 && gDfLong.rotate === 0 && gA4v.rotate === 0 && gA4h.rotate === 0, "Rotation flags correct");
+  assert(gDfShort.rotate === undefined && gDfLong.rotate === undefined && gA4v.rotate === undefined && gA4h.rotate === undefined, "No rotate field on any profile (rotation-free model)");
 }
 
 // Calibration independence: switching mode uses the other calibration set

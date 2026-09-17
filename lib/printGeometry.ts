@@ -51,6 +51,12 @@ export interface PrintGeometry {
   /** absolute cheque position on the carrier page (A4 mode) in mm */
   chequeX: number;
   chequeY: number;
+  /** CSS content rotation in degrees.
+   *  Always 0 — content is rendered unrotated in a landscape 190.5×88.9 mm
+   *  @page box. Short Edge First vs Long Edge First is a printer paper-feed
+   *  setting, not a CSS transform. Type is `number` (not literal `0`) to
+   *  prevent esbuild from stripping the property during transpilation. */
+  rotate: number;
 }
 
 /**
@@ -75,6 +81,7 @@ export function resolvePrintGeometry(template: BankTemplate, mode: ProfileKey): 
       pageH: chequeH,
       containerW: chequeW,
       containerH: chequeH,
+      rotate: 0,
       chequeW,
       chequeH,
       chequeX: 0,
@@ -92,6 +99,7 @@ export function resolvePrintGeometry(template: BankTemplate, mode: ProfileKey): 
     pageH,
     containerW: pageW,
     containerH: pageH,
+    rotate: 0,
     chequeW: template.widthMm,
     chequeH: template.heightMm,
     chequeX: profile.x,
