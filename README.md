@@ -135,7 +135,7 @@ changes.
    than printing a ruined cheque.
 5. **Verify** — set `verification.status` to `browser-verified` once the
    geometry is checked against a sample cheque, then run the record sheet in
-   `lib/physical-test-matrix.md` before marking anything `physically-verified`.
+   `lib/physical-test-matrix.md` before marking anything `physically-calibrated`.
 
 Nothing in steps 1–4 requires touching a component. That is the whole point of
 the architecture — and the regression tests enforce it.
@@ -149,7 +149,7 @@ Two verification levels are tracked separately and must never be conflated:
 * **`browser-verified`** — page box, cheque box, field rectangles, orientation,
   calibration arithmetic and preview/print parity confirmed in the browser.
   Provable by the test suite.
-* **`physically-verified`** — ink lands within ±0.5 mm of the expected position
+* **`physically-calibrated`** — ink lands within ±0.5 mm of the expected position
   on real cheque stock, measured with a ruler. Only a human with a printer can
   establish this, and this build has not done it for any template.
 

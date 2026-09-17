@@ -18,7 +18,7 @@ import {
   upsertBank,
 } from "@/lib/catalogue";
 import { initChequeSizes } from "@/lib/sizes";
-import { CATALOGUE_DISCLAIMER, CATALOGUE_REVISION } from "../../../data/banks";
+import { CATALOGUE_DISCLAIMER, CATALOGUE_REVISION } from "@/data/banks";
 
 const CLASSES: NrbClass[] = ["A", "B", "C", "D"];
 

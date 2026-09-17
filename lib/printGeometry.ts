@@ -25,18 +25,31 @@
 
 import type { BankTemplate, Orientation, ProfileKey, Calibration } from "./types.ts";
 import { isDirectFeed, paperIdForMode } from "./types.ts";
-import { getPaperSize, orientationFor } from "./sizes.ts";
+import { getChequeSize, getPaperSize, orientationFor } from "./sizes.ts";
 
 // ---------------------------------------------------------------------------
-// Canonical size constants. These are compatibility aliases — the registries in
-// lib/sizes.ts are the source of truth.
+// Canonical size constants, DERIVED from the registries in lib/sizes.ts.
+//
+// These are compatibility aliases for convenience, never a second source of
+// truth: if a size is edited in the registry, these follow. Duplicating a
+// millimetre value here is how a codebase ends up with two answers to "how big
+// is a cheque".
 // ---------------------------------------------------------------------------
 
-export const STANDARD_CHEQUE_W_MM = 190.5;
-export const STANDARD_CHEQUE_H_MM = 88.9;
+export const STANDARD_CHEQUE_SIZE_ID = "standard-190x89";
 
-export const A4_PORTRAIT_W_MM = 210;
-export const A4_PORTRAIT_H_MM = 297;
+const STANDARD_CHEQUE = getChequeSize(STANDARD_CHEQUE_SIZE_ID);
+const A4_PORTRAIT = getPaperSize("a4-portrait");
+
+if (!STANDARD_CHEQUE || !A4_PORTRAIT) {
+  throw new Error("Size registry is missing a built-in size — lib/sizes.ts must declare them before geometry is used.");
+}
+
+export const STANDARD_CHEQUE_W_MM = STANDARD_CHEQUE.widthMm;
+export const STANDARD_CHEQUE_H_MM = STANDARD_CHEQUE.heightMm;
+
+export const A4_PORTRAIT_W_MM = A4_PORTRAIT.widthMm;
+export const A4_PORTRAIT_H_MM = A4_PORTRAIT.heightMm;
 export const A4_LANDSCAPE_W_MM = A4_PORTRAIT_H_MM; // 297
 export const A4_LANDSCAPE_H_MM = A4_PORTRAIT_W_MM; // 210
 

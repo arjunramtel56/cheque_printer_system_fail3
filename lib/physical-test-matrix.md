@@ -3,16 +3,16 @@
 > **The rule this document exists to enforce:** a cheque template is *not*
 > implemented because it looks right in the browser. Browser preview and
 > physical output are recorded in **separate columns**, and a template only
-> reaches `physically-verified` when a real sheet has been measured.
+> reaches `physically-calibrated` when a real sheet has been measured.
 
 | Status | Meaning | Evidence required |
 |--------|---------|-------------------|
 | `unverified` | Geometry is placeholder. Not selectable for printing. | Sample cheque photograph + coordinate read-off |
 | `browser-verified` | Geometry, page box and field rectangles confirmed in the browser print preview. | `tests/preview-print-parity.test.mjs`, `tests/geometry-matrix.test.mjs` |
-| `physically-verified` | Ink lands within ±0.5 mm of the expected position on real cheque stock. | Completed record sheet below, measured with a ruler |
+| `physically-calibrated` | Ink lands within ±0.5 mm of the expected position on real cheque stock. | Completed record sheet below, measured with a ruler |
 
 Current state of the catalogue: **5 templates, 1 browser-verified
-(`siddhartha`), 0 physically-verified.** Everything below is the *expected*
+(`siddhartha`), 0 physically-calibrated.** Everything below is the *expected*
 half of the record sheet; the *actual* columns are empty on purpose.
 
 ---
@@ -192,7 +192,7 @@ Second print deviation: ΔX = ______ mm   ΔY = ______ mm     [ ] ≤ 0.5 mm  �
 ```
 
 Record one block per (template × print mode). A template is only
-`physically-verified` when all four modes pass. Calibration is stored per
+`physically-calibrated` when all four modes pass. Calibration is stored per
 template **and** per mode, so passing Direct Feed says nothing about A4.
 
 ---
@@ -242,7 +242,7 @@ physical size** — asserted in `tests/geometry-matrix.test.mjs`.
 6. Measure each printed field from the paper edge with a ruler.
 7. Compute the correction, apply it in the calibration panel, re-print.
 8. Repeat until every Δ ≤ 0.5 mm, then record the final calibration here and
-   mark the template `physically-verified` via the admin workbench.
+   mark the template `physically-calibrated` via the admin workbench.
 9. Run the MICR check: the reserved band must be **blank ink-free**.
 10. Do this on at least two different physical printers before calling a
     template production-ready — calibration is per printer, and the app ships
