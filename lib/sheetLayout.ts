@@ -117,11 +117,15 @@ export function computeSheetLayout(
   const requested = normalizeCalibration(calibration);
   const contentOffsetX = df ? requested.x : 0;
   const contentOffsetY = df ? requested.y : 0;
+  // Carrier: resolveCalibratedGeometry already produced the calibrated cheque
+  // position (clamped so it can never leave the paper).
+  const chequeX = df ? 0 : geom.finalChequeX;
+  const chequeY = df ? 0 : geom.finalChequeY;
   const applied: Calibration = df
     ? requested
     : {
-        x: Math.round((geom.finalChequeX - geom.chequeX) * 10) / 10,
-        y: Math.round((geom.finalChequeY - geom.chequeY) * 10) / 10,
+        x: Math.round((chequeX - geom.chequeX) * 10) / 10,
+        y: Math.round((chequeY - geom.chequeY) * 10) / 10,
       };
 
   const words = resolveWords(data);
@@ -178,8 +182,8 @@ export function computeSheetLayout(
         key: field.key,
         label: field.label,
         kind: field.kind,
-        xMm: geom.chequeX + contentOffsetX + field.x,
-        yMm: geom.chequeY + contentOffsetY + field.y,
+        xMm: chequeX + contentOffsetX + field.x,
+        yMm: chequeY + contentOffsetY + field.y,
         widthMm: field.width,
         heightMm,
         fontSizePt,
@@ -196,8 +200,8 @@ export function computeSheetLayout(
     paperId: geom.paperId,
     pageW: geom.pageW,
     pageH: geom.pageH,
-    chequeX: geom.chequeX + contentOffsetX,
-    chequeY: geom.chequeY + contentOffsetY,
+    chequeX,
+    chequeY,
     chequeW: geom.chequeW,
     chequeH: geom.chequeH,
     calibration: applied,

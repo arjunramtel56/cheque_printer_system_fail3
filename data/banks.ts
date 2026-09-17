@@ -60,6 +60,11 @@ const COMMERCIAL_ACTIVE: Bank[] = [
   active("sanima", "Sanima Bank Limited", "A", "SNMANPKA"),
   active("siddhartha", "Siddhartha Bank Limited", "A", "SIDDNPKA"),
   active("standard-chartered", "Standard Chartered Bank Nepal Limited", "A", "SCBLNPKA"),
+  // Carried over from the pre-existing template set: "Bank of Pokhara Limited"
+  // had a seeded cheque layout, so the institution is kept resolvable here.
+  // Its NRB class and current licence status have NOT been confirmed — the
+  // missing `verifiedAt` stamp is what signals that to an administrator.
+  active("bank-of-pokhara", "Bank of Pokhara Limited", "A"),
 ];
 
 const COMMERCIAL_MERGED: Bank[] = [

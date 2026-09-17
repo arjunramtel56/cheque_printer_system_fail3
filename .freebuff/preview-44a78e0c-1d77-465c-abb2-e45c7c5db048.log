@@ -141,3 +141,5 @@
 ✓ Compiled in 40ms
  GET /admin/login 200 in 45ms (next.js: 19ms, application-code: 27ms)
  GET /admin/login 200 in 13ms (next.js: 6ms, application-code: 7ms)
+ GET /admin/login 200 in 28ms (next.js: 6ms, application-code: 21ms)
+ GET /admin/login 200 in 120ms (next.js: 9ms, application-code: 111ms)

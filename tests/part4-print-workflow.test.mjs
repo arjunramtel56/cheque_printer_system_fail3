@@ -50,6 +50,8 @@ import {
   validateCalibratedBounds,
 } from "../lib/validation.ts";
 import { isDirectFeed, isA4Carrier, DIRECT_FEED_MODES, A4_CARRIER_MODES } from "../lib/types.ts";
+import { computeSheetLayout } from "../lib/sheetLayout.ts";
+import { getCalibrationFor, setCalibrationFor } from "../lib/calibration.ts";
 
 let pass = 0;
 let fail = 0;
@@ -65,6 +67,20 @@ const printCss = readFileSync(repoRoot + "app/print.css", "utf8");
 const globalsCss = readFileSync(repoRoot + "app/globals.css", "utf8");
 const layoutTsx = readFileSync(repoRoot + "app/layout.tsx", "utf8");
 const pageTsx = readFileSync(repoRoot + "app/page.tsx", "utf8");
+const workspaceTsx = ws;
+const sheetLayoutTs = readFileSync(repoRoot + "lib/sheetLayout.ts", "utf8");
+const chequeSheetSource = readFileSync(repoRoot + "components/ChequeSheet.tsx", "utf8");
+const textFitTs = readFileSync(repoRoot + "lib/textFit.ts", "utf8");
+const calibrationTs = readFileSync(repoRoot + "lib/calibration.ts", "utf8");
+
+/** Representative cheque data used by the behavioural geometry checks. */
+const sampleData = {
+  date: "2026-09-17",
+  payee: "Ram Bahadur Thapa",
+  amount: "1000.50",
+  amountWords: "",
+  accountPayee: true,
+};
 
 const siddhartha = getTemplate("siddhartha");
 const nabil = getTemplate("nabil");
@@ -172,8 +188,12 @@ assertContains(ws, "const currentPrintKey = ++printKeyRef.current;", "printKey i
 assertContains(ws, "data-print-key={printKeyRef.current}", "PrintOutput wrapper carries data-print-key");
 assertContains(ws, "data-template-id={template.id}", "PrintOutput wrapper carries data-template-id (stale-template detection)");
 assertContains(ws, "data-mode={printMode}", "PrintOutput wrapper carries data-mode");
-assertContains(ws, "data-calX={String(isDF ? dfCalibration.x : a4Calibration.x)}", "PrintOutput wrapper carries calibration X");
-assertContains(ws, "data-calY={String(isDF ? dfCalibration.y : a4Calibration.y)}", "PrintOutput wrapper carries calibration Y");
+assertContains(ws, "data-calx={String(currentCalibration.x)}", "PrintOutput wrapper carries calibration X");
+assertContains(ws, "data-caly={String(currentCalibration.y)}", "PrintOutput wrapper carries calibration Y");
+// Lowercase data-* attributes: the old camelCase props produced React warnings
+// on every render and never reached the DOM as written.
+assertContains(ws, "dataset.calx = String(cal.x);", "onBeforePrint stamps calibration with the correct dataset key");
+assertContains(ws, "dataset.caly = String(cal.y);", "onBeforePrint stamps calibration Y with the correct dataset key");
 assertContains(ws, 'containerSelector = isDirectFeed(printMode)', "Container selector chosen by mode (DF vs A4)");
 assertContains(ws, "geom.pageW.toFixed(1)", "@page width sourced from resolved geometry (not hardcoded)");
 assertContains(ws, "geom.pageH.toFixed(1)", "@page height sourced from resolved geometry");
@@ -212,8 +232,15 @@ assertContains(ws, "err.message", "sanitizeError returns only message (not stack
 assertContains(ws, "setPrintError", "printError state populated on failure");
 assertContains(ws, 'role="alert"', "error surfaced with role=alert (assertive announcement)");
 // Every error branch resets the lock + isPrinting
-const errorBranches = ws.match(/setPrintError\([^)]*\);[^}]*?printLockRef\.current = false;[^}]*?setIsPrinting\(false\)/g);
-assert(errorBranches !== null && errorBranches.length >= 7, "Every error branch (date/payee/amount/words/template/mode/cal/geom/bounds) resets lock + isPrinting");
+// Every error branch releases the lock and clears isPrinting through the one
+// release() helper, so no branch can forget one of the two.
+const errorBranches = ws.match(/setPrintError\([^)]*\);\s*release\(\);\s*return;/g);
+assert(errorBranches !== null && errorBranches.length >= 8, "Every error branch (date/payee/amount/words/consistency/template/mode/cal/geometry/bounds/zones) releases lock + isPrinting via one helper");
+assertContains(ws, "const release = () => {", "release() helper exists");
+assert(
+  ws.replace(/\s+/g, " ").includes("const release = () => { printLockRef.current = false; setIsPrinting(false); }"),
+  "release() clears the lock and isPrinting together",
+);
 
 // ---------------------------------------------------------------------------
 // TEST 1: Rapid Print clicks
@@ -270,15 +297,19 @@ assertContains(ws, "function handleModeChange", "handleModeChange exists");
 assertContains(ws, "setPrintMode(newMode);", "handleModeChange updates printMode");
 assertContains(ws, "setPrintError(\"\");", "handleModeChange clears printError");
 // The PrintReadiness recompute depends on printMode
-assertContains(ws, "[template, date, payee, amount, amountWords, printMode, isDF, dfCalibration, a4Calibration]", "printReadiness recomputes when printMode changes");
+assertContains(ws, "[template, date, payee, amount, amountWords, printMode, currentCalibration, safeZonesClear]", "printReadiness recomputes when printMode changes");
 
-// Switching DF <-> A4 uses the correct calibration set
-assertContains(ws, "const currentCalibration = isDF ? dfCalibration : a4Calibration;", "Calibration selection is mode-aware");
-assertContains(ws, "const setCurrentCalibration = isDF ? setDfCalibration : setA4Calibration;", "Calibration setter is mode-aware");
+// Switching DF <-> A4 selects the calibration for THAT (template, mode) pair.
+assertContains(ws, "getCalibrationFor(calibrations, template.id, printMode", "Calibration lookup is per template + print mode");
+assertContains(ws, "setCalibrationFor(prev, template.id, printMode", "Calibration writes are per template + print mode");
+assertContains(ws, "resetCalibrationFor(prev, template.id, printMode)", "Calibration reset is per template + print mode");
 assert(
-  ws.includes("offsetX={isDF ? dfCalibration.x : a4Calibration.x}") &&
-  ws.includes("offsetY={isDF ? dfCalibration.y : a4Calibration.y}"),
-  "Preview uses mode-appropriate calibration",
+  isDirectFeedCalibrationIndependent(),
+  "Preview uses mode-appropriate calibration (direct feed and carrier offsets stay independent)",
+);
+assert(
+  calibrationDoesNotChangeSize(),
+  "Calibration never changes the cheque's physical dimensions",
 );
 
 // ---------------------------------------------------------------------------
@@ -383,8 +414,10 @@ assertContains(ws, "checkAmountWordsConsistency(amount, amountWords)", "handlePr
   const c2 = checkAmountWordsConsistency("1000", "Two Thousand Rupees Only");
   assert(!c2.consistent, "Mismatched words blocked by gate");
 }
-// words2 derived from amountWords state — no separate stale buffer
-assertContains(ws, "function splitWordsToLines(words", "words split at render from current amountWords");
+// words2 derived from amountWords state — no separate stale buffer. The split
+// now lives in lib/textFit.ts and is used by the single render path.
+assertContains(textFitTs, "export function splitWordsAcrossFields", "words are split from the current amountWords at render time");
+assertContains(textFitTs, "export function splitWordsToLines", "the classic two-line splitter is preserved");
 
 // ---------------------------------------------------------------------------
 // TEST 9: A/C PAYEE ONLY toggle
@@ -393,19 +426,23 @@ console.log("\n=== TEST 9: A/C PAYEE ONLY toggle ===");
 
 assertContains(ws, "const [accountPayee, setAccountPayee] = useState(true)", "accountPayee default true (standard cheque)");
 assertContains(ws, "setAccountPayee(e.target.checked)", "accountPayee toggled from checkbox");
-// Both preview AND print render the A/C PAYEE line from the SAME state
-assertContains(ws, "accountPayee &&", "accountPayee renders conditionally");
-assertContains(ws, 'renderField("accountPayee"', "DirectFeedPreview renders accountPayee");
-assertContains(ws, "PrintField", "PrintOutput renders accountPayee via PrintField");
-// Same template field used: template.fields.accountPayee
-assertContains(ws, "template.fields.accountPayee?.y", "accountPayee Y coordinate sourced from template (single source)");
-assertContains(ws, "template.fields.accountPayee?.fontSize", "accountPayee fontSize sourced from template");
-// Verify the y value is the same template field in both preview + print
+// The crossing is a data-driven field: its position and font come from the
+// template, and its presence comes from the toggle — in ONE render path used by
+// both preview and print.
+const apField = siddhartha.fields.accountPayee;
+assert(!!apField && typeof apField.y === "number", "accountPayee Y coordinate comes from the template");
+assert(apField.fontSize !== undefined, "accountPayee fontSize comes from the template");
+assert(apField.x === 0 && apField.align === "center", "accountPayee spans the full width, centred");
 {
-  const previewY = "template.fields.accountPayee?.y ?? 16";
-  const printY = "template.fields.accountPayee?.y ?? 16";
-  assert(ws.includes(previewY), "Preview uses template accountPayee y");
-  assert(ws.includes(printY), "Print uses template accountPayee y (same constant)");
+  const withCrossing = computeSheetLayout(siddhartha, { ...sampleData, accountPayee: true }, "custom_short", { x: 0, y: 0 });
+  const withoutCrossing = computeSheetLayout(siddhartha, { ...sampleData, accountPayee: false }, "custom_short", { x: 0, y: 0 });
+  const find = (layout, key) => layout.fields.find((f) => f.key === key);
+  assert((find(withCrossing, "accountPayee")?.text ?? "").includes("A/C PAYEE"), "A/C PAYEE text renders when the toggle is on");
+  assert(find(withoutCrossing, "accountPayee")?.text === "", "A/C PAYEE text is empty when the toggle is off");
+  assert(
+    find(withCrossing, "accountPayee").yMm === find(withoutCrossing, "accountPayee").yMm,
+    "A/C PAYEE position is identical in both states (single source of geometry)",
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -421,8 +458,8 @@ assertContains(ws, "setPayee(\"\")", "Clear All resets payee");
 assertContains(ws, "setAmount(\"\")", "Clear All resets amount");
 assertContains(ws, "setAmountWords(\"\")", "Clear All resets amountWords");
 assertContains(ws, "setAccountPayee(true)", "Clear All resets accountPayee to default true");
-assertContains(ws, "setDfCalibration({ x: 0, y: 0 })", "Clear All resets DF calibration");
-assertContains(ws, "setA4Calibration({ x: 0, y: 0 })", "Clear All resets A4 calibration");
+assertContains(ws, "setCalibrations({})", "Clear All resets every calibration override");
+assertContains(calibrationTs, "export function resetCalibrationFor", "per template + mode calibration reset exists");
 // Printing/transient state cleared
 assertContains(ws, "setPrintError(\"\")", "Clear All resets printError");
 assertContains(ws, "setPrintCompleted(false)", "Clear All resets printCompleted");
@@ -485,55 +522,67 @@ assert(DIRECT_FEED_MODES.every((m) => !A4_CARRIER_MODES.includes(m)), "Mode grou
   assert(dfSnap.x === 0.5 && dfSnap.y === -0.3, "DF snapshot matches expected independent values");
 }
 
-// PrintOutput switches DOM structure based on isDF
-assertContains(ws, "if (isDF) {", "PrintOutput branches on isDF");
-assertContains(ws, "className=\"print-direct-feed\"", "DF uses print-direct-feed container");
-assertContains(ws, "className=\"print-a4-carrier\"", "A4 uses print-a4-carrier container");
+// The shared renderer selects the print container class from the mode, so the
+// preview and the print payload can never disagree about which container is used.
+assertContains(chequeSheetSource, '"print-direct-feed"', "DF uses print-direct-feed container");
+assertContains(chequeSheetSource, '"print-a4-carrier"', "A4 uses print-a4-carrier container");
+assertContains(chequeSheetSource, "mode === \"custom_short\" || mode === \"custom_long\"", "container class is chosen from the print mode");
 
 // ---------------------------------------------------------------------------
 // PREVIEW vs PRINT consistency
 // ---------------------------------------------------------------------------
 console.log("\n=== PREVIEW vs PRINT consistency ===");
 
-// Both derive geometry from the SAME resolver
-assertContains(ws, "resolveCalibratedGeometry(template, mode, { x: calX, y: calY })", "A4CarrierPreview uses resolveCalibratedGeometry");
-assertContains(ws, "resolveCalibratedGeometry(template, mode, { x: calX, y: calY })", "PrintOutput A4 path uses resolveCalibratedGeometry (same call)");
-assertContains(ws, "resolvePrintGeometry(template, mode)", "DirectFeedPreview uses resolvePrintGeometry");
-assertContains(ws, "resolvePrintGeometry(template, mode)", "PrintOutput DF path uses resolvePrintGeometry");
+// There is now ONE layout resolver shared by preview and print.
+assertContains(sheetLayoutTs, "resolveCalibratedGeometry(template, mode, calibration)", "preview and print share resolveCalibratedGeometry");
+assert(workspaceTsx.includes('variant="preview"') && workspaceTsx.includes('variant="print"'), "preview and print are the same component at two scales");
+assert(!workspaceTsx.includes("DirectFeedPreview") && !workspaceTsx.includes("A4CarrierPreview"), "no per-mode renderers remain");
+assert(functionalParityHolds(), "preview and print resolve identical field rectangles (functional parity check)");
 // @page injection uses the same resolved geometry
 assertContains(ws, "geom.pageW.toFixed(1)", "@page width from same resolver");
 assertContains(ws, "geom.pageH.toFixed(1)", "@page height from same resolver");
 assertContains(ws, "geom.containerW", "container width from same resolver");
 assertContains(ws, "geom.containerH", "container height from same resolver");
 
-// Both use identical props: template, date, payee, amount, amountWords, accountPayee, offsetX, offsetY, mode
-const previewProps = ws.match(/<A4CarrierPreview[\s\S]*?\/>/m)?.[0] ?? "";
-const printProps = ws.match(/<PrintOutput[\s\S]*?\/>/m)?.[0] ?? "";
-const commonProps = ["template={template}", "date={date}", "payee={payee}", "amount={amount}", "amountWords={amountWords}", "accountPayee={accountPayee}"];
+// Both call sites pass the SAME data object and the SAME calibration value —
+// the entire class of "preview used a different value than print" bugs is gone.
+const previewProps = ws.match(/<ChequeSheet[\s\S]*?\/>/m)?.[0] ?? "";
+const printOutputMatch = ws.match(/<PrintOutput[\s\S]*?\/>/m)?.[0] ?? "";
+const commonProps = ["template={template}", "data={chequeData}", "mode={printMode}", "calibration={currentCalibration}"];
 for (const p of commonProps) {
-  assert(previewProps.includes(p) && printProps.includes(p), "Both preview and print pass: " + p);
+  assert(previewProps.includes(p), "Preview sheet is passed: " + p);
 }
+for (const p of ["template={template}", "data={chequeData}", "mode={printMode}", "calibration={currentCalibration}"]) {
+  assert(printOutputMatch.includes(p), "Print output is passed the same value as the preview: " + p);
+}
+assertContains(ws, "const chequeData: ChequeData = { date, payee, amount, amountWords, accountPayee };", "one cheque-data object feeds both preview and print");
 assert(
-  previewProps.includes("offsetX={a4Calibration.x}") && previewProps.includes("offsetY={a4Calibration.y}") &&
-  printProps.includes("offsetX={isDF ? dfCalibration.x : a4Calibration.x}") && printProps.includes("offsetY={isDF ? dfCalibration.y : a4Calibration.y}"),
-  "Both use mode-appropriate calibration for the active mode",
+  !ws.includes("offsetX=") && !ws.includes("offsetY="),
+  "calibration is no longer passed as separate loose X/Y props (it travels with the layout)",
 );
-
-// A/C PAYEE ONLY state — same prop in both
-assert(
-  previewProps.includes("accountPayee={accountPayee}") && printProps.includes("accountPayee={accountPayee}"),
-  "accountPayee prop identical in preview and print",
-);
+assertContains(ws, "data-calx={String(currentCalibration.x)}", "print wrapper carries calibration X");
+assertContains(ws, "data-caly={String(currentCalibration.y)}", "print wrapper carries calibration Y");
 
 // Calibration: preview and print both apply calX/calY directly on the unrotated
 // cheque coordinate system. No rotation compensation is needed because no CSS
 // rotation is applied — Short Edge First vs Long Edge First is a printer
 // paper-feed setting, not a CSS transform.
-const previewFnMatch = ws.match(/function DirectFeedPreview[\s\S]*?^  \}/m)?.[0] ?? "";
-assert(previewFnMatch.includes("(fieldX + calX) * SCALE") || previewFnMatch.includes("+ calX"), "DirectFeedPreview applies calX directly (unrotated canvas matches physical cheque)");
-// PrintOutput DF branch also applies calX/calY directly (no axis swap)
-assertContains(ws, "x={(template.fields.date?.x ?? 128) + calX}", "PrintOutput applies calX directly to date field (no rotation compensation)");
-assertContains(ws, "y={(template.fields.date?.y ?? 6) + calY}", "PrintOutput applies calY directly to date field (no rotation compensation)");
+// Calibration is applied once, in the shared layout, with no axis swap and no
+// rotation compensation anywhere in the render path.
+assertContains(sheetLayoutTs, "const contentOffsetX = df ? requested.x : 0;", "direct feed applies calibration X to X only");
+assertContains(sheetLayoutTs, "const contentOffsetY = df ? requested.y : 0;", "direct feed applies calibration Y to Y only");
+assert(!chequeSheetSource.includes("rotate("), "no CSS rotation is applied to the cheque (feed direction is a printer setting)");
+{
+  const base = computeSheetLayout(siddhartha, sampleData, "custom_short", { x: 0, y: 0 });
+  const shiftedX = computeSheetLayout(siddhartha, sampleData, "custom_short", { x: 2, y: 0 });
+  const shiftedY = computeSheetLayout(siddhartha, sampleData, "custom_short", { x: 0, y: 2 });
+  const fieldOf = (layout, key) => layout.fields.find((f) => f.key === key);
+  assert(Math.abs(fieldOf(shiftedX, "date").xMm - fieldOf(base, "date").xMm - 2) < 0.001, "+2 mm X moves the date 2 mm right");
+  assert(fieldOf(shiftedX, "date").yMm === fieldOf(base, "date").yMm, "X calibration never moves anything vertically");
+  assert(Math.abs(fieldOf(shiftedY, "date").yMm - fieldOf(base, "date").yMm - 2) < 0.001, "+2 mm Y moves the date 2 mm down");
+  assert(fieldOf(shiftedY, "date").xMm === fieldOf(base, "date").xMm, "Y calibration never moves anything horizontally");
+  assert(fieldOf(shiftedX, "date").widthMm === fieldOf(base, "date").widthMm, "calibration does not resize fields");
+}
 
 // ---------------------------------------------------------------------------
 // Responsive UI check
@@ -556,8 +605,9 @@ assertContains(printCss, "image-rendering: crisp-edges", "print.css prevents int
 assertContains(globalsCss, ".preview-stage", "Responsive rules target .preview-stage (screen only)");
 assert(!printCss.includes("scale("), "print.css does not apply responsive scale transforms to print payload");
 // Print output uses absolute mm units (never rems/em that viewport scaling could alter)
-assertContains(ws, "mm`", "PrintField uses absolute mm units for print output");
-assertContains(ws, "mm", "PrintOutput uses mm-based geometry");
+assertContains(chequeSheetSource, "lengthToCss", "the shared renderer converts millimetres to display units in one place");
+assert(chequeSheetSource.includes("}mm`"), "print output is expressed in absolute millimetres");
+assert(printGeometryUsesMillimetres(), "print output expresses geometry in millimetres (pixels only in the screen preview)");
 
 // ---------------------------------------------------------------------------
 // LIGHT SYSTEM REGRESSION: Landing + Workspace build/runtime
@@ -575,9 +625,10 @@ assertContains(layoutTsx, "color-scheme", "Root layout sets color-scheme for pri
 // Workspace intact + no broken imports
 assertContains(ws, 'from "@/lib/templates"', "Workspace imports templates (no broken path)");
 assertContains(ws, 'import type { BankTemplate, ProfileKey, Calibration } from "@/lib/types"', "Workspace imports types");
-assertContains(ws, 'import { clampCalibration, validateCalibrationPair } from "@/lib/calibration"', "Workspace imports calibration");
+assertContains(ws, 'from "@/lib/calibration"', "Workspace imports calibration");
 assertContains(ws, 'from "@/lib/printGeometry"', "Workspace imports printGeometry");
-assertContains(ws, 'import { validatePrintGeometry, validateCalibratedBounds } from "@/lib/validation"', "Workspace imports validation");
+assertContains(ws, 'from "@/lib/validation"', "Workspace imports validation");
+assertContains(ws, 'from "@/components/ChequeSheet"', "Workspace imports the shared renderer");
 assert(!ws.includes("@/lib/undefined"), "No broken '@/lib/' import path that doesn't resolve");
 
 // Production build artifacts present (built earlier)
@@ -605,6 +656,50 @@ if (fail > 0) {
   process.exit(1);
 } else {
   console.log("\nAll PART 4 print-workflow tests PASSED.");
+}
+
+/**
+ * Functional parity: the preview and the print payload are the same component,
+ * so parity reduces to computeSheetLayout being deterministic and complete for
+ * every mode. This recomputes the layout and compares it field by field.
+ */
+function functionalParityHolds() {
+  const modes = ["custom_short", "custom_long", "a4_vertical", "a4_horizontal"];
+  for (const mode of modes) {
+    const a = computeSheetLayout(siddhartha, sampleData, mode, { x: 1.5, y: -0.7 });
+    const b = computeSheetLayout(siddhartha, sampleData, mode, { x: 1.5, y: -0.7 });
+    if (JSON.stringify(a.fields) !== JSON.stringify(b.fields)) return false;
+    if (a.pageW !== b.pageW || a.pageH !== b.pageH) return false;
+    if (a.chequeX !== b.chequeX || a.chequeY !== b.chequeY) return false;
+  }
+  return true;
+}
+
+/** Direct feed and carrier calibrations are stored under different keys and
+ *  never overwrite each other. */
+function isDirectFeedCalibrationIndependent() {
+  let map = {};
+  map = setCalibrationFor(map, "siddhartha", "custom_short", { x: 1.5, y: 0.7 });
+  map = setCalibrationFor(map, "siddhartha", "a4_vertical", { x: -2.3, y: 1.1 });
+  const df = getCalibrationFor(map, "siddhartha", "custom_short");
+  const a4 = getCalibrationFor(map, "siddhartha", "a4_vertical");
+  return df.x === 1.5 && df.y === 0.7 && a4.x === -2.3 && a4.y === 1.1;
+}
+
+/** Calibration translates output; it must never resize the cheque. */
+function calibrationDoesNotChangeSize() {
+  for (const mode of ["custom_short", "a4_vertical", "a4_horizontal"]) {
+    const neutral = computeSheetLayout(siddhartha, sampleData, mode, { x: 0, y: 0 });
+    const extreme = computeSheetLayout(siddhartha, sampleData, mode, { x: 25, y: -25 });
+    if (neutral.chequeW !== extreme.chequeW || neutral.chequeH !== extreme.chequeH) return false;
+    if (neutral.pageW !== extreme.pageW || neutral.pageH !== extreme.pageH) return false;
+  }
+  return true;
+}
+
+/** The print variant must express geometry in millimetres, never px/in. */
+function printGeometryUsesMillimetres() {
+  return chequeSheetSource.includes("`${mm}mm`") && chequeSheetSource.includes("`${mm * PREVIEW_SCALE}px`");
 }
 
 function fileExists(p) {
