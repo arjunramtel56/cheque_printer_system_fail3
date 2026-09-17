@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "tsx tests/workspace.test.mjs && tsx tests/print-flow.test.mjs && tsx tests/validation.test.mjs && tsx tests/print-verification.mjs && tsx tests/catalogue.test.mjs && tsx tests/geometry-matrix.test.mjs && tsx tests/preview-print-parity.test.mjs && tsx tests/part4-print-workflow.test.mjs && tsx tests/part5-qa.test.mjs"
+    "test": "tsx tests/workspace.test.mjs && tsx tests/print-flow.test.mjs && tsx tests/validation.test.mjs && tsx tests/print-verification.mjs && tsx tests/catalogue.test.mjs && tsx tests/geometry-matrix.test.mjs && tsx tests/preview-print-parity.test.mjs && tsx tests/verification-honesty.test.mjs && tsx tests/admin-access.test.mjs && tsx tests/part4-print-workflow.test.mjs && tsx tests/part5-qa.test.mjs",
+    "verify": "npm run typecheck && npm test"
   },
   "dependencies": {
     "next": "^16.3.5",

@@ -38,7 +38,7 @@ import {
   validateCalibrationPair,
   type CalibrationMap,
 } from "@/lib/calibration";
-import { resolvePaper, resolvePrintGeometry } from "@/lib/printGeometry";
+import { resolvePaper, resolvePrintGeometry, STANDARD_CHEQUE_W_MM, STANDARD_CHEQUE_H_MM } from "@/lib/printGeometry";
 import { validateCalibratedBounds, validatePrintGeometry, validateSafeZoneClearance, validateTemplateForPrint } from "@/lib/validation";
 import { computeSheetLayout, fieldsWithinCheque, type ChequeData } from "@/lib/sheetLayout";
 import ChequeSheet, { PREVIEW_SCALE } from "@/components/ChequeSheet";
@@ -1199,7 +1199,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
               ) : (
                 <div
                   className="cheque-preview"
-                  style={{ width: Math.round(190.5 * SCALE), height: Math.round(88.9 * SCALE) }}
+                  style={{ width: Math.round(STANDARD_CHEQUE_W_MM * SCALE), height: Math.round(STANDARD_CHEQUE_H_MM * SCALE) }}
                   role="img"
                   aria-label="No bank template selected — preview unavailable"
                 >

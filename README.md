@@ -36,6 +36,51 @@ this repository implements it.
 
 ---
 
+## Roadmap status (V0.1 → V1.0)
+
+This project follows a versioned roadmap where the **printing engine comes
+first** and business features follow. Current position: the engine is built and
+tested; the remaining gap to V1.0 is *physical* verification, plus the admin area
+being genuinely reachable.
+
+| Version | Focus | Status | Evidence / gap |
+|---------|-------|--------|----------------|
+| **V0.1** | Audit the existing codebase | ✅ Done | Findings recorded above; the aspirational legacy README was moved aside rather than left to mislead |
+| **V0.2** | Core print engine | ✅ Done | `lib/printGeometry.ts`, `lib/sheetLayout.ts`, one renderer `components/ChequeSheet.tsx` |
+| **V0.3** | Portrait + landscape | ✅ Done (model) | `orientation` is a template property; the model is deliberately rotation-free — feed direction is a printer setting, never a CSS transform |
+| **V0.4** | Dynamic cheque size | ✅ Done | `lib/sizes.ts` registry is the only place physical mm values are declared; `lib/printGeometry.ts` derives from it |
+| **V0.5** | Nepal bank + template system | ✅ Done (partial data) | 76 banks, bank ≠ one template; 5 templates, of which 1 has real geometry |
+| **V0.6** | Admin template management | ✅ Done | Bank CRUD, template workbench (size, orientation, fields, safe zones, print modes), export/import, calibration records |
+| **V0.7** | A4 carrier printing | ✅ Done | `a4_vertical` / `a4_horizontal`: cheque keeps its own size inside the carrier |
+| **V0.8** | X/Y calibration | ✅ Done | Per template × per mode, 0.1 mm steps, ±25 mm, independent axes |
+| **V0.9** | Preview + measurement | ✅ Done | Preview and print render the same millimetre rectangles; measurement guides are screen-only and provably cannot print |
+| **V1.0** | Stable printing MVP | ⏳ Open | Requires a real cheque measured on real stock (see below) |
+
+### V1.0 definition of done
+
+```
+one bank -> one real cheque -> correct size -> correct orientation
+        -> correct field positions -> correct browser preview
+        -> correct physical printer output
+```
+
+Browser verification is provable by the test suite and is already done for
+Siddhartha. Physical verification is **not** provable by code: it needs somebody
+with a printer, a ruler and a blank cheque, following
+[lib/physical-test-matrix.md](lib/physical-test-matrix.md). Until a record sheet
+is completed, `physicallyCalibratedCount` stays at 0 and no template may be
+called physically calibrated.
+
+### Not built yet (and deliberately out of order)
+
+Trial (V1.1), user panel (V1.2), print history and audit (V1.4), advanced
+templates (V1.5), multi-printer optimisation (V1.6), calibration sheet printing
+(V1.7), server-side security hardening (V1.8) and performance work (V1.9). The
+printing engine is stable first — those features sit on top of it, and none of
+them should fork it.
+
+---
+
 ## Architecture
 
 ```
@@ -162,8 +207,9 @@ in [lib/physical-test-matrix.md](lib/physical-test-matrix.md).
 ## Tests
 
 ```bash
+npm run verify      # typecheck + full suite (use this before handing work over)
 npm run typecheck   # tsc --noEmit
-npm test            # full suite
+npm test            # full suite only
 ```
 
 | Suite | Covers |
@@ -175,6 +221,8 @@ npm test            # full suite
 | `tests/catalogue.test.mjs` | Bank/template catalogue integrity and selectors |
 | `tests/geometry-matrix.test.mjs` | Every template × mode: page box, cheque box, calibration invariance |
 | `tests/preview-print-parity.test.mjs` | Preview and print render identical mm rectangles |
+| `tests/verification-honesty.test.mjs` | Guides never print, no unearned verification claims, one source of physical size |
+| `tests/admin-access.test.mjs` | The admin sign-in route stays reachable and the rest stays gated |
 | `tests/part4-print-workflow.test.mjs` | Print workflow states, gating, readiness |
 | `tests/part5-qa.test.mjs` | Quality gates and edge cases |
 
