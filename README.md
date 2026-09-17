@@ -1,17 +1,9 @@
 # Reactify Cheque Printer System
 
-**Current Release: Version 1.8.0**
-
-Version 1.8.0 rewrites the entire application as a modern, responsive, accessible
-**Next.js (React) application** — Landing page, User Panel, Guest Trial Panel and
-Administrator Panel — with cohesive layouts, a shared design-token system and
-**Light / Dark / System** themes. Every page in now server-rendered React over the
-preserved, Express-free security core (`core/platform.mjs`), so no approved
-functionality, security control, historical data or cheque-printing configuration
-is altered. See the [Version 1.8 Release Report](RELEASE-NOTES-v1.8.md) for the
-verified change summary and actual test results.
-
-The **Reactify Cheque Printer System** is a secure commercial cheque-printing platform designed around a server-authorized printing workflow. It supports **Administrator, Subscriber/User, and one-day Guest access**, with authentication, subscription management, printer calibration, payment processing, audit logging, and security controls.
+A bank-template-driven cheque printing system for Nepal, built with **Next.js 16
+(App Router) + React 18 + TypeScript**. Every physical dimension in the
+application is millimetre-based and data-driven: adding a bank or a new cheque
+format is a data change, not a code change.
 
 * **Developed by:** Reactify Software Technologies Pvt. Ltd.
 * **Support:** [support@reactifysoftwaretechnologies.com.np](mailto:support@reactifysoftwaretechnologies.com.np)
@@ -19,687 +11,210 @@ The **Reactify Cheque Printer System** is a secure commercial cheque-printing pl
 * **Address:** Kankai Municipality-3, Nepal
 * **PAN:** 65284125
 * **Website:** [https://www.reactifysoftwaretechnologies.com.np](https://www.reactifysoftwaretechnologies.com.np)
-* **Production Deployment:** [Railway + Cloudflare Production Runbook](docs/RAILWAY-CLOUDFLARE-PRODUCTION-v1.7.md)
-* **Version 1.7 Release Report:** [Release Notes and Verified Results](RELEASE-NOTES-v1.7.md)
 
 ---
 
-## Key Features and Implemented Functionality
+## Read this first: what is real and what is not
 
-### Authentication and Security
+This repository contains the **Phase 1 cheque printing engine**. It is honest
+about its own state, and the quickest way to break it is to assume more than
+that:
 
-* Server-side authentication with role-based access control.
-* Subscription and trial eligibility enforcement.
-* CSRF protection and secure HTTP security headers.
-* Scrypt password hashing with unique salts.
-* Mandatory TOTP-based MFA for all Administrator accounts.
-* Rotating, expiring, and remotely revocable server-side sessions using HTTP-only, SameSite cookies.
-* Email-based verification for registered Users.
-* Production fail-closed CAPTCHA integration.
-* Phone numbers are collected for registered-account contact purposes but are not used as a verification mechanism.
+| Claim | Reality |
+|-------|---------|
+| Bank catalogue | **76 institutions seeded** (29 Class A, 16 Class B, 17 Class C, 14 Class D). Class A is complete, including merged institutions; B/C/D are subsets to be extended through admin import. |
+| Cheque templates | **5 exist** — Siddhartha plus four clone-geometry placeholders (Nabil, NIC Asia, Everest, Bank of Pokhara). Only `siddhartha` is `browser-verified`. |
+| Geometry provenance | Real coordinates exist for Siddhartha only. The other four deliberately reuse the same field coordinates and are **not selectable for printing** until real values are entered from a sample cheque. |
+| Physical print verification | **None.** No cheque has been printed and measured by this build. Browser verification does not imply ink position — see [Verification](#verification). |
+| Cheque sizes registered | One: `standard-190x89` (190.5 × 88.9 mm, landscape). The size registry supports arbitrary mm sizes and per-template orientation; only one size has real data behind it. |
+| Admin authentication | A **client-side demo gate**: password `admin`, a non-cryptographic hash, and a session in `localStorage`. There is no server, no API routes and no database in this repository. Do not deploy the admin panel as-is. |
+| Payment / VAT / invoicing / MFA / email verification | **Not present in this repository.** These are documented for the wider product in [docs/legacy-product-readme-v1.md](docs/legacy-product-readme-v1.md), which describes a different, larger codebase and is kept for reference only. |
 
-### Guest Access
-
-* Password-free Guest access using:
-
-  * Personal or Organizational usage type
-  * Full name
-  * Email address
-* Guest access creates a secure server session immediately without requiring:
-
-  * Registration
-  * Password
-  * OTP
-  * Email verification
-* One-day Guest access is resumable on the previously registered device.
-* Guest access is protected through:
-
-  * Signed device cookies
-  * Pseudonymous device fingerprints
-  * IP-risk history
-  * Rate limiting
-  * Abuse detection
-  * Configurable print limits
-
-### Registered User Trial
-
-* Registered Users receive one free 24-hour access period after email verification.
-* A shared eligibility ledger prevents Guest and User trials from being stacked.
-* Authorized Administrators can record an override reason when an exception is required.
-
-### Printing and Calibration
-
-The system supports four print profiles:
-
-1. Custom Short
-2. Custom Long
-3. A4 Vertical Carrier
-4. A4 Horizontal Carrier
-
-Additional printing functionality includes:
-
-* Independent X/Y calibration for each User and print profile.
-* Server-generated, two-minute, single-use print tickets.
-* Server-side print authorization to prevent premium printing from being unlocked by manipulating browser elements.
-* Bank-template-based cheque configuration.
-* Printer-specific calibration settings.
-* Print preview and alignment testing.
-* Plain-paper overlay testing before production printing.
-
-### Bank Templates
-
-* Includes 54 Nepal Rastra Bank Class A, B, and C institution names.
-* Only verified/calibrated templates are marked as calibrated.
-* Siddhartha Bank currently has a calibrated template based on the supplied reference and safe-zone requirements.
-* Other bank templates must undergo a physical plain-paper alignment test before an Administrator can mark them as calibrated.
-* Bank selection is never silently applied.
-
-On every page load and form reset:
-
-> **Select a Bank Template**
-
-The User must explicitly select a bank before saving or printing. No bank is selected automatically.
-
-### Cheque Layout and Calibration
-
-The system supports configurable cheque fields, including:
-
-* Bank name
-* Date
-* Payee name
-* Amount in words
-* Numeric amount
-* Account/reference information
-* A/C PAYEE positioning
-* Signature areas
-* X/Y printer corrections
-
-The preview and print output use the same coordinate system to maintain consistency between screen preview and physical printing.
-
-### Audit, Billing, and Records
-
-The system provides server-side management for:
-
-* Cheque history
-* Payment and invoice records
-* Subscription status
-* Support records
-* Security events
-* Backups
-* Append-only HMAC-chained audit logs
+If you are looking for the commercial platform documentation (subscriptions,
+invoices, Railway deployment, MFA), it is in that legacy file — but no code in
+this repository implements it.
 
 ---
 
-## Subscription and Pricing
-
-The platform supports separate **Personal** and **Organizational** plans with configurable:
-
-* Pricing
-* Print allowances
-* Benefits
-* Permissions
-* Support levels
-* Discounts
-* Promotions
-* Subscription lifecycle status
-
-Plan selection is available from:
-
-* Landing page
-* User dashboard
-
-A plan selected on the landing page is displayed as a read-only registration summary and carried into the User dashboard.
-
-**Registration does not contain a separate plan-selection field.**
-
----
-
-## Payment and Invoice Management
-
-**Fonepay QR** is currently the only supported payment method.
-
-Users can:
-
-1. Create an invoice.
-2. Upload a payment voucher in PNG, JPEG, or PDF format.
-3. View the payment status.
-4. Receive Pending, Approved, or Rejected status.
-5. View rejection reasons.
-6. Resubmit a voucher after rejection.
-
-### Invoice Features
-
-Company-branded one-page A4 invoices include:
-
-* Customer information
-* Plan information
-* Immutable pricing snapshot
-* Issue date
-* Due date
-* Subscription dates after activation
-* Tax/VAT information
-* Payment method
-* Payment reference
-* Terms and conditions
-* Authorized-signature area
-* View
-* Print
-* Download PDF
-
-### Tax and VAT Administration
-
-Authorized tax administrators can configure:
-
-* Verified seller PAN/VAT registration
-* VAT rate in basis points
-* 13% VAT default
-* VAT-inclusive pricing
-* VAT-exclusive pricing
-* Separate Personal and Organizational defaults
-* Customer-specific PAN/VAT treatment
-
-Each invoice stores an immutable server-side snapshot of:
-
-* Original price
-* Approved adjustment
-* Taxable amount
-* VAT rate
-* VAT amount
-* Final payable amount
-* Applicable policy version
-
-Future tax-policy changes do not modify previously issued invoice snapshots.
-
----
-
-## Administrator Dashboard
-
-The Administrator dashboard provides centralized management for:
-
-* Plan creation and editing
-* Subscription requests
-* Custom quotations
-* Individual pricing adjustments
-* Invoice generation
-* Payment voucher review
-* Paid/Unpaid decisions
-* Subscription activation
-* Trial overrides
-* Reports
-* Backups
-* Audit verification
-* Bank-template management
-* User management
-* Security monitoring
-
-### Real-Time Server Events
-
-The platform uses live server events to push changes to active dashboards without requiring users to:
-
-* Refresh the browser
-* Log out
-* Log in again
-
-Supported live updates include:
-
-* Payment approvals
-* Subscription changes
-* Plan changes
-* Bank-template changes
-
----
-
-## Supported Devices and Browsers
-
-The interface is responsive and designed for:
-
-* Windows
-* macOS
-* Android
-* iPhone
-* Modern desktop and mobile browsers
-
----
-
-## Nepal Timezone Support
-
-The landing-page demonstration cheque date uses the **Asia/Kathmandu** timezone.
-
-The system:
-
-* Calculates the demonstration date using Nepal time.
-* Renders the date as eight independent `DD/MM/YYYY` digits.
-* Reschedules the demonstration date at Nepal midnight.
-* Does not modify any saved or printable cheque date.
-
----
-
-## Backup and Security Operations
-
-The system supports:
-
-* AES-256-GCM encrypted backups
-* Backup integrity verification
-* Scheduled backups
-* Isolated restore testing
-* High-severity security alert hooks
-* Cross-site request validation
-* Weekly automated dependency and security scanning
-* HMAC-based audit-chain verification
-
----
-
-# Important Launch Boundary
-
-This release is a **tested commercial MVP/foundation**. It should not be interpreted as confirmation that the production financial system has passed an independent security audit, penetration test, compliance review, or financial-system certification.
-
-Before public production use:
-
-* Perform physical printer alignment testing on every printer and cheque format.
-* Replace the Fonepay placeholder graphic with the official company QR before accepting payments.
-* Verify the company's PAN/VAT registration status and applicable tax requirements.
-* Configure production email-verification and CAPTCHA providers.
-* Perform an independent penetration test.
-* Complete an OWASP ASVS/security review.
-* Migrate from SQLite to managed PostgreSQL before multi-instance deployment or significant production scale.
-
-### Fonepay QR
-
-The included Fonepay graphic is intentionally a placeholder labelled:
-
-> **This is a Fonepay QR.**
-
-It must be replaced with the official company payment QR before accepting real payments.
-
-### Tax/VAT
-
-The default configuration stores the supplied company PAN but does not automatically claim VAT registration or charge VAT.
-
-An authorized Administrator must verify the company's VAT registration status and applicable legal requirements before enabling taxable treatment.
-
-Existing invoice snapshots remain unchanged when future tax policies are modified.
-
-### Production Verification
-
-Production User email verification and CAPTCHA require properly configured providers.
-
-Guest access does not require email verification; however, **CAPTCHA remains mandatory in production**.
-
-Development CAPTCHA challenges are generated dynamically at runtime. No shared CAPTCHA bypass token is included in the production package.
-
-### Database
-
-SQLite is suitable for a controlled single-server pilot environment.
-
-For:
-
-* Multiple application instances
-* Higher traffic
-* Material production scale
-
-the system should be migrated to a managed PostgreSQL deployment.
-
----
-
-# Running the Verified Pilot Locally
-
-### Requirements
-
-* Node.js **22.21 or newer**
-* No third-party runtime packages are required.
-
-### 1. Start the Application
-
-On Windows, run:
-
-```text
-Start-Cheque-Platform.bat
+## Architecture
+
+```
+Bank (data/banks.ts)                      identity only: name, NRB class, status
+  |
+  +-- ChequeTemplate (data/templates.ts)  geometry: size ref, orientation, fields,
+     |                                    print modes, safe zones, verification
+     |
+     +-- ChequeSize (lib/sizes.ts)       190.5 x 88.9 mm ... arbitrary, millimetres
+     |
+     +-- PaperSize (lib/sizes.ts)         A4 portrait / landscape, carrier only
+     |
+     +-- Field rectangles                 x, y, width, height in mm
+     |
+     +-- Safe zones                       reserved bands (MICR) — never printed
+     |
+     +-- Calibration (per template, per mode)   X/Y offset in 0.1 mm steps, +/-25 mm
 ```
 
-Alternatively:
+The pipeline every print goes through:
 
-```text
+```
+user input -> selected bank -> selected template -> mm geometry -> field
+rectangles -> orientation -> calibration -> computeSheetLayout()
+   |                                                       |
+   +--> ChequeSheet (screen preview)  <-- same component --> ChequeSheet (print)
+```
+
+`lib/sheetLayout.ts` produces the single set of millimetre rectangles that both
+the preview and the printed page render; the only difference between the two is
+a constant scale factor. Preview/print parity is therefore **structural**, not a
+promise, and it is asserted by `tests/preview-print-parity.test.mjs`.
+
+### Files worth knowing
+
+| Path | Role |
+|------|------|
+| `lib/types.ts` | Domain types: `Bank`, `BankTemplate`, `ChequeSize`, `PaperSize`, `SafeZone`, `ProfileKey`, `Orientation`, `Calibration` |
+| `lib/sizes.ts` | The **only** place physical millimetre constants are declared; includes the runtime size registry |
+| `data/banks.ts` | Seeded NRB institution catalogue with provenance and status |
+| `data/templates.ts` | Cheque templates: seeds + clone helper, each with verification metadata |
+| `lib/catalogue.ts` | Selectors: selectable vs pending banks, bank groups, summary counts, admin import/export |
+| `lib/printGeometry.ts` | `resolveCalibratedGeometry` — page box, cheque box, rotation, clamping |
+| `lib/sheetLayout.ts` | `computeSheetLayout` — the single mm layout pipeline |
+| `lib/textFit.ts` | Font fitting and amount-in-words line splitting |
+| `lib/amountWords.ts` | Amount parsing (integer paisa), words generation, Nepali date digits |
+| `lib/calibration.ts` | Per (template × mode) calibration store, clamping, bounds validation |
+| `lib/validation.ts` | Field, template, size and calibration validation gates |
+| `components/ChequeSheet.tsx` | The one renderer used by preview **and** print |
+| `components/Workspace.tsx` | The guided print workspace: selection, entry, modes, calibration, print |
+| `components/admin/*` | Template editor and workbench used by the admin pages |
+| `lib/physical-test-matrix.md` | Per-template physical verification protocol and record sheets |
+
+---
+
+## Routes
+
+| Route | Purpose |
+|-------|---------|
+| `/` | Guided entry: choose a bank, then a cheque template |
+| `/banks` | Full bank catalogue with provenance and template availability |
+| `/banks/[bank]` | Templates for one bank, with their verification status |
+| `/banks/[bank]/cheque/[template]` | The print workspace (deep-linkable, URL-bound selection) |
+| `/admin/login` | Demo admin gate (password `admin`) |
+| `/admin` | Admin overview and counters |
+| `/admin/banks` | Bank CRUD, enable/disable, verification marking |
+| `/admin/templates` | Template list, create, duplicate |
+| `/admin/templates/[id]` | Template workbench: geometry, orientation, size, safe zones, test print |
+| `/admin/calibration` | Calibration records per template and print mode |
+
+### Print modes
+
+| Key | Label | Page box |
+|-----|-------|----------|
+| `custom_short` | Direct Feed · Short Edge First | cheque stock, unrotated |
+| `custom_long` | Direct Feed · Long Edge First | cheque stock, unrotated |
+| `a4_vertical` | A4 Carrier · Portrait | 210 × 297 mm |
+| `a4_horizontal` | A4 Carrier · Landscape | 297 × 210 mm |
+
+Direct feed prints on cheque-sized stock, so calibration shifts the **content**
+inside a page that is exactly the cheque size. Carrier modes print on A4, so
+calibration shifts the **cheque block** inside the sheet. In both cases X moves
+horizontally only, Y vertically only, and the cheque's physical size never
+changes.
+
+---
+
+## Adding a bank or a cheque format
+
+1. **Bank** — add an entry to `data/banks.ts` with its NRB class and status.
+2. **Cheque size** — measure the real cheque (mm) and register it in
+   `lib/sizes.ts`. Never reuse a size because it is "close enough".
+3. **Template** — add the field rectangles, orientation and print modes to
+   `data/templates.ts`. Keep everything in millimetres.
+4. **Safe zones** — declare the MICR band as reserved. A field overlapping a
+   reserved band fails validation and the template is blocked at load, rather
+   than printing a ruined cheque.
+5. **Verify** — set `verification.status` to `browser-verified` once the
+   geometry is checked against a sample cheque, then run the record sheet in
+   `lib/physical-test-matrix.md` before marking anything `physically-verified`.
+
+Nothing in steps 1–4 requires touching a component. That is the whole point of
+the architecture — and the regression tests enforce it.
+
+---
+
+## Verification
+
+Two verification levels are tracked separately and must never be conflated:
+
+* **`browser-verified`** — page box, cheque box, field rectangles, orientation,
+  calibration arithmetic and preview/print parity confirmed in the browser.
+  Provable by the test suite.
+* **`physically-verified`** — ink lands within ±0.5 mm of the expected position
+  on real cheque stock, measured with a ruler. Only a human with a printer can
+  establish this, and this build has not done it for any template.
+
+`getCatalogueSummary().physicallyCalibratedCount` is the live count: currently
+**0**. Per-template expected coordinates, record sheets and the MICR check are
+in [lib/physical-test-matrix.md](lib/physical-test-matrix.md).
+
+---
+
+## Tests
+
+```bash
+npm run typecheck   # tsc --noEmit
+npm test            # full suite
+```
+
+| Suite | Covers |
+|-------|--------|
+| `tests/workspace.test.mjs` | Workspace rendering and workflow contracts |
+| `tests/print-flow.test.mjs` | End-to-end print flow behaviour |
+| `tests/validation.test.mjs` | Validation gates (fields, sizes, calibration, dates, amounts) |
+| `tests/print-verification.mjs` | Print geometry across all templates and modes |
+| `tests/catalogue.test.mjs` | Bank/template catalogue integrity and selectors |
+| `tests/geometry-matrix.test.mjs` | Every template × mode: page box, cheque box, calibration invariance |
+| `tests/preview-print-parity.test.mjs` | Preview and print render identical mm rectangles |
+| `tests/part4-print-workflow.test.mjs` | Print workflow states, gating, readiness |
+| `tests/part5-qa.test.mjs` | Quality gates and edge cases |
+
+Tests run against TypeScript sources via `tsx`; there is no build step for the
+suite.
+
+---
+
+## Local development
+
+```bash
+npm install
+npm run dev        # http://localhost:3000
+npm run build
 npm start
 ```
 
-### 2. First Launch
+No environment variables are required — the application reads none.
 
-On the first local launch, the application automatically creates a private `.env` file containing independently generated:
+Two traps specific to this project:
 
-* Administrator credentials
-* MFA secrets
-* Session secrets
-* Audit secrets
-* IP-hashing secrets
-* Backup secrets
-
-Credentials are not printed to the console or committed to Git.
-
-### 3. Open the Application
-
-Open:
-
-```text
-http://127.0.0.1:8787/
-```
-
-To access the Administrator account, open the locally generated `.env` file and enroll `ADMIN_TOTP_SECRET` in an authenticator application.
-
-### 4. Application Routes
-
-| Function             | URL                                  |
-| -------------------- | ------------------------------------ |
-| Landing Page         | `http://127.0.0.1:8787/`             |
-| User Login           | `http://127.0.0.1:8787/login`        |
-| User Registration    | `http://127.0.0.1:8787/register`     |
-| Guest Trial          | `http://127.0.0.1:8787/trial`        |
-| Email Verification   | `http://127.0.0.1:8787/verify-email` |
-| Administrator Portal | `http://127.0.0.1:8787/admin`        |
-
-### 5. Administrator Login
-
-Sign in using the Administrator email and password configured in the private environment, together with the current TOTP code generated by the enrolled authenticator application.
-
-No default Administrator password or MFA secret is bundled with the application or printed in server logs.
+* **Pin the port.** If your shell has `PORT` set (for example `PORT=0`), Next.js
+  will pick a random port and your bookmarks break. Set `PORT=3000` explicitly.
+* **Use `localhost`, not `127.0.0.1`.** Next.js 16 dev blocks cross-origin dev
+  resources for unlisted origins: loading the app from `127.0.0.1` serves
+  correct markup but silently skips hydration, leaving every control disabled.
+  If you need that origin, add `allowedDevOrigins: ['127.0.0.1']` to
+  `next.config.mjs`.
 
 ---
 
-# Existing Administrator Credential Management
-
-For an existing installation, update:
-
-```text
-ADMIN_EMAIL
-ADMIN_PASSWORD
-ADMIN_TOTP_SECRET
-```
-
-in the private `.env` file or protected service environment while preserving the existing:
-
-```text
-AUDIT_HMAC_KEY
-```
-
-Then run:
-
-```text
-npm run admin:update
-```
-
-The command:
-
-* Validates the credentials.
-* Synchronizes all three Administrator credentials with the existing database.
-* Keeps MFA mandatory.
-* Preserves Administrator permissions.
-* Clears login lockout state.
-* Revokes existing Administrator sessions.
-* Records the change in the tamper-evident audit log.
-* Leaves customer, subscription, payment, and invoice records unchanged.
-
-Enroll the exact `ADMIN_TOTP_SECRET` in an authenticator application before attempting to sign in.
-
-**Never commit Administrator passwords or MFA secrets to GitHub or include them in downloadable source archives.**
-
----
-
-# Administrator Troubleshooting
-
-If Administrator login fails, run:
-
-```text
-npm run admin:diagnose
-```
-
-The diagnostic report checks:
-
-* Configured Administrator email
-* Password/database synchronization
-* MFA configuration
-* Account lock status
-* Server UTC time
-* Standard six-digit TOTP configuration
-* Standard 30-second TOTP interval
-
-Sensitive information is never displayed, including:
-
-* Passwords
-* MFA secrets
-* One-time authentication codes
-
-If an Administrator password or authenticator seed has been exposed, run:
-
-```text
-npm run admin:rotate
-```
-
-This generates:
-
-* A new random Administrator password
-* A new 32-character Base32 MFA seed
-
-The new values are stored only in the private `.env` file.
-
-Enroll the replacement MFA seed in your authenticator application, restart the application, and sign in using the newly generated credentials.
-
----
-
-# Secret Generation
-
-Generate each security secret independently:
-
-```text
-node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
-```
-
-Generate a fresh Administrator TOTP seed:
-
-```text
-node -e "const c=require('node:crypto');console.log([...c.randomBytes(32)].map(v=>'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[v&31]).join(''))"
-```
-
-Keep all generated values exclusively in the private `.env` file or an approved managed secret store.
-
----
-
-# Testing and Security Scanning
-
-Run the test suite:
-
-```text
-node --test tests/*.test.mjs
-```
-
-Run the dependency and security scan:
-
-```text
-npm run security:scan
-```
-
-Both should be completed successfully before production deployment.
-
----
-
-# Production Configuration
-
-Copy the required values from `.env.example` into the production secret manager or protected service environment.
-
-**Never commit real credentials or secrets to the repository.**
-
-When:
-
-```text
-NODE_ENV=production
-```
-
-the application refuses to start without the required:
-
-* Session secrets
-* Audit secrets
-* IP-pseudonymization secrets
-* Administrator credentials
-* TOTP configuration
-* CAPTCHA configuration
-* Email-verification provider
-
----
-
-# Backup Management
-
-Create an encrypted backup:
-
-```text
-npm run backup:create
-```
-
-Verify an existing backup:
-
-```text
-npm run backup:verify -- /absolute/path/to/backup.rcbackup
-```
-
-Backups should be tested regularly through an isolated restore-verification process.
-
----
-
-# Production Deployment
-
-Deploy the stateful application to **Railway** behind its managed HTTPS endpoint and configure **Cloudflare DNS** as required.
-
-Refer to:
-
-```text
-docs/RAILWAY-CLOUDFLARE-PRODUCTION-v1.7.md
-docs/SECURITY-AND-OPERATIONS.md
-docs/PRICING-RESEARCH.md
-```
-
-### Railway Build Configuration
-
-Railway builds this release using the committed `Dockerfile`.
-
-The npm download cache is mounted at:
-
-```text
-/root/.npm
-```
-
-outside:
-
-```text
-/app/node_modules
-```
-
-This prevents npm cache files from interfering with the application dependency directory and avoids the previous:
-
-```text
-EBUSY: resource busy or locked,
-rmdir '/app/node_modules/.cache'
-```
-
-error produced by the previous automatic Nixpacks/Railpack build process.
-
----
-
-# Printer Configuration
-
-For accurate physical printing, use the following browser print settings:
-
-* **Scale:** 100% / Actual Size
-* **Margins:** None
-* **Headers and Footers:** Off
-* **Pages per Sheet:** 1
-* **Two-sided Printing:** Off
-* **Fit to Page:** Never
-
-Always perform a plain-paper overlay test before using a new bank template or printer combination.
-
-### Print Profiles
-
-| Profile               | Paper / Cheque Size | Orientation  | Rotation       |
-| --------------------- | ------------------- | ------------ | -------------- |
-| Custom Short          | 190.5 × 88.9 mm     | Landscape    | None (feed setting) |
-| Custom Long           | 190.5 × 88.9 mm     | Landscape    | None (feed setting) |
-| A4 Vertical Carrier   | 210 × 297 mm        | Portrait     | None            |
-| A4 Horizontal Carrier | 297 × 210 mm        | Landscape    | None            |
-
-The default calibration values are based on the documented Nepal printer workflow and tray-centering requirements.
-
-* Custom Cheque (Direct Feed, both Short/Long Edge): **X = 0.0 mm** (cheque fills the page box; feed direction is a printer setting)
-* A4 Vertical Carrier: **X = 9.75 mm**
-* A4 Horizontal Carrier: **X = 20.0 mm**
-
-Per-user X/Y calibration values are applied as printer-specific corrections to these defaults.
-
----
-
-# Source Code Structure
-
-* `server.mjs` — single-process Next.js application server. Renders every page
-  (landing, auth, guest trial, user panel, administrator panel) and mounts the
-  preserved security core in-process for `/api`, `/print`, `/health`, crawler
-  guidance and the byte-protected printing assets.
-* `core/platform.mjs` — consolidated backend: HTTP/API, authentication, access
-  control, trials, billing, VAT, Administrator operations, audit and backups.
-* `database.mjs` — database schema, subscription plans, bank templates, audit chain.
-* `security.mjs` — password hashing, TOTP, secure cookies, security headers, CSRF,
-  CAPTCHA and rate limiting.
-* `print-engine.mjs` — amount-to-words conversion, geometry validation, safe-zone
-  rendering and print-page generation. `invoice-pdf.mjs`, `invoice-math.mjs`,
-  `plan-catalogue.mjs`, `backup-crypto.mjs`, `mfa-crypto.mjs` — invoice PDFs,
-  approved pricing/VAT arithmetic, plan catalogue, encrypted backups, MFA secrets.
-* `app/` — Next.js App Router pages and design system:
-  * `layout.jsx`, `globals.css` — root layout and shared Light/Dark/System tokens.
-  * `page.jsx` — public landing page.
-  * `login`, `register`, `trial`, `verify-email`, `reset-password`, `admin` — auth + Admin portal.
-  * `app/` — authenticated User workspace.
-* `components/` — React components: `ui.jsx`, `Captcha.jsx`, `AuthShell.jsx`,
-  `AppShell.jsx`, `user/*` (compose, templates, history, subscription, account)
-  and `admin/AdminDashboard.jsx`.
-* `lib/` — `theme.jsx` (Light/Dark/System), `api.js` (CSRF + device fingerprint),
-  `nepal-date.js` (Asia/Kathmandu).
-* `scripts/` — startup, admin credential management, backups, env diagnostics,
-  plan-price migrations.
-* `tests/` — unit tests and full API integration tests (the Next.js production
-  build path is exercised by `tests/deployment.test.mjs`).
-
----
-
-# Privacy and Device Identification
-
-The platform does **not** attempt to access or read a device's MAC address.
-
-Instead, it uses pseudonymous hashes derived from:
-
-* Signed device cookies
-* Browser signals
-* Network-risk signals
-
-Device fingerprinting is used only as supporting evidence.
-
-It does not replace the platform's other security controls, which include:
-
-* Submitted identity information
-* Signed device tokens
-* Rate limiting
-* CAPTCHA
-* Server-side sessions
-* IP-risk thresholds
-* Security-event monitoring
-* Administrator review and controls
-
----
-
-## Release Status
-
-**Version 1.8.0 is the current commercial release.** It rewrites the entire
-application as a modern, responsive, accessible **Next.js (React)** experience —
-Landing page, User Panel, Guest Trial Panel and Administrator Panel — with a
-cohesive layout system, shared design tokens and **Light / Dark / System** themes.
-All approved Version 1.7 functionality is preserved: the server-authoritative
-plan catalogue, configurable VAT with immutable invoice snapshots, the 54 bank
-templates, precise X/Y calibration, protected single-use print tickets, mandatory
-MFA, deny-by-default Administrator permission profiles, idempotent financial
-decisions, the append-only audit chain and encrypted backups.
-
-Before accepting real customer payments or sensitive financial records in production, complete the required **printer validation, provider configuration, tax verification, independent penetration testing, security review, backup recovery testing, and production infrastructure review**.
+## Known limitations
+
+* Admin auth is a client-side demo gate over `localStorage`; all admin state
+  (banks, templates, sizes, calibration) lives in the browser. There is no
+  server-side authorization, persistence or audit trail in this repository.
+* 71 of the 76 catalogued banks have no geometry and are not selectable.
+* Only one cheque size is registered; portrait cheque templates are supported by
+  the model but no portrait template exists yet.
+* Text that exceeds a field is shrunk to a readable floor of 6 pt and clipped
+  beyond that, rather than becoming unreadable micro-print.
+* Signature panels are screen-only overlays marking the pre-printed cheque
+  stock; they are never printed.
