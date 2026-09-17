@@ -297,6 +297,10 @@ function PrepChecklist({
     { label: "Reserved zones clear (MICR band)", ok: safeZonesClear },
   ];
   const allOk = items.every((i) => i.ok);
+  // Non-blocking: a template whose geometry has never been checked against a
+  // real cheque can still be test-printed on plain paper (that is how it gets
+  // verified), but the operator must know the ink position is a guess.
+  const geometryUnverified = template?.verification?.status === "unverified";
 
   return (
     <div aria-label="Print readiness checklist (application-level checks only)" className="card" style={{ marginTop: 12 }}>
@@ -314,6 +318,14 @@ function PrepChecklist({
           </li>
         ))}
       </ul>
+      {geometryUnverified && (
+        <p
+          role="status"
+          style={{ margin: "8px 0 0 0", fontSize: "0.78rem", fontWeight: 600, color: "var(--warning)" }}
+        >
+          ⚠ Geometry unverified — test-print on plain paper before printing on real cheque stock.
+        </p>
+      )}
       <p style={{ margin: "8px 0 0 0", fontSize: "0.76rem", color: "var(--text-muted)" }}>
         This checklist verifies application-level data only. It does not confirm physical printer readiness — always check your printer
         before printing real cheques.

@@ -24,7 +24,7 @@ that:
 |-------|---------|
 | Bank catalogue | **76 institutions seeded** (29 Class A, 16 Class B, 17 Class C, 14 Class D). Class A is complete, including merged institutions; B/C/D are subsets to be extended through admin import. |
 | Cheque templates | **5 exist** — Siddhartha plus four clone-geometry placeholders (Nabil, NIC Asia, Everest, Bank of Pokhara). Only `siddhartha` is `browser-verified`. |
-| Geometry provenance | Real coordinates exist for Siddhartha only. The other four deliberately reuse the same field coordinates and are **not selectable for printing** until real values are entered from a sample cheque. |
+| Geometry provenance | Real coordinates exist for Siddhartha only. The other four deliberately reuse the same field coordinates; they are badged **“Layout unverified”, warn at print time, and must not be used on real cheque stock** until real values are entered from a sample cheque. They stay selectable on purpose — a plain-paper test print is how a template gets verified. |
 | Physical print verification | **None.** No cheque has been printed and measured by this build. Browser verification does not imply ink position — see [Verification](#verification). |
 | Cheque sizes registered | One: `standard-190x89` (190.5 × 88.9 mm, landscape). The size registry supports arbitrary mm sizes and per-template orientation; only one size has real data behind it. |
 | Admin authentication | A **client-side demo gate**: password `admin`, a non-cryptographic hash, and a session in `localStorage`. There is no server, no API routes and no database in this repository. Do not deploy the admin panel as-is. |
@@ -211,7 +211,8 @@ Two traps specific to this project:
 * Admin auth is a client-side demo gate over `localStorage`; all admin state
   (banks, templates, sizes, calibration) lives in the browser. There is no
   server-side authorization, persistence or audit trail in this repository.
-* 71 of the 76 catalogued banks have no geometry and are not selectable.
+* 71 of the 76 catalogued banks have no geometry at all and are listed as "template pending", not selectable.
+* Unverified templates are not blocked from printing (the verification workflow needs a test print) — they are badged, annotated with their provenance, and warned about in the readiness panel.
 * Only one cheque size is registered; portrait cheque templates are supported by
   the model but no portrait template exists yet.
 * Text that exceeds a field is shrunk to a readable floor of 6 pt and clipped

@@ -174,3 +174,4 @@ Import traces:
     ./app/admin/page.tsx [Server Component]
 
 https://nextjs.org/docs/messages/module-not-found 
+⚠ Fast Refresh had to perform a full reload when ./components/Workspace.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
