@@ -83,6 +83,8 @@ export function validateFieldBounds(
 // Template validation
 // ---------------------------------------------------------------------------
 
+const ALL_MODES: ProfileKey[] = ["custom_short", "custom_long", "a4_vertical", "a4_horizontal"];
+
 /**
  * Validate a complete BankTemplate. Returns a list of errors (empty/null when
  * the template is valid). Run once at load time so a corrupt template can never
@@ -90,7 +92,7 @@ export function validateFieldBounds(
  */
 export function validateBankTemplate(template: BankTemplate): ValidationResult {
   const errors: ValidationError[] = [];
-  const { id, bankName, widthMm, heightMm, fields, structural, profiles } = template;
+  const { id, bankName, widthMm, heightMm, fields, structural, profiles, print, enabled } = template;
   const ctx = (p: string) => `${id}.${p}`;
 
   // 1. Dimensions
@@ -115,7 +117,7 @@ export function validateBankTemplate(template: BankTemplate): ValidationResult {
          errors.push({ code: "PROFILE_NAN", message: `${id}: profile '${key}' has non-finite values.`, path: ctx(`profiles.${key}`) });
          continue;
        }
-      if (p.pageWidth <= 0 || p.pageHeight <= 0) {
+       if (p.pageWidth <= 0 || p.pageHeight <= 0) {
          errors.push({ code: "PROFILE_DIMENSION_INVALID", message: `${id}: profile '${key}' has non-positive page dimensions.`, path: ctx(`profiles.${key}`) });
        }
       // 2b. Profile page dimensions must match the expected page size for the mode.
@@ -144,7 +146,67 @@ export function validateBankTemplate(template: BankTemplate): ValidationResult {
      }
    }
 
-  // 3. Field coordinates
+  // 3. Print config validation
+  if (!print) {
+    errors.push({ code: "PRINT_CONFIG_MISSING", message: `${id}: missing print configuration.`, path: ctx("print") });
+  } else {
+    if (typeof print !== "object") {
+      errors.push({ code: "PRINT_CONFIG_INVALID", message: `${id}: print config is not an object.`, path: ctx("print") });
+    } else {
+      // 3a. Calibration defaults
+      if (!print.calibration || !isFiniteNumber(print.calibration.defaultX) || !isFiniteNumber(print.calibration.defaultY)) {
+        errors.push({
+          code: "CAL_DEFAULT_NAN",
+          message: `${id}: calibration defaults are not finite.`,
+          path: ctx("print.calibration"),
+        });
+      }
+      if (print.calibration) {
+        const { defaultX, defaultY } = print.calibration;
+        if (isFiniteNumber(defaultX) && (defaultX < -25 || defaultX > 25)) {
+          errors.push({
+            code: "CAL_DEFAULT_OUT_OF_RANGE",
+            message: `${id}: calibration defaultX (${defaultX}) must be between -25 and 25 mm.`,
+            path: ctx("print.calibration.defaultX"),
+          });
+        }
+        if (isFiniteNumber(defaultY) && (defaultY < -25 || defaultY > 25)) {
+          errors.push({
+            code: "CAL_DEFAULT_OUT_OF_RANGE",
+            message: `${id}: calibration defaultY (${defaultY}) must be between -25 and 25 mm.`,
+            path: ctx("print.calibration.defaultY"),
+          });
+        }
+      }
+      // 3b. Supported modes
+      if (print.supportedModes) {
+        if (!Array.isArray(print.supportedModes)) {
+          errors.push({
+            code: "SUPPORTED_MODES_INVALID",
+            message: `${id}: supportedModes is not an array.`,
+            path: ctx("print.supportedModes"),
+          });
+        } else {
+          for (const m of print.supportedModes) {
+            if (!ALL_MODES.includes(m)) {
+              errors.push({
+                code: "SUPPORTED_MODE_INVALID",
+                message: `${id}: unsupported print mode '${m}' in supportedModes.`,
+                path: ctx("print.supportedModes"),
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 4. Enabled flag
+  if (typeof enabled !== "boolean") {
+    errors.push({ code: "ENABLED_INVALID", message: `${id}: 'enabled' must be a boolean.`, path: ctx("enabled") });
+  }
+
+  // 5. Field coordinates
   const fieldLabels: Record<string, string> = {
     date: "date",
     payee: "payee",
@@ -167,9 +229,12 @@ export function validateBankTemplate(template: BankTemplate): ValidationResult {
     if (field.width !== undefined && field.width <= 0) {
       errors.push({ code: "FIELD_DIM_INVALID", message: `${id}.fields.${key}: width must be positive.`, path: ctx(`fields.${key}.width`) });
     }
+    if (field.letterSpacing !== undefined && !isFiniteNumber(field.letterSpacing)) {
+      errors.push({ code: "FIELD_NAN", message: `${id}.fields.${key}: letterSpacing not finite.`, path: ctx(`fields.${key}.letterSpacing`) });
+    }
   }
 
-  // 4. Structural positions
+  // 6. Structural positions
   if (structural) {
     for (const [key, sp] of Object.entries(structural)) {
       const label = `${id}.structural.${key}`;
@@ -186,6 +251,62 @@ export function validateBankTemplate(template: BankTemplate): ValidationResult {
       const overflowErr = validateFieldBounds({ x: sp.x, y: sp.y, width: w }, widthMm, heightMm, label);
       if (overflowErr) errors.push(overflowErr);
     }
+  }
+
+  return errors.length ? errors : null;
+}
+
+/**
+ * Validate that there are no duplicate template IDs in a collection.
+ * Returns an error with the duplicate IDs, or null if all are unique.
+ */
+export function validateNoDuplicateIds(templates: BankTemplate[]): ValidationResult {
+  const seen = new Map<string, string>();
+  const duplicates: string[] = [];
+  for (const t of templates) {
+    if (seen.has(t.id)) {
+      duplicates.push(t.id);
+    } else {
+      seen.set(t.id, t.bankName);
+    }
+  }
+  if (duplicates.length > 0) {
+    return [{
+      code: "DUPLICATE_TEMPLATE_ID",
+      message: `Duplicate template IDs found: ${duplicates.join(", ")}`,
+      path: "BANK_TEMPLATES",
+    }];
+  }
+  return null;
+}
+
+/**
+ * Validate that a template is safe to print — i.e., it's enabled and its
+ * print configuration is well-formed. This is the runtime guard that runs
+ * before any template reaches the print engine from user/admin configuration.
+ */
+export function validateTemplateForPrint(template: BankTemplate): ValidationResult {
+  const errors: ValidationError[] = [];
+
+  if (!template) {
+    errors.push({ code: "TEMPLATE_NULL", message: "No template selected." });
+    return errors;
+  }
+
+  if (!template.enabled) {
+    errors.push({
+      code: "TEMPLATE_DISABLED",
+      message: `${template.id}: template is disabled by an administrator.`,
+      path: "enabled",
+    });
+  }
+
+  if (!template.print || !template.print.supportedModes || template.print.supportedModes.length === 0) {
+    errors.push({
+      code: "NO_SUPPORTED_MODES",
+      message: `${template.id}: no supported print modes configured.`,
+      path: "print.supportedModes",
+    });
   }
 
   return errors.length ? errors : null;

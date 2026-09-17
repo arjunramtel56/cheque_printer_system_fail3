@@ -14,6 +14,7 @@ export interface ChequeFieldCoords {
   letterSpacing?: number;
   align?: "left" | "center" | "right";
   render?: "text" | "date-grid";
+  height?: number;
 }
 
 export interface StructuralPosition {
@@ -30,6 +31,16 @@ export interface PrintProfile {
   pageHeight: number;
 }
 
+export interface PrintConfig {
+  calibration: {
+    defaultX: number;
+    defaultY: number;
+  };
+  supportedModes: ProfileKey[];
+}
+
+export const DEFAULT_SUPPORTED_MODES: ProfileKey[] = ["custom_short", "custom_long", "a4_vertical", "a4_horizontal"];
+
 export interface BankTemplate {
   id: string;
   bankName: string;
@@ -38,6 +49,8 @@ export interface BankTemplate {
   fields: Record<string, ChequeFieldCoords>;
   structural?: Record<string, StructuralPosition>;
   profiles: Record<ProfileKey, PrintProfile>;
+  print: PrintConfig;
+  enabled: boolean;
 }
 
 export const DIRECT_FEED_MODES: ProfileKey[] = ["custom_short", "custom_long"];

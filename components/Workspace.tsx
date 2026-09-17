@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getAllTemplates, getTemplate } from "@/lib/templates";
+import { getAllTemplates, getAllActiveTemplates, getTemplate, initRuntimeTemplates } from "@/lib/templates";
 import type { BankTemplate, ProfileKey, Calibration } from "@/lib/types";
 import { isDirectFeed } from "@/lib/types";
 import {
@@ -1262,7 +1262,11 @@ function PrepChecklist({ template, date, payee, amount, amountWords, printMode, 
 // ---------------------------------------------------------------------------
 
 export default function Workspace() {
-  const templates = useMemo(() => getAllTemplates(), []);
+  useEffect(() => {
+    initRuntimeTemplates();
+  }, []);
+
+  const templates = useMemo(() => getAllActiveTemplates(), []);
   const [templateId, setTemplateId] = useState("");
   const [date, setDate] = useState("");
   const [payee, setPayee] = useState("");
@@ -1374,25 +1378,41 @@ export default function Workspace() {
   // Also aborts any in-progress print cycle: removes injected print styles,
   // removes lingering beforeprint/afterprint/pagehide listeners, and releases
   // the print lock so a new print can proceed without stale DOM/CSS state.
-  useEffect(() => {
-    if (printStyleRef.current) {
-      printStyleRef.current.remove();
-      printStyleRef.current = null;
-    }
-    if (beforePrintRef.current) {
-      window.removeEventListener("beforeprint", beforePrintRef.current);
-      beforePrintRef.current = null;
-    }
-    if (afterPrintRef.current) {
-      window.removeEventListener("afterprint", afterPrintRef.current);
-      window.removeEventListener("pagehide", afterPrintRef.current);
-      afterPrintRef.current = null;
-    }
-    setPrintCompleted(false);
-    setPrintError("");
-    setIsPrinting(false);
-    printLockRef.current = false;
-  }, [templateId]);
+    useEffect(() => {
+      if (printStyleRef.current) {
+        printStyleRef.current.remove();
+        printStyleRef.current = null;
+      }
+      if (beforePrintRef.current) {
+        window.removeEventListener("beforeprint", beforePrintRef.current);
+        beforePrintRef.current = null;
+      }
+      if (afterPrintRef.current) {
+        window.removeEventListener("afterprint", afterPrintRef.current);
+        window.removeEventListener("pagehide", afterPrintRef.current);
+        afterPrintRef.current = null;
+      }
+      setPrintCompleted(false);
+      setPrintError("");
+      setIsPrinting(false);
+      printLockRef.current = false;
+      return () => {
+        if (printStyleRef.current) {
+          printStyleRef.current.remove();
+          printStyleRef.current = null;
+        }
+        if (beforePrintRef.current) {
+          window.removeEventListener("beforeprint", beforePrintRef.current);
+          beforePrintRef.current = null;
+        }
+        if (afterPrintRef.current) {
+          window.removeEventListener("afterprint", afterPrintRef.current);
+          window.removeEventListener("pagehide", afterPrintRef.current);
+          afterPrintRef.current = null;
+        }
+        printLockRef.current = false;
+      };
+    }, [templateId]);
 
   // Auto-sync words when amount changes.
   // - When amount is valid & > 0: regenerate words (clears stale words automatically).
@@ -1535,6 +1555,7 @@ export default function Workspace() {
     }
 
     function onAfterPrint() {
+      if (!printLockRef.current) return;
       window.removeEventListener("beforeprint", onBeforePrint);
       window.removeEventListener("afterprint", onAfterPrint);
       window.removeEventListener("pagehide", onAfterPrint);
@@ -2040,13 +2061,15 @@ export default function Workspace() {
           Renders at 1:1 mm scale for actual-size output.
           ================================================================ */}
       {template && profile && (
-        <div
-          ref={printOutputRef}
-          data-print-key={printKeyRef.current}
-          data-template-id={template.id}
-          data-mode={printMode}
-          className="print-output-screen"
-        >
+         <div
+           ref={printOutputRef}
+           data-print-key={printKeyRef.current}
+           data-template-id={template.id}
+           data-mode={printMode}
+           data-calX={String(isDF ? dfCalibration.x : a4Calibration.x)}
+           data-calY={String(isDF ? dfCalibration.y : a4Calibration.y)}
+           className="print-output-screen"
+         >
           <PrintOutput
             key={printKeyRef.current}
             template={template}

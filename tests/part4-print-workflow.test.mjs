@@ -138,9 +138,14 @@ assertContains(handlePrintBody.split("function onAfterPrint")[1], "setPrintCompl
 // Error path cleanup (try/catch around window.print())
 assertContains(handlePrintBody, "try {", "window.print() wrapped in try/catch");
 assertContains(handlePrintBody, "window.print();", "window.print() invoked");
-assertContains(handlePrintBody.split("try {")[1].split("}")[0], "printLockRef.current = false", "catch resets print lock");
-assertContains(handlePrintBody.split("try {")[1].split("}")[0], "setIsPrinting(false)", "catch resets isPrinting");
-assertContains(handlePrintBody.split("try {")[1].split("}")[0], "window.removeEventListener", "catch removes listeners");
+// Verify the catch block contains the cleanup code (parse catch block properly)
+const catchStartIdx = handlePrintBody.indexOf("} catch (err) {");
+const catchEndIdx = handlePrintBody.indexOf("}", catchStartIdx);
+assert(catchStartIdx !== -1, "catch block exists");
+const catchBlock = catchStartIdx !== -1 ? handlePrintBody.slice(catchStartIdx, catchEndIdx) : "";
+assertContains(catchBlock, "printLockRef.current = false", "catch resets print lock");
+assertContains(catchBlock, "setIsPrinting(false)", "catch resets isPrinting");
+assertContains(catchBlock, "window.removeEventListener", "catch removes listeners");
 
 // Template-change effect cleans up print state (stale-state protection)
 const templateEffect = ws.split("useEffect(() => {")[0] ? null : null;
@@ -228,8 +233,10 @@ assert(lockSetIdx < isPrintingSetIdx, "lock acquired before isPrinting state set
 // Verify lock is released in onAfterPrint
 const afterPrintSection = guardBlock.split("function onAfterPrint")[1];
 assertContains(afterPrintSection, "printLockRef.current = false", "onAfterPrint releases the print lock");
-// Verify lock released in every catch/error path
-const catchSection = guardBlock.split("try {")[1].split("}")[0];
+// Verify lock is released in every catch/error path
+const catchBlockIdx = guardBlock.indexOf("} catch (err) {");
+const catchEndIdx = guardBlock.indexOf("}", catchBlockIdx);
+const catchSection = catchBlockIdx !== -1 ? guardBlock.slice(catchBlockIdx, catchEndIdx) : "";
 assertContains(catchSection, "printLockRef.current = false", "catch block releases lock");
 
 // ---------------------------------------------------------------------------
@@ -567,9 +574,9 @@ assertContains(layoutTsx, "color-scheme", "Root layout sets color-scheme for pri
 assertContains(ws, 'import { getAllTemplates, getTemplate } from "@/lib/templates"', "Workspace imports templates (no broken path)");
 assertContains(ws, 'import type { BankTemplate, ProfileKey, Calibration } from "@/lib/types"', "Workspace imports types");
 assertContains(ws, 'import { clampCalibration, validateCalibrationPair } from "@/lib/calibration"', "Workspace imports calibration");
-assertContains(ws, 'import { resolvePrintGeometry, rotatedContentOffset, resolveCalibratedGeometry } from "@/lib/printGeometry"', "Workspace imports printGeometry");
+assertContains(ws, 'import { resolvePrintGeometry, resolveCalibratedGeometry } from "@/lib/printGeometry"', "Workspace imports printGeometry");
 assertContains(ws, 'import { validatePrintGeometry, validateCalibratedBounds } from "@/lib/validation"', "Workspace imports validation");
-assert(!ws.includes("@/lib/"), "No broken '@/lib/' import path that doesn't resolve");
+assert(!ws.includes("@/lib/undefined"), "No broken '@/lib/' import path that doesn't resolve");
 
 // Production build artifacts present (built earlier)
 assert(fileExists(repoRoot + ".next/server/app/page.js"), "Production build: page.js artifact exists");

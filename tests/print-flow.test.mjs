@@ -357,12 +357,14 @@ for (const t of getAllTemplates()) {
 for (const t of getAllTemplates()) {
   const cs = t.profiles.custom_short;
   assert(cs.pageWidth === 190.5 && cs.pageHeight === 88.9, t.bankName + " custom_short: page dims = 190.5×88.9 (cheque W×H, landscape, no swap)");
-  assert(cs.rotate === 0, t.bankName + " custom_short: rotate=0 (no CSS rotation — feed direction is printer setting)");
+  const csGeom = resolvePrintGeometry(t, "custom_short");
+  assert(csGeom.rotate === 0, t.bankName + " custom_short: rotate=0 (no CSS rotation — feed direction is printer setting)");
   assert(cs.x === 0 && cs.y === 0, t.bankName + " custom_short: x=y=0 (cheque fills page box)");
 
   const cl = t.profiles.custom_long;
   assert(cl.pageWidth === 190.5 && cl.pageHeight === 88.9, t.bankName + " custom_long: page dims = 190.5×88.9 (cheque W×H)");
-  assert(cl.rotate === 0, t.bankName + " custom_long: rotate=0");
+  const clGeom = resolvePrintGeometry(t, "custom_long");
+  assert(clGeom.rotate === 0, t.bankName + " custom_long: rotate=0");
   assert(cl.x === 0 && cl.y === 0, t.bankName + " custom_long: x=y=0 (cheque fills page box)");
 }
 

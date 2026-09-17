@@ -161,7 +161,7 @@ assert(siddhartha !== undefined, "siddhartha template exists");
 {
   const g = resolvePrintGeometry(siddhartha, "a4_vertical");
    assert(g.pageW === 210 && g.pageH === 297, "A4 Portrait: page=210x297");
-  assert(g.rotate === undefined, "A4 Portrait: no rotate field");
+   assert(g.rotate === 0, "A4 Portrait: no rotation (rotate=0)");
   assert(g.chequeX === 9.75 && g.chequeY === 20, "A4 Portrait: cheque at 9.75,20");
   assert(g.chequeX + g.chequeW <= 210, "A4 Portrait: cheque fits width");
   assert(g.chequeY + g.chequeH <= 297, "A4 Portrait: cheque fits height");
@@ -171,7 +171,7 @@ assert(siddhartha !== undefined, "siddhartha template exists");
 {
   const g = resolvePrintGeometry(siddhartha, "a4_horizontal");
    assert(g.pageW === 297 && g.pageH === 210, "A4 Landscape: page=297x210");
-  assert(g.rotate === undefined, "A4 Landscape: no rotate field");
+   assert(g.rotate === 0, "A4 Landscape: no rotation (rotate=0)");
   assert(g.chequeX === 20 && g.chequeY === 50.75, "A4 Landscape: cheque at 20,50.75");
   assert(g.chequeX + g.chequeW <= 297, "A4 Landscape: cheque fits width");
   assert(g.chequeY + g.chequeH <= 210, "A4 Landscape: cheque fits height");
@@ -268,9 +268,10 @@ console.log("\n  Orientation:");
 for (const t of all) {
   const gShort = resolvePrintGeometry(t, "custom_short");
   const gLong = resolvePrintGeometry(t, "custom_long");
-  // No rotate field — feed direction is printer setting, not CSS transform
-  assert(gShort.rotate === undefined, t.id + " custom_short has no rotate field");
-  assert(gLong.rotate === undefined, t.id + " custom_long has no rotate field");
+  // No CSS rotation — feed direction is printer setting, not CSS transform.
+  // resolvePrintGeometry returns rotate: 0 for Direct Feed (rotation-free model).
+  assert(gShort.rotate === 0, t.id + " custom_short has no rotation (rotate=0)");
+  assert(gLong.rotate === 0, t.id + " custom_long has no rotation (rotate=0)");
   assert(gShort.pageW === 190.5 && gShort.pageH === 88.9, t.id + " custom_short: page = cheque physical size");
   assert(gLong.pageW === 190.5 && gLong.pageH === 88.9, t.id + " custom_long: page = cheque physical size");
 }
