@@ -27,7 +27,7 @@ that:
 | Geometry provenance | Real coordinates exist for Siddhartha only. The other four deliberately reuse the same field coordinates; they are badged **“Layout unverified”, warn at print time, and must not be used on real cheque stock** until real values are entered from a sample cheque. They stay selectable on purpose — a plain-paper test print is how a template gets verified. |
 | Physical print verification | **None.** No cheque has been printed and measured by this build. Browser verification does not imply ink position — see [Verification](#verification). |
 | Cheque sizes registered | One: `standard-190x89` (190.5 × 88.9 mm, landscape). The size registry supports arbitrary mm sizes and per-template orientation; only one size has real data behind it. |
-| Admin authentication | A **client-side demo gate**: password `admin`, a non-cryptographic hash, and a session in `localStorage`. There is no server, no API routes and no database in this repository. Do not deploy the admin panel as-is. |
+| Admin authentication | A **client-side demo gate**: password `admin` (documented here deliberately — the login page does not display it), SHA-256 hashing via WebCrypto, constant-time comparison, exponential-backoff lockout after 5 failures, 4-hour session in `localStorage`. There is no server, no API routes and no database in this repository. Do not deploy the admin panel as-is. |
 | Payment / VAT / invoicing / MFA / email verification | **Not present in this repository.** These are documented for the wider product in [docs/legacy-product-readme-v1.md](docs/legacy-product-readme-v1.md), which describes a different, larger codebase and is kept for reference only. |
 
 If you are looking for the commercial platform documentation (subscriptions,
@@ -78,6 +78,40 @@ templates (V1.5), multi-printer optimisation (V1.6), calibration sheet printing
 (V1.7), server-side security hardening (V1.8) and performance work (V1.9). The
 printing engine is stable first — those features sit on top of it, and none of
 them should fork it.
+
+---
+
+## Security posture
+
+Honest summary of what is and is not protected in this repository:
+
+**In place (client-side hardening):**
+
+| Control | Detail |
+|---------|--------|
+| Content-Security-Policy | `default-src 'self'`; scripts/styles allow the inline Next.js runtime; `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'` |
+| Framing | `X-Frame-Options: DENY` + CSP `frame-ancestors 'none'` — clickjacking is out |
+| MIME sniffing | `X-Content-Type-Options: nosniff` |
+| Referrer leakage | `Referrer-Policy: strict-origin-when-cross-origin` |
+| Powerful APIs | `Permissions-Policy` denies camera, microphone, geolocation, payment, USB |
+| `X-Powered-By` | Suppressed (`poweredByHeader: false`) |
+| HSTS | Emitted in production builds only (`max-age=31536000; includeSubDomains`) |
+| Demo admin gate | SHA-256 (WebCrypto) password hashing, constant-time comparison, no plaintext password in storage or in the UI, exponential lockout (2s → 5min) after 5 failures, generic error messages, 4-hour session TTL |
+
+**Not protected (known limits, stated plainly):**
+
+- The admin gate lives entirely in the browser. A user with devtools can flip
+  `localStorage` and reach the admin pages, because every admin mutation is a
+  `localStorage` write. That is the definition of a demo gate.
+- There are no API routes, so there is no server-side authorization, no audit
+  log and no persistence beyond one browser profile.
+- Server-side work — httpOnly session cookie, API routes with validation,
+  scrypt-hashed credential, audit trail — is the scheduled hardening phase and
+  is **not** part of this repository yet.
+
+**Consequence:** run this locally, or treat the admin area as a configuration
+mock-up in any shared deployment. Do not expose it publicly expecting the gate
+to hold.
 
 ---
 
