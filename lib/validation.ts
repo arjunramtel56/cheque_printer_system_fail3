@@ -1,21 +1,30 @@
 // ---------------------------------------------------------------------------
-// Pure validation utilities for the print engine.
+// Pure validation utilities for the cheque engine.
 //
-// These functions are the SINGLE validation layer:
-//   - validateBankTemplate(...) — validates a template's dimensions, field
-//     coordinates, and profile configuration once at load time.
-//   - validatePrintGeometry(...) — validates geometry produced by
-//     resolvePrintGeometry, including cheque-vs-page bounds under max
-//     calibration, NaN/Infinity safety, and Direct-Feed rotation sanity.
-//   - validateFieldBounds(...) — checks that a field rectangle stays within
-//     the cheque boundary (used per-field and by the template validator).
+//   validateBank            — one catalogue entry
+//   validateBankTemplate    — dimensions, orientation, size registry, fields,
+//                             safe zones, profiles and print configuration
+//   validateCatalogue       — banks <-> templates cross-integrity
+//   validatePrintGeometry   — the geometry resolver's output, per mode
+//   validateCalibratedBounds— the template's carrier placement is calibration-safe
+//   validateTemplateForPrint— runtime guard for a template about to be printed
 //
 // No JSX. No React. Importable from tests and from the component layer.
 // ---------------------------------------------------------------------------
 
-import type { BankTemplate, ProfileKey } from "./types.ts";
-import { isDirectFeed } from "./types.ts";
+import type {
+  Bank,
+  BankTemplate,
+  FieldKind,
+  NrbClass,
+  Orientation,
+  ProfileKey,
+  SafeZone,
+} from "./types.ts";
+import { isDirectFeed, isPrintableKind } from "./types.ts";
 import type { PrintGeometry } from "./printGeometry.ts";
+import { getChequeSize, getPaperSize, orientationMatchesSize } from "./sizes.ts";
+import { paperIdForMode } from "./types.ts";
 
 export interface ValidationError {
   code: string;
@@ -30,6 +39,52 @@ function isFiniteNumber(v: unknown): v is number {
   return typeof v === "number" && Number.isFinite(v);
 }
 
+const SLUG = /^[a-z0-9][a-z0-9_-]*$/;
+const FIELD_KINDS: FieldKind[] = ["date-grid", "payee", "words", "amount", "ac-payee", "label", "signature"];
+const NRB_CLASSES: NrbClass[] = ["A", "B", "C", "D"];
+const ORIENTATIONS: Orientation[] = ["portrait", "landscape"];
+const ALL_MODES: ProfileKey[] = ["custom_short", "custom_long", "a4_vertical", "a4_horizontal"];
+
+// ---------------------------------------------------------------------------
+// Bank validation
+// ---------------------------------------------------------------------------
+
+export function validateBank(bank: Bank): ValidationError | null {
+  if (!bank || typeof bank !== "object") {
+    return { code: "BANK_INVALID", message: "Bank entry is not an object.", path: "bank" };
+  }
+  const path = bank.id || "bank";
+  if (typeof bank.id !== "string" || !SLUG.test(bank.id)) {
+    return {
+      code: "BANK_ID_INVALID",
+      message: `Bank id "${bank.id}" must be lowercase alphanumeric with hyphens or underscores.`,
+      path,
+    };
+  }
+  if (typeof bank.name !== "string" || bank.name.trim() === "") {
+    return { code: "BANK_NAME_MISSING", message: `${path}: bank name is required.`, path };
+  }
+  if (!NRB_CLASSES.includes(bank.nrbClass)) {
+    return { code: "BANK_CLASS_INVALID", message: `${path}: NRB class "${bank.nrbClass}" is not A, B, C or D.`, path };
+  }
+  if (!["active", "merged", "defunct", "inactive"].includes(bank.status)) {
+    return { code: "BANK_STATUS_INVALID", message: `${path}: unknown status "${bank.status}".`, path };
+  }
+  if (typeof bank.enabled !== "boolean") {
+    return { code: "BANK_ENABLED_INVALID", message: `${path}: 'enabled' must be a boolean.`, path };
+  }
+  if (!Array.isArray(bank.templateIds) || bank.templateIds.some((id) => typeof id !== "string")) {
+    return { code: "BANK_TEMPLATE_IDS_INVALID", message: `${path}: templateIds must be an array of strings.`, path };
+  }
+  if (bank.status === "merged" && !bank.supersededBy) {
+    return { code: "BANK_MERGED_TARGET_MISSING", message: `${path}: a merged bank must name the bank it merged into.`, path };
+  }
+  if (bank.verifiedAt !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(bank.verifiedAt))) {
+    return { code: "BANK_VERIFIED_AT_INVALID", message: `${path}: verifiedAt must be an ISO date (YYYY-MM-DD).`, path };
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Field / coordinate validation
 // ---------------------------------------------------------------------------
@@ -41,13 +96,24 @@ interface FieldLike {
   fontSize?: number;
   minFontSize?: number;
   letterSpacing?: number;
+  height?: number;
 }
 
 /**
- * Check that a field rectangle [x, x+width] × [y, ...] stays within the
- * cheque boundary [0, chequeW] × [0, chequeH]. A field is allowed to start
- * at y=0; only its *right edge* and *bottom edge* are bounded. The account-payee
- * line is intentionally full-width and may span x=0..chequeW.
+ * Estimated rendered height of a field in mm — used for safe-zone overlap and
+ * bottom-edge checks. Font size is in points (1pt = 0.352778 mm).
+ */
+export function fieldHeightMm(field: FieldLike): number {
+  if (isFiniteNumber(field.height) && field.height > 0) return field.height;
+  const fontSize = isFiniteNumber(field.fontSize) ? field.fontSize : 10;
+  return Math.max(fontSize * 0.352778 * 1.4, 2);
+}
+
+/**
+ * Check that a field rectangle stays within the cheque boundary
+ * [0, chequeW] × [0, chequeH]. A field may start at y=0; its right and bottom
+ * edges are bounded. The account-payee line is intentionally full-width and may
+ * span x=0..chequeW.
  */
 export function validateFieldBounds(
   field: FieldLike,
@@ -68,7 +134,6 @@ export function validateFieldBounds(
   if (field.y < 0) {
     return { code: "FIELD_OUT_OF_BOUNDS", message: `${label}: y is negative (${field.y}).`, path: label };
   }
-  // Right edge: allow fields that touch the right edge (x+width <= chequeW + epsilon)
   if (field.x + width > chequeW + 0.05) {
     return {
       code: "FIELD_OVERFLOW",
@@ -80,176 +145,367 @@ export function validateFieldBounds(
 }
 
 // ---------------------------------------------------------------------------
+// Safe zones
+// ---------------------------------------------------------------------------
+
+function overlaps(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }): boolean {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
+/** Validate the reserved (non-printable) zones: inside the cheque, positive
+ *  area, unique ids. */
+export function validateSafeZones(safeZones: SafeZone[] | undefined, widthMm: number, heightMm: number, path: string): ValidationError[] {
+  const errors: ValidationError[] = [];
+  if (safeZones === undefined) return errors;
+  if (!Array.isArray(safeZones)) {
+    errors.push({ code: "SAFE_ZONE_INVALID", message: `${path}: safeZones must be an array.`, path });
+    return errors;
+  }
+  const seen = new Set<string>();
+  for (const zone of safeZones) {
+    const label = `${path}.${zone?.id ?? "?"}`;
+    if (!zone || typeof zone.id !== "string" || zone.id.trim() === "") {
+      errors.push({ code: "SAFE_ZONE_INVALID", message: `${label}: a safe zone needs an id.`, path: label });
+      continue;
+    }
+    if (seen.has(zone.id)) {
+      errors.push({ code: "SAFE_ZONE_DUPLICATE", message: `${label}: duplicate safe zone id.`, path: label });
+    }
+    seen.add(zone.id);
+    if (!isFiniteNumber(zone.x) || !isFiniteNumber(zone.y) || !isFiniteNumber(zone.width) || !isFiniteNumber(zone.height)) {
+      errors.push({ code: "SAFE_ZONE_NAN", message: `${label}: coordinates/size are not finite.`, path: label });
+      continue;
+    }
+    if (zone.width <= 0 || zone.height <= 0) {
+      errors.push({ code: "SAFE_ZONE_INVALID", message: `${label}: width/height must be positive.`, path: label });
+    }
+    if (zone.x < -0.05 || zone.y < -0.05 || zone.x + zone.width > widthMm + 0.05 || zone.y + zone.height > heightMm + 0.05) {
+      errors.push({ code: "SAFE_ZONE_OUT_OF_BOUNDS", message: `${label}: zone falls outside the cheque.`, path: label });
+    }
+  }
+  return errors;
+}
+
+/** No printable field may overlap a reserved zone. This is the rule that keeps
+ *  the engine off the MICR band. */
+export function validateSafeZoneClearance(template: BankTemplate): ValidationError[] {
+  const errors: ValidationError[] = [];
+  if (!template.safeZones || template.safeZones.length === 0) return errors;
+  for (const field of Object.values(template.fields)) {
+    if (!isPrintableKind(field.kind)) continue;
+    const rect = {
+      x: field.x,
+      y: field.y,
+      w: field.width,
+      h: fieldHeightMm(field),
+    };
+    for (const zone of template.safeZones) {
+      if (!isFiniteNumber(zone.x) || !isFiniteNumber(zone.y)) continue;
+      if (overlaps(rect, { x: zone.x, y: zone.y, w: zone.width, h: zone.height })) {
+        errors.push({
+          code: "SAFE_ZONE_OVERLAP",
+          message: `${template.id}.fields.${field.key}: overlaps reserved zone "${zone.id}" (${zone.label}).`,
+          path: `${template.id}.fields.${field.key}`,
+        });
+      }
+    }
+  }
+  return errors;
+}
+
+// ---------------------------------------------------------------------------
 // Template validation
 // ---------------------------------------------------------------------------
 
-const ALL_MODES: ProfileKey[] = ["custom_short", "custom_long", "a4_vertical", "a4_horizontal"];
-
 /**
- * Validate a complete BankTemplate. Returns a list of errors (empty/null when
- * the template is valid). Run once at load time so a corrupt template can never
- * reach the print engine.
+ * Validate a complete cheque template. Returns a list of errors, or null when
+ * valid. Runs at load time AND on every admin save, so a corrupt template can
+ * never reach the print engine.
  */
 export function validateBankTemplate(template: BankTemplate): ValidationResult {
   const errors: ValidationError[] = [];
-  const { id, bankName, widthMm, heightMm, fields, structural, profiles, print, enabled } = template;
+  const { id, bankId, bankName, label, sizeId, widthMm, heightMm, orientation, fields, profiles, print, safeZones, verification, enabled } = template;
   const ctx = (p: string) => `${id}.${p}`;
+
+  // 0. Identity
+  if (typeof id !== "string" || !SLUG.test(id)) {
+    errors.push({ code: "TEMPLATE_ID_INVALID", message: `Template id "${id}" is not a valid slug.`, path: "id" });
+  }
+  if (typeof bankId !== "string" || !SLUG.test(bankId)) {
+    errors.push({ code: "TEMPLATE_BANK_ID_INVALID", message: `${id}: bankId "${bankId}" is not a valid slug.`, path: ctx("bankId") });
+  }
+  if (typeof bankName !== "string" || bankName.trim() === "") {
+    errors.push({ code: "TEMPLATE_BANK_NAME_MISSING", message: `${id}: bank name is required.`, path: ctx("bankName") });
+  }
+  if (typeof label !== "string" || label.trim() === "") {
+    errors.push({ code: "TEMPLATE_LABEL_MISSING", message: `${id}: a template label is required.`, path: ctx("label") });
+  }
 
   // 1. Dimensions
   if (!isFiniteNumber(widthMm) || !isFiniteNumber(heightMm)) {
     errors.push({ code: "DIM_NAN", message: `${id}: dimensions are not finite.`, path: id });
-    return errors; // can't check fields if dimensions are broken
+    return errors; // cannot check geometry with broken dimensions
   }
   if (widthMm <= 0 || heightMm <= 0) {
     errors.push({ code: "DIM_INVALID", message: `${id}: non-positive dimensions ${widthMm}×${heightMm}.`, path: id });
     return errors;
   }
 
-  // 2. Required profile keys present for all four modes
-  const requiredKeys: ProfileKey[] = ["custom_short", "custom_long", "a4_vertical", "a4_horizontal"];
-  for (const key of requiredKeys) {
-    const p = profiles[key];
+  // 1b. Declared orientation must be truthful about the physical box.
+  if (!ORIENTATIONS.includes(orientation)) {
+    errors.push({ code: "ORIENTATION_INVALID", message: `${id}: orientation "${orientation}" is not portrait or landscape.`, path: ctx("orientation") });
+  } else if (!orientationMatchesSize(widthMm, heightMm, orientation)) {
+    errors.push({
+      code: "ORIENTATION_MISMATCH",
+      message: `${id}: declared ${orientation} does not match ${widthMm}×${heightMm} mm.`,
+      path: ctx("orientation"),
+    });
+  }
+
+  // 1c. The size registry must agree with the denormalized dimensions. This is
+  // what stops a template from drifting away from the central size registry.
+  if (typeof sizeId !== "string" || sizeId.trim() === "") {
+    errors.push({ code: "SIZE_ID_MISSING", message: `${id}: sizeId is required.`, path: ctx("sizeId") });
+  } else {
+    const size = getChequeSize(sizeId);
+    if (!size) {
+      errors.push({ code: "SIZE_UNKNOWN", message: `${id}: cheque size "${sizeId}" is not in the size registry.`, path: ctx("sizeId") });
+    } else if (Math.abs(size.widthMm - widthMm) > 0.01 || Math.abs(size.heightMm - heightMm) > 0.01) {
+      errors.push({
+        code: "SIZE_REGISTRY_MISMATCH",
+        message: `${id}: dimensions ${widthMm}×${heightMm} disagree with size "${sizeId}" (${size.widthMm}×${size.heightMm}).`,
+        path: ctx("sizeId"),
+      });
+    }
+  }
+
+  // 2. Profiles: all four modes present, finite, consistent with the registry.
+  for (const key of ALL_MODES) {
+    const p = profiles?.[key];
     if (!p) {
       errors.push({ code: "PROFILE_MISSING", message: `${id}: missing profile '${key}'.`, path: ctx(`profiles.${key}`) });
       continue;
     }
     if (!isFiniteNumber(p.x) || !isFiniteNumber(p.y) || !isFiniteNumber(p.pageWidth) || !isFiniteNumber(p.pageHeight)) {
-         errors.push({ code: "PROFILE_NAN", message: `${id}: profile '${key}' has non-finite values.`, path: ctx(`profiles.${key}`) });
-         continue;
-       }
-       if (p.pageWidth <= 0 || p.pageHeight <= 0) {
-         errors.push({ code: "PROFILE_DIMENSION_INVALID", message: `${id}: profile '${key}' has non-positive page dimensions.`, path: ctx(`profiles.${key}`) });
-       }
-      // 2b. Profile page dimensions must match the expected page size for the mode.
-      // Direct Feed: page box = cheque (no rotation; feed direction is a printer setting).
-      // A4 Carrier: page box = A4 portrait (210×297) or landscape (297×210).
-      if (isDirectFeed(key)) {
-        const expW = widthMm;
-        const expH = heightMm;
-        if (Math.abs(p.pageWidth - expW) > 0.05 || Math.abs(p.pageHeight - expH) > 0.05) {
-          errors.push({
-            code: "DF_PROFILE_DIM_MISMATCH",
-            message: `${id}: profile '${key}' page dimensions (${p.pageWidth}×${p.pageHeight}) should be ${expW}×${expH}.`,
-            path: ctx(`profiles.${key}`),
-          });
-        }
-      } else {
-       const expW = key === "a4_vertical" ? 210 : 297;
-       const expH = key === "a4_vertical" ? 297 : 210;
-       if (Math.abs(p.pageWidth - expW) > 0.05 || Math.abs(p.pageHeight - expH) > 0.05) {
-         errors.push({
-           code: "A4_PROFILE_DIM_MISMATCH",
-           message: `${id}: profile '${key}' page dimensions (${p.pageWidth}×${p.pageHeight}) should be ${expW}×${expH}.`,
-           path: ctx(`profiles.${key}`),
-         });
-       }
-     }
-   }
-
-  // 3. Print config validation
-  if (!print) {
-    errors.push({ code: "PRINT_CONFIG_MISSING", message: `${id}: missing print configuration.`, path: ctx("print") });
-  } else {
-    if (typeof print !== "object") {
-      errors.push({ code: "PRINT_CONFIG_INVALID", message: `${id}: print config is not an object.`, path: ctx("print") });
-    } else {
-      // 3a. Calibration defaults
-      if (!print.calibration || !isFiniteNumber(print.calibration.defaultX) || !isFiniteNumber(print.calibration.defaultY)) {
+      errors.push({ code: "PROFILE_NAN", message: `${id}: profile '${key}' has non-finite values.`, path: ctx(`profiles.${key}`) });
+      continue;
+    }
+    if (p.pageWidth <= 0 || p.pageHeight <= 0) {
+      errors.push({ code: "PROFILE_DIMENSION_INVALID", message: `${id}: profile '${key}' has non-positive page dimensions.`, path: ctx(`profiles.${key}`) });
+    }
+    if (isDirectFeed(key)) {
+      // Direct feed: the page box IS the cheque (no rotation, no swap).
+      if (Math.abs(p.pageWidth - widthMm) > 0.05 || Math.abs(p.pageHeight - heightMm) > 0.05) {
         errors.push({
-          code: "CAL_DEFAULT_NAN",
-          message: `${id}: calibration defaults are not finite.`,
-          path: ctx("print.calibration"),
+          code: "DF_PROFILE_DIM_MISMATCH",
+          message: `${id}: profile '${key}' page dimensions (${p.pageWidth}×${p.pageHeight}) should be ${widthMm}×${heightMm}.`,
+          path: ctx(`profiles.${key}`),
         });
       }
-      if (print.calibration) {
-        const { defaultX, defaultY } = print.calibration;
-        if (isFiniteNumber(defaultX) && (defaultX < -25 || defaultX > 25)) {
-          errors.push({
-            code: "CAL_DEFAULT_OUT_OF_RANGE",
-            message: `${id}: calibration defaultX (${defaultX}) must be between -25 and 25 mm.`,
-            path: ctx("print.calibration.defaultX"),
-          });
-        }
-        if (isFiniteNumber(defaultY) && (defaultY < -25 || defaultY > 25)) {
-          errors.push({
-            code: "CAL_DEFAULT_OUT_OF_RANGE",
-            message: `${id}: calibration defaultY (${defaultY}) must be between -25 and 25 mm.`,
-            path: ctx("print.calibration.defaultY"),
-          });
-        }
+    } else {
+      // Carrier: the page box is the registered paper for that mode.
+      const paper = getPaperSize(paperIdForMode(key, sizeId));
+      if (paper && (Math.abs(p.pageWidth - paper.widthMm) > 0.05 || Math.abs(p.pageHeight - paper.heightMm) > 0.05)) {
+        errors.push({
+          code: "A4_PROFILE_DIM_MISMATCH",
+          message: `${id}: profile '${key}' page dimensions (${p.pageWidth}×${p.pageHeight}) should be ${paper.widthMm}×${paper.heightMm} (${paper.id}).`,
+          path: ctx(`profiles.${key}`),
+        });
       }
-      // 3b. Supported modes
-      if (print.supportedModes) {
-        if (!Array.isArray(print.supportedModes)) {
-          errors.push({
-            code: "SUPPORTED_MODES_INVALID",
-            message: `${id}: supportedModes is not an array.`,
-            path: ctx("print.supportedModes"),
-          });
-        } else {
-          for (const m of print.supportedModes) {
-            if (!ALL_MODES.includes(m)) {
-              errors.push({
-                code: "SUPPORTED_MODE_INVALID",
-                message: `${id}: unsupported print mode '${m}' in supportedModes.`,
-                path: ctx("print.supportedModes"),
-              });
-            }
-          }
+    }
+  }
+
+  // 3. Print configuration
+  if (!print) {
+    errors.push({ code: "PRINT_CONFIG_MISSING", message: `${id}: missing print configuration.`, path: ctx("print") });
+  } else if (typeof print !== "object") {
+    errors.push({ code: "PRINT_CONFIG_INVALID", message: `${id}: print config is not an object.`, path: ctx("print") });
+  } else {
+    if (!print.calibration || !isFiniteNumber(print.calibration.defaultX) || !isFiniteNumber(print.calibration.defaultY)) {
+      errors.push({ code: "CAL_DEFAULT_NAN", message: `${id}: calibration defaults are not finite.`, path: ctx("print.calibration") });
+    } else {
+      const { defaultX, defaultY } = print.calibration;
+      if (defaultX < -25 || defaultX > 25) {
+        errors.push({
+          code: "CAL_DEFAULT_OUT_OF_RANGE",
+          message: `${id}: calibration defaultX (${defaultX}) must be between -25 and 25 mm.`,
+          path: ctx("print.calibration.defaultX"),
+        });
+      }
+      if (defaultY < -25 || defaultY > 25) {
+        errors.push({
+          code: "CAL_DEFAULT_OUT_OF_RANGE",
+          message: `${id}: calibration defaultY (${defaultY}) must be between -25 and 25 mm.`,
+          path: ctx("print.calibration.defaultY"),
+        });
+      }
+    }
+    if (!Array.isArray(print.supportedModes)) {
+      errors.push({ code: "SUPPORTED_MODES_INVALID", message: `${id}: supportedModes is not an array.`, path: ctx("print.supportedModes") });
+    } else {
+      for (const m of print.supportedModes) {
+        if (!ALL_MODES.includes(m)) {
+          errors.push({ code: "SUPPORTED_MODE_INVALID", message: `${id}: unsupported print mode '${m}' in supportedModes.`, path: ctx("print.supportedModes") });
         }
       }
     }
   }
 
-  // 4. Enabled flag
+  // 4. Verification metadata
+  if (!verification || typeof verification !== "object") {
+    errors.push({ code: "VERIFICATION_MISSING", message: `${id}: verification metadata is required.`, path: ctx("verification") });
+  } else if (!["unverified", "browser-verified", "physically-calibrated"].includes(verification.status)) {
+    errors.push({
+      code: "VERIFICATION_INVALID",
+      message: `${id}: unknown verification status "${verification.status}".`,
+      path: ctx("verification.status"),
+    });
+  } else if (verification.status === "physically-calibrated" && !verification.verifiedAt) {
+    errors.push({
+      code: "VERIFICATION_DATE_MISSING",
+      message: `${id}: a physically calibrated template must record the date it was verified.`,
+      path: ctx("verification.verifiedAt"),
+    });
+  }
+
+  // 5. Enabled flag
   if (typeof enabled !== "boolean") {
     errors.push({ code: "ENABLED_INVALID", message: `${id}: 'enabled' must be a boolean.`, path: ctx("enabled") });
   }
 
-  // 5. Field coordinates
-  const fieldLabels: Record<string, string> = {
-    date: "date",
-    payee: "payee",
-    words1: "words",
-    words2: "words",
-    amount: "amount",
-    accountPayee: "acpayee",
-    memo: "memo",
-  };
-  for (const [key, field] of Object.entries(fields)) {
-    const label = fieldLabels[key] ?? key;
-    const err = validateFieldBounds(field as FieldLike, widthMm, heightMm, `${id}.fields.${key}`);
+  // 6. Fields — every entry must carry its own key, label and kind.
+  for (const [key, field] of Object.entries(fields ?? {})) {
+    const path = `${id}.fields.${key}`;
+    if (!field || typeof field !== "object") {
+      errors.push({ code: "FIELD_INVALID", message: `${path}: field is not an object.`, path });
+      continue;
+    }
+    if (field.key !== key) {
+      errors.push({ code: "FIELD_KEY_MISMATCH", message: `${path}: field.key "${field.key}" does not match its key.`, path });
+    }
+    if (typeof field.label !== "string" || field.label.trim() === "") {
+      errors.push({ code: "FIELD_LABEL_MISSING", message: `${path}: a field label is required.`, path });
+    }
+    if (!FIELD_KINDS.includes(field.kind)) {
+      errors.push({ code: "FIELD_KIND_INVALID", message: `${path}: unknown field kind "${field.kind}".`, path });
+    }
+    const err = validateFieldBounds(field as FieldLike, widthMm, heightMm, path);
     if (err) errors.push(err);
     if (field.fontSize !== undefined && !isFiniteNumber(field.fontSize)) {
-      errors.push({ code: "FIELD_NAN", message: `${id}.fields.${key}: fontSize not finite.`, path: ctx(`fields.${key}.fontSize`) });
+      errors.push({ code: "FIELD_NAN", message: `${path}: fontSize not finite.`, path: `${path}.fontSize` });
     }
     if (field.minFontSize !== undefined && !isFiniteNumber(field.minFontSize)) {
-      errors.push({ code: "FIELD_NAN", message: `${id}.fields.${key}: minFontSize not finite.`, path: ctx(`fields.${key}.minFontSize`) });
+      errors.push({ code: "FIELD_NAN", message: `${path}: minFontSize not finite.`, path: `${path}.minFontSize` });
     }
     if (field.width !== undefined && field.width <= 0) {
-      errors.push({ code: "FIELD_DIM_INVALID", message: `${id}.fields.${key}: width must be positive.`, path: ctx(`fields.${key}.width`) });
+      errors.push({ code: "FIELD_DIM_INVALID", message: `${path}: width must be positive.`, path: `${path}.width` });
     }
     if (field.letterSpacing !== undefined && !isFiniteNumber(field.letterSpacing)) {
-      errors.push({ code: "FIELD_NAN", message: `${id}.fields.${key}: letterSpacing not finite.`, path: ctx(`fields.${key}.letterSpacing`) });
+      errors.push({ code: "FIELD_NAN", message: `${path}: letterSpacing not finite.`, path: `${path}.letterSpacing` });
+    }
+    // Printable fields must also fit vertically inside the cheque.
+    if (field.y + fieldHeightMm(field as FieldLike) > heightMm + 0.05) {
+      errors.push({ code: "FIELD_OVERFLOW", message: `${path}: bottom edge exceeds cheque height (${heightMm}).`, path });
     }
   }
 
-  // 6. Structural positions
-  if (structural) {
-    for (const [key, sp] of Object.entries(structural)) {
-      const label = `${id}.structural.${key}`;
+  // 7. Structural (screen-only) positions
+  if (template.structural) {
+    for (const [key, sp] of Object.entries(template.structural)) {
+      const path = `${id}.structural.${key}`;
       if (!isFiniteNumber(sp.x) || !isFiniteNumber(sp.y)) {
-        errors.push({ code: "STRUCTURAL_NAN", message: `${label}: x/y not finite.`, path: label });
+        errors.push({ code: "STRUCTURAL_NAN", message: `${path}: x/y not finite.`, path });
         continue;
       }
       const w = sp.width ?? 0;
       if (!isFiniteNumber(w)) {
-        errors.push({ code: "STRUCTURAL_NAN", message: `${label}: width not finite.`, path: label });
+        errors.push({ code: "STRUCTURAL_NAN", message: `${path}: width not finite.`, path });
         continue;
       }
-      // Signatures / pay label typically fit within cheque width
-      const overflowErr = validateFieldBounds({ x: sp.x, y: sp.y, width: w }, widthMm, heightMm, label);
+      const overflowErr = validateFieldBounds({ x: sp.x, y: sp.y, width: w }, widthMm, heightMm, path);
       if (overflowErr) errors.push(overflowErr);
+    }
+  }
+
+  // 8. Safe zones and printable-field clearance
+  errors.push(...validateSafeZones(safeZones, widthMm, heightMm, ctx("safeZones")));
+  errors.push(...validateSafeZoneClearance(template));
+
+  return errors.length ? errors : null;
+}
+
+/** Validate that there are no duplicate template IDs in a collection. */
+export function validateNoDuplicateIds(templates: BankTemplate[]): ValidationResult {
+  const seen = new Set<string>();
+  const duplicates: string[] = [];
+  for (const t of templates) {
+    if (seen.has(t.id)) duplicates.push(t.id);
+    else seen.add(t.id);
+  }
+  if (duplicates.length > 0) {
+    return [
+      {
+        code: "DUPLICATE_TEMPLATE_ID",
+        message: `Duplicate template IDs found: ${duplicates.join(", ")}`,
+        path: "BANK_TEMPLATES",
+      },
+    ];
+  }
+  return null;
+}
+
+/**
+ * Cross-integrity of the whole catalogue: unique bank ids, unique template ids,
+ * every template resolving to a real bank, and every declared bank template id
+ * resolving back to that bank.
+ */
+export function validateCatalogue(banks: Bank[], templates: BankTemplate[]): ValidationResult {
+  const errors: ValidationError[] = [];
+  const byId = new Map<string, Bank>();
+
+  for (const bank of banks) {
+    const err = validateBank(bank);
+    if (err) {
+      errors.push(err);
+      continue;
+    }
+    if (byId.has(bank.id)) {
+      errors.push({ code: "DUPLICATE_BANK_ID", message: `Duplicate bank id "${bank.id}".`, path: bank.id });
+    }
+    byId.set(bank.id, bank);
+  }
+
+  const templateIds = new Set<string>();
+  for (const template of templates) {
+    if (templateIds.has(template.id)) {
+      errors.push({ code: "DUPLICATE_TEMPLATE_ID", message: `Duplicate template id "${template.id}".`, path: template.id });
+    }
+    templateIds.add(template.id);
+    if (!byId.has(template.bankId)) {
+      errors.push({
+        code: "ORPHAN_TEMPLATE",
+        message: `Template "${template.id}" belongs to unknown bank "${template.bankId}".`,
+        path: template.id,
+      });
+    }
+  }
+
+  for (const bank of banks) {
+    for (const templateId of bank.templateIds ?? []) {
+      const template = templates.find((t) => t.id === templateId);
+      if (!template) {
+        errors.push({
+          code: "BANK_TEMPLATE_MISSING",
+          message: `Bank "${bank.id}" references missing template "${templateId}".`,
+          path: bank.id,
+        });
+      } else if (template.bankId !== bank.id) {
+        errors.push({
+          code: "BANK_TEMPLATE_LINK_MISMATCH",
+          message: `Bank "${bank.id}" references template "${templateId}" that belongs to "${template.bankId}".`,
+          path: bank.id,
+        });
+      }
     }
   }
 
@@ -257,33 +513,8 @@ export function validateBankTemplate(template: BankTemplate): ValidationResult {
 }
 
 /**
- * Validate that there are no duplicate template IDs in a collection.
- * Returns an error with the duplicate IDs, or null if all are unique.
- */
-export function validateNoDuplicateIds(templates: BankTemplate[]): ValidationResult {
-  const seen = new Map<string, string>();
-  const duplicates: string[] = [];
-  for (const t of templates) {
-    if (seen.has(t.id)) {
-      duplicates.push(t.id);
-    } else {
-      seen.set(t.id, t.bankName);
-    }
-  }
-  if (duplicates.length > 0) {
-    return [{
-      code: "DUPLICATE_TEMPLATE_ID",
-      message: `Duplicate template IDs found: ${duplicates.join(", ")}`,
-      path: "BANK_TEMPLATES",
-    }];
-  }
-  return null;
-}
-
-/**
- * Validate that a template is safe to print — i.e., it's enabled and its
- * print configuration is well-formed. This is the runtime guard that runs
- * before any template reaches the print engine from user/admin configuration.
+ * Validate that a template is safe to print — enabled, well-formed print
+ * configuration, and a bank that exists.
  */
 export function validateTemplateForPrint(template: BankTemplate): ValidationResult {
   const errors: ValidationError[] = [];
@@ -292,7 +523,6 @@ export function validateTemplateForPrint(template: BankTemplate): ValidationResu
     errors.push({ code: "TEMPLATE_NULL", message: "No template selected." });
     return errors;
   }
-
   if (!template.enabled) {
     errors.push({
       code: "TEMPLATE_DISABLED",
@@ -300,7 +530,6 @@ export function validateTemplateForPrint(template: BankTemplate): ValidationResu
       path: "enabled",
     });
   }
-
   if (!template.print || !template.print.supportedModes || template.print.supportedModes.length === 0) {
     errors.push({
       code: "NO_SUPPORTED_MODES",
@@ -308,7 +537,9 @@ export function validateTemplateForPrint(template: BankTemplate): ValidationResu
       path: "print.supportedModes",
     });
   }
-
+  if (!template.bankId) {
+    errors.push({ code: "TEMPLATE_BANK_ID_INVALID", message: `${template.id}: template has no bank.`, path: "bankId" });
+  }
   return errors.length ? errors : null;
 }
 
@@ -317,16 +548,14 @@ export function validateTemplateForPrint(template: BankTemplate): ValidationResu
 // ---------------------------------------------------------------------------
 
 /**
- * Validate the geometry produced by resolvePrintGeometry, taking the *worst-case
- * calibration* (max offset in the direction of the cheque's nearest edge) into
- * account for A4 Carrier modes. This guarantees the cheque can never be shifted
- * partially off the page by calibration, and that @page/container math is sane.
+ * Validate the geometry produced by resolvePrintGeometry: @page/container math,
+ * the cheque staying on the carrier paper at its base placement, orientation
+ * truthfulness and NaN/Infinity safety.
  */
 export function validatePrintGeometry(geom: PrintGeometry, template: BankTemplate, mode: ProfileKey): ValidationResult {
   const errors: ValidationError[] = [];
   const { pageW, pageH, containerW, containerH, chequeW, chequeH, chequeX, chequeY } = geom;
 
-  // Finite check
   const check = (v: unknown, label: string) => {
     if (!isFiniteNumber(v)) errors.push({ code: "GEOM_NAN", message: `${mode}: ${label} not finite.`, path: mode });
   };
@@ -339,14 +568,25 @@ export function validatePrintGeometry(geom: PrintGeometry, template: BankTemplat
   check(chequeX, "chequeX");
   check(chequeY, "chequeY");
 
-  // Container must be the page box
   if (containerW !== pageW || containerH !== pageH) {
-    errors.push({ code: "GEOM_CONTAINER_PAGE_MISMATCH", message: `${mode}: container (${containerW}×${containerH}) != @page (${pageW}×${pageH}).`, path: mode });
+    errors.push({
+      code: "GEOM_CONTAINER_PAGE_MISMATCH",
+      message: `${mode}: container (${containerW}×${containerH}) != @page (${pageW}×${pageH}).`,
+      path: mode,
+    });
+  }
+
+  // The cheque's physical box must be the template's declared size in every mode.
+  if (Math.abs(chequeW - template.widthMm) > 0.01 || Math.abs(chequeH - template.heightMm) > 0.01) {
+    errors.push({
+      code: "GEOM_CHEQUE_SIZE_MISMATCH",
+      message: `${mode}: cheque box ${chequeW}×${chequeH} != declared size ${template.widthMm}×${template.heightMm}.`,
+      path: mode,
+    });
   }
 
   if (isDirectFeed(mode)) {
-    // For Direct Feed the container IS the cheque — no rotation, no swap.
-    // The @page is landscape 190.5×88.9; content is rendered flat.
+    // The container IS the cheque — no rotation, no swap, no offset.
     if (containerW !== chequeW || containerH !== chequeH) {
       errors.push({
         code: "DF_GEOMETRY_MISMATCH",
@@ -354,63 +594,47 @@ export function validatePrintGeometry(geom: PrintGeometry, template: BankTemplat
         path: mode,
       });
     }
+    if (chequeX !== 0 || chequeY !== 0) {
+      errors.push({ code: "DF_GEOMETRY_MISMATCH", message: `${mode}: direct feed cannot offset the cheque.`, path: mode });
+    }
   } else {
-    // A4 Carrier: the cheque must fit within the page at its *base* profile
-    // position (calibration is clamped to ±CALIBRATION_MAX_MM at input time and
-    // validated per-use, so a template is "valid" if its base placement fits;
-    // runtime calibration that would push off-page is caught by the clamped
-    // range + validateCalibrationPair guard in the component).
     if (chequeX < -0.05) {
       errors.push({ code: "A4_CHEQUE_OFF_PAGE_LEFT", message: `${mode}: cheque x is negative (${chequeX}).`, path: mode });
     }
     if (chequeX + chequeW > pageW + 0.05) {
-      errors.push({ code: "A4_CHEQUE_OFF_PAGE_RIGHT", message: `${mode}: cheque right edge (${(chequeX + chequeW).toFixed(2)}) exceeds page width (${pageW}).`, path: mode });
+      errors.push({
+        code: "A4_CHEQUE_OFF_PAGE_RIGHT",
+        message: `${mode}: cheque right edge (${(chequeX + chequeW).toFixed(2)}) exceeds page width (${pageW}).`,
+        path: mode,
+      });
     }
     if (chequeY < -0.05) {
       errors.push({ code: "A4_CHEQUE_OFF_PAGE_TOP", message: `${mode}: cheque y is negative (${chequeY}).`, path: mode });
     }
-     if (chequeY + chequeH > pageH + 0.05) {
-       errors.push({ code: "A4_CHEQUE_OFF_PAGE_BOTTOM", message: `${mode}: cheque bottom edge (${(chequeY + chequeH).toFixed(2)}) exceeds page height (${pageH}).`, path: mode });
-     }
-   }
+    if (chequeY + chequeH > pageH + 0.05) {
+      errors.push({
+        code: "A4_CHEQUE_OFF_PAGE_BOTTOM",
+        message: `${mode}: cheque bottom edge (${(chequeY + chequeH).toFixed(2)}) exceeds page height (${pageH}).`,
+        path: mode,
+      });
+    }
+  }
 
   return errors.length ? errors : null;
 }
 
-// ---------------------------------------------------------------------------
-// Calibrated geometry validation (A4 Carrier — cheque stays on page at max cal)
-// ---------------------------------------------------------------------------
-
 /**
- * Validate the A4 Carrier profile's calibration safety.
- *
- * At print time, resolveCalibratedGeometry() clamps calibration so the cheque
- * can never leave the page. This function validates the *template* — it checks:
- *
- * 1. The cheque fits on the page at its BASE profile position (no calibration).
- *    If the base position already overflows, the template is broken.
- *
- * 2. The profile leaves at least a minimal calibration margin (≥ 0.5 mm) on
- *    each side, so the user can always make a fine-tuning adjustment in both
- *    directions. If a side has zero margin, calibration in that direction is
- *    silently clamped to 0 — the print is still valid but the user should be
- *    aware.
- *
- * 3. The cheque does not touch both opposing edges (would leave zero room
- *    for any calibration — a misconfigured template).
- *
- * For Direct Feed the page box IS the cheque, so calibration only shifts
- * field content within the cheque — no page-edge check is needed.
- *
- * Returns null if the template is safe, or a list of errors/warnings.
- * Errors (calibrationRange must contain at least one error-level issue to
- * block printing.
+ * Validate that a carrier profile's BASE placement is on-page and that at least
+ * a minimal calibration margin (0.5 mm) exists on each side, so the user can
+ * always fine-tune in both directions. Direct feed needs no such check because
+ * the page box IS the cheque.
  */
 export function validateCalibratedBounds(template: BankTemplate, mode: ProfileKey): ValidationResult {
   const errors: ValidationError[] = [];
 
-  if (isDirectFeed(mode)) {
-    return null;
+  if (isDirectFeed(mode)) return null;
+  if (!template.profiles?.[mode]) {
+    return [{ code: "PROFILE_MISSING", message: `${template.id}: missing profile '${mode}'.`, path: mode }];
   }
 
   const profile = template.profiles[mode];
@@ -419,7 +643,6 @@ export function validateCalibratedBounds(template: BankTemplate, mode: ProfileKe
   const pageW = profile.pageWidth;
   const pageH = profile.pageHeight;
 
-  // 1. Base position must be on-page (cheque fully inside the A4 sheet)
   if (profile.x < -0.05) {
     errors.push({
       code: "A4_BASE_OFF_PAGE_LEFT",
