@@ -36,7 +36,7 @@ import {
 } from "../lib/validation.ts";
 import { createCustomChequeSize, orientationFor, orientationMatchesSize, upsertChequeSize, resetChequeSizes } from "../lib/sizes.ts";
 import { micrSafeZone, MICR_BAND_MM } from "../data/templates.ts";
-import { computeSheetLayout } from "../lib/sheetLayout.ts";
+import { computeSheetLayout, fieldsWithinCheque } from "../lib/sheetLayout.ts";
 
 let passed = 0;
 let failed = 0;
@@ -123,12 +123,16 @@ function templateForSize(size, orientation, overrides = {}) {
   t.label = `${size.widthMm} × ${size.heightMm} ${orientation}`;
   t.profiles.custom_short = { x: 0, y: 0, pageWidth: size.widthMm, pageHeight: size.heightMm };
   t.profiles.custom_long = { x: 0, y: 0, pageWidth: size.widthMm, pageHeight: size.heightMm };
-  // Keep every field inside the new box and below the reserved band.
+  // Keep every field inside the new box and below the reserved band. The clone
+  // adapts Siddhartha's landscape coordinates, so on portrait stock a field's
+  // WIDTH must also be re-fitted, not just its position — a real portrait
+  // template would be authored from scratch with correct widths.
   for (const field of Object.values(t.fields)) {
     if (field.kind === "ac-payee") field.width = size.widthMm;
     if (field.kind === "words") field.width = Math.min(field.width, size.widthMm - field.x - 2);
     if (field.kind === "signature") field.y = size.heightMm - MICR_BAND_MM - 8;
     if (field.kind === "amount") field.y = Math.min(field.y, size.heightMm - MICR_BAND_MM - 8);
+    field.width = Math.min(field.width, size.widthMm - 1);
     if (field.x + field.width > size.widthMm) field.x = Math.max(0, size.widthMm - field.width - 1);
   }
   t.safeZones = [micrSafeZone(size.widthMm, size.heightMm)];
@@ -318,6 +322,56 @@ for (const template of [landscapeTemplate, portraitTemplate, base]) {
     clamped.calibration.x < 25 && clamped.calibration.x > 0,
     `clamping keeps the cheque on the paper (applied X = ${clamped.calibration.x} mm, not 25)`,
   );
+}
+
+// ---------------------------------------------------------------------------
+// 5b. Portrait readiness — rotation-free, axis-pure, on the standard twin
+//
+// No real portrait cheque template ships yet (the catalogue only has real
+// geometry for landscape stock). These tests prove the PIPELINE is
+// portrait-ready so that entering a real portrait cheque's measurements later
+// is a data change, not an engine change.
+// ---------------------------------------------------------------------------
+console.log("\n--- SECTION 5b: Portrait readiness (synthetic sizes) ---");
+
+{
+  // The portrait twin of the shipped standard stock, plus a second arbitrary
+  // portrait size — two different aspect ratios, both taller than wide.
+  const PORTRAIT_TWIN = createCustomChequeSize("test-88x190", "Test portrait twin 88.9 × 190.5", 88.9, 190.5);
+  upsertChequeSize(PORTRAIT_TWIN);
+  const twin = templateForSize(PORTRAIT_TWIN, "portrait");
+
+  assert(validateBankTemplate(twin) === null, "portrait twin template validates clean against the registry");
+  assert(orientationFor(88.9, 190.5) === "portrait", "the twin's dimensions resolve as portrait");
+
+  for (const mode of MODES) {
+    const geom = resolvePrintGeometry(twin, mode);
+    const offset = rotatedContentOffset(geom);
+    assert(offset.leftMm === 0 && offset.topMm === 0, `portrait twin ${mode}: content offset is exactly zero (no rotation, no double rotation)`);
+    if (isDirectFeed(mode)) {
+      assert(geom.pageW === 88.9 && geom.pageH === 190.5, `portrait twin ${mode}: @page is 88.9 × 190.5 mm, nothing swapped`);
+    }
+  }
+
+  // Axis isolation: on the carrier, X must move only X and Y only Y — for a
+  // portrait cheque this is where a rotation bug would show up first.
+  const neutral = computeSheetLayout(twin, sampleData, "a4_vertical", { x: 0, y: 0 });
+  const movedX = computeSheetLayout(twin, sampleData, "a4_vertical", { x: 0.5, y: 0 });
+  const movedY = computeSheetLayout(twin, sampleData, "a4_vertical", { x: 0, y: 0.5 });
+  const dateN = neutral.fields.find((f) => f.key === "date");
+  const dateX = movedX.fields.find((f) => f.key === "date");
+  const dateY = movedY.fields.find((f) => f.key === "date");
+  assert(Math.abs(dateX.xMm - dateN.xMm - 0.5) < 0.001 && Math.abs(dateX.yMm - dateN.yMm) < 0.001, "portrait twin: +0.5 mm X moves the field horizontally only");
+  assert(Math.abs(dateY.yMm - dateN.yMm - 0.5) < 0.001 && Math.abs(dateY.xMm - dateN.xMm) < 0.001, "portrait twin: +0.5 mm Y moves the field vertically only");
+
+  const calibrated = resolveCalibratedGeometry(twin, "a4_vertical", { x: 10, y: -10 });
+  assert(calibrated.chequeW === twin.widthMm && calibrated.chequeH === twin.heightMm, "portrait twin: calibration never resizes the cheque");
+
+  // Fields stay inside the tall box for every mode.
+  for (const mode of MODES) {
+    const layout = computeSheetLayout(twin, sampleData, mode, { x: 0, y: 0 });
+    assert(fieldsWithinCheque(layout), `portrait twin ${mode}: every printable field stays inside the cheque box`);
+  }
 }
 
 // ---------------------------------------------------------------------------

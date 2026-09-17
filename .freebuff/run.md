@@ -76,6 +76,27 @@ Object.getOwnPropertyNames(document.querySelector('#template-select'))
   .filter(k => k.startsWith('__react'))   // must be non-empty
 ```
 
+### After moving or adding a route: run `next typegen` or `tsc` fails
+
+`tsconfig.json` includes `.next/types/**/*.ts`. Those route type files are
+**generated**, and Next.js only rewrites them on a dev-server start or an explicit
+typegen — a *running* dev server keeps serving the stale ones. So immediately
+after moving/renaming/adding an `app/**/page.tsx` or `layout.tsx`, `npm run
+typecheck` fails with errors that look like this and are **not real code errors**:
+
+```
+.next/types/validator.ts(51,39): error TS2307: Cannot find module '../../app/admin/page.js'
+```
+
+Fix (no build required, safe while the dev server runs):
+
+```bash
+npx next typegen
+```
+
+Observation window: the stale validator can persist for several minutes after
+the move, so "re-run tsc and hope" is not a strategy.
+
 ### Replacing a registered preview stops the running server
 
 `register_preview` with `replace: true` released the old preview **and killed the
@@ -126,13 +147,24 @@ data-calY prop on a DOM element`. Source: `components/Workspace.tsx` (camelCase
 | Page | URL |
 | ---- | --- |
 | Guided cheque workspace | `/` |
-| Admin dashboard (demo gate) | `/admin` |
-| Admin login | `/admin/login` |
-| Bank template editor | `/admin/templates` |
+| Bank directory | `/banks` |
+| Deep-linked workspace | `/banks/[bank]/cheque/[template]` |
+| Admin login (demo gate) | `/admin/login` |
+| Admin dashboard (gated) | `/admin` |
+| Admin bank management | `/admin/banks` |
+| Template list / workbench | `/admin/templates`, `/admin/templates/[id]` |
+| Calibration records | `/admin/calibration` |
+
+Demo admin password: `admin` (client-side gate only — see the README).
+
+The admin area is split by a route group: `/admin/login` sits **outside** the
+`(dashboard)` group so it can render while signed out. If it ever renders blank,
+the gate has been moved back over it — `tests/admin-access.test.mjs` catches that.
 
 ## 3. Other useful commands
 
 ```bash
-npm run typecheck   # tsc --noEmit
-npm test            # tsx test suite (validation, print flow, verification)
+npm run verify      # typecheck + the full suite — use this one
+npm run typecheck   # tsc --noEmit (see the typegen note above)
+npm test            # tsx test suite (11 suites)
 ```

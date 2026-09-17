@@ -53,6 +53,17 @@ export function orientationFor(widthMm: number, heightMm: number): Orientation {
 }
 
 /**
+ * Upper bound for any physical dimension, in millimetres.
+ *
+ * A real bank cheque is 80–250 mm across; A4's long edge is 297 mm. Anything
+ * wider than 500 mm cannot be fed by any consumer printer and is almost always
+ * a unit mistake (pixels, points, tenths of a millimetre). Without this cap,
+ * an admin typo like 1905 instead of 190.5 would silently become a
+ * "cheque" five times wider than the paper it must print on.
+ */
+export const MAX_DIMENSION_MM = 500;
+
+/**
  * Does the declared orientation agree with the physical dimensions?
  * This is what stops a template from claiming "portrait" while carrying
  * landscape geometry (which would silently rotate a physical cheque).
@@ -74,6 +85,11 @@ export function validateSize(size: ChequeSize): string | null {
   }
   if (!isValidSizeValue(size.widthMm) || !isValidSizeValue(size.heightMm)) {
     return `Size "${size.id}" must have positive finite width and height.`;
+  }
+  // Step 7 of the size-system spec: reject obviously unreasonable dimensions
+  // rather than letting a typo generate broken print output.
+  if (size.widthMm > MAX_DIMENSION_MM || size.heightMm > MAX_DIMENSION_MM) {
+    return `Size "${size.id}" is unreasonably large (${size.widthMm} × ${size.heightMm} mm). Dimensions are millimetres and must not exceed ${MAX_DIMENSION_MM} mm — this usually means a unit mistake.`;
   }
   return null;
 }

@@ -10,9 +10,9 @@ import {
   getBankOptions,
   initBankCatalogue,
 } from "@/lib/catalogue";
-import { initChequeSizes } from "@/lib/sizes";
+import { getPaperSize, initChequeSizes } from "@/lib/sizes";
 import type { BankTemplate, ProfileKey, Calibration } from "@/lib/types";
-import { isDirectFeed } from "@/lib/types";
+import { isDirectFeed, paperIdForMode } from "@/lib/types";
 import {
   checkAmountWordsConsistency,
   formatAmountDisplay,
@@ -47,12 +47,34 @@ import ChequeSheet, { PREVIEW_SCALE } from "@/components/ChequeSheet";
 // Constants & helpers
 // ---------------------------------------------------------------------------
 
-export const PRINT_MODE_LABELS: Record<ProfileKey, { mode: string; paper: string; orientation: string }> = {
-  custom_short: { mode: "Custom Cheque Size", paper: "Custom Cheque", orientation: "Landscape" },
-  custom_long: { mode: "Custom Cheque Size", paper: "Custom Cheque", orientation: "Landscape" },
-  a4_vertical: { mode: "A4 Carrier", paper: "A4", orientation: "Portrait" },
-  a4_horizontal: { mode: "A4 Carrier", paper: "A4", orientation: "Landscape" },
+// Mode presentation labels. The paper box and orientation are DERIVED from the
+// paper registry at runtime (paperIdForMode -> getPaperSize) rather than typed
+// here — this map must never become a second place that declares an orientation.
+const PRINT_MODE_PRESENTATION: Record<ProfileKey, { mode: string; paperId: ProfileKey | "cheque" }> = {
+  custom_short: { mode: "Custom Cheque Size", paperId: "cheque" },
+  custom_long: { mode: "Custom Cheque Size", paperId: "cheque" },
+  a4_vertical: { mode: "A4 Carrier", paperId: "a4_vertical" },
+  a4_horizontal: { mode: "A4 Carrier", paperId: "a4_horizontal" },
 };
+
+/** Screen-facing description of a print mode: which paper, which orientation.
+ *  Both facts come from the registry, capitalised for display only. */
+export function printModeInfo(mode: ProfileKey, chequeSizeId: string): { mode: string; paper: string; orientation: string } {
+  const presentation = PRINT_MODE_PRESENTATION[mode];
+  const paperId = paperIdForMode(mode, chequeSizeId);
+  const paper = presentation.paperId === "cheque" ? null : getPaperSize(paperId);
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  return {
+    mode: presentation.mode,
+    paper:
+      presentation.paperId === "cheque"
+        ? "Custom Cheque"
+        : paper
+          ? `A4 (${paper.widthMm} × ${paper.heightMm} mm)`
+          : "A4",
+    orientation: cap(paper ? paper.orientation : "landscape"),
+  };
+}
 
 const PROFILE_LABELS: Record<ProfileKey, string> = {
   custom_short: "Direct Feed · Short Edge First",
