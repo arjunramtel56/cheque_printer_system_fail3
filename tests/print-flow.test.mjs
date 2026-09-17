@@ -636,13 +636,28 @@ assert(geom1.finalChequeX === geom2.finalChequeX, "resolveCalibratedGeometry is 
 assert(geom1.finalChequeY === geom2.finalChequeY, "resolveCalibratedGeometry is deterministic (Y)");
 assert(geom1.calibratedClamped === geom2.calibratedClamped, "resolveCalibratedGeometry is deterministic (clamped flag)");
 
-// Preview and print both use the same function — verify the components import it
-assert(workspaceTsx.includes("resolveCalibratedGeometry"), "Workspace.tsx imports resolveCalibratedGeometry for both preview and print");
-assert(workspaceTsx.includes("resolvePrintGeometry"), "Workspace.tsx imports resolvePrintGeometry for preview geometry checks");
+// Preview and print are now the SAME component rendered at two scales. The
+// calibration/geometry resolution lives in one pure module that both paths use.
+const sheetLayoutTs = readFileSync(repoRoot + "lib/sheetLayout.ts", "utf8");
+const chequeSheetTsx = readFileSync(repoRoot + "components/ChequeSheet.tsx", "utf8");
 
-// Direct Feed preview uses resolvePrintGeometry (no calibration shift on page box)
-assert(workspaceTsx.includes("const geom = resolvePrintGeometry(template, mode)"), "PrintOutput uses resolvePrintGeometry for DF (page box)");
-assert(workspaceTsx.includes("resolveCalibratedGeometry(template, mode, { x: calX, y: calY })"), "A4 preview uses resolveCalibratedGeometry (same as print)");
+assert(sheetLayoutTs.includes("resolveCalibratedGeometry"), "sheetLayout resolves calibrated geometry (single source)");
+assert(sheetLayoutTs.includes("computeSheetLayout"), "sheetLayout exposes computeSheetLayout for both paths");
+assert(chequeSheetTsx.includes("lengthToCss"), "ChequeSheet converts millimetres to display units in exactly one place");
+assert(chequeSheetTsx.includes("unitFactor"), "ChequeSheet exposes the single linear unit factor");
+
+// The workspace must render the shared sheet twice: preview and print output.
+assert(workspaceTsx.includes('<ChequeSheet'), "Workspace renders the shared ChequeSheet");
+assert(workspaceTsx.includes('variant="preview"'), "preview uses the shared sheet");
+assert(workspaceTsx.includes('variant="print"'), "print output uses the same shared sheet");
+assert(
+  (workspaceTsx.match(/<ChequeSheet/g) || []).length >= 2,
+  "preview and print both render ChequeSheet (one renderer, two scales)",
+);
+assert(!workspaceTsx.includes("DirectFeedPreview"), "the separate direct-feed preview renderer is gone");
+assert(!workspaceTsx.includes("A4CarrierPreview"), "the separate A4 preview renderer is gone");
+assert(!workspaceTsx.includes("function PrintField"), "the duplicated PrintField renderer is gone");
+assert(sheetLayoutTs.includes("calibration"), "sheetLayout reports the calibration that was applied");
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------

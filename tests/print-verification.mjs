@@ -222,7 +222,12 @@ for (const t of templates) {
   assert(words1 && words2, `${t.id}: amount words fields exist`);
   const ap = t.fields.accountPayee;
   assert(ap && ap.align === "center" && ap.x === 0, `${t.id}: A/C PAYEE at x=0, centered`);
-  assert(t.structural?.sig1 && t.structural?.sig2, `${t.id}: signature areas exist`);
+  const signatureFields = Object.values(t.fields).filter((f) => f.kind === "signature");
+  assert(signatureFields.length >= 2, `${t.id}: signature areas exist as data-driven fields`);
+  assert(signatureFields.every((f) => f.printable === undefined && f.label), `${t.id}: signature fields carry labels`);
+  const reservedZones = t.safeZones ?? [];
+  assert(reservedZones.some((z) => z.id === "micr"), `${t.id}: MICR band is a reserved (never printed) zone`);
+  assert(t.orientation === "landscape" && t.sizeId === "standard-190x89", `${t.id}: orientation and size registry id declared`);
   assert(t.profiles.custom_short && t.profiles.custom_long && t.profiles.a4_vertical && t.profiles.a4_horizontal, `${t.id}: all 4 profiles present`);
   assert(validateBankTemplate(t) === null, `${t.id}: template validates clean`);
 }
@@ -287,7 +292,11 @@ assert(!workspaceCode.includes("as any"), "No 'as any' type casts in Workspace.t
 assert(workspaceCode.includes("printLockRef"), "Workspace.tsx has synchronous print lock ref");
 assert(workspaceCode.includes("pagehide"), "Workspace.tsx registers pagehide fallback listener");
 assert(workspaceCode.includes("parseCalibrationInput"), "Workspace.tsx has strict calibration input parser");
-assert(workspaceCode.includes("resolveCalibratedGeometry"), "Workspace.tsx uses resolveCalibratedGeometry for preview+print consistency");
+const sheetLayoutSource = readFileSync(repoRoot + "lib/sheetLayout.ts", "utf8");
+const chequeSheetSource = readFileSync(repoRoot + "components/ChequeSheet.tsx", "utf8");
+assert(sheetLayoutSource.includes("resolveCalibratedGeometry"), "sheetLayout.ts uses resolveCalibratedGeometry for preview+print consistency");
+assert(chequeSheetSource.includes("computeSheetLayout"), "ChequeSheet renders the shared layout (no private field list)");
+assert(!chequeSheetSource.includes("'payee'") && !chequeSheetSource.includes('"payee"'), "ChequeSheet contains no hardcoded field keys");
 
 // ============================================================================
 // SECTION 12: Direct Feed Short Edge First — Calibration axis compensation
@@ -309,10 +318,11 @@ assert(!workspaceCode.includes("geom.rotate"), "No rotate reference in PrintOutp
   assert(dfLongCompensation === null, "No ternary rotate-compensation expression (rotation-free model)");
 }
 {
-  const previewSection = workspaceCode.match(/function DirectFeedPreview[\s\S]*?^}/m);
-  assert(previewSection !== null, "DirectFeedPreview function exists in source");
-  assert(previewSection[0].includes("(fieldX + calX)"), "DirectFeedPreview applies calX to X (no compensation needed for screen preview)");
-  assert(previewSection[0].includes("(fieldY + calY)"), "DirectFeedPreview applies calY to Y (no compensation needed for screen preview)");
+  // Direct-feed calibration is applied as a content offset inside the cheque —
+  // X to X and Y to Y, with no axis compensation anywhere in the render path.
+  assert(sheetLayoutSource.includes("contentOffsetX") && sheetLayoutSource.includes("contentOffsetY"), "sheetLayout applies direct-feed calibration as a content offset");
+  assert(!sheetLayoutSource.includes("contentOffsetY = df ? requested.x"), "calibration axes are never swapped");
+  assert(!chequeSheetSource.includes("rotate("), "the shared renderer applies no CSS rotation");
 }
 
 // ============================================================================
@@ -325,8 +335,8 @@ assert(!workspaceCode.includes("geom.rotate"), "No rotate reference in PrintOutp
 console.log("\n--- SECTION 13: Preview/Print Source-of-Truth Alignment ---");
 
 assert(workspaceCode.includes("resolvePrintGeometry(template, printMode)"), "PrepChecklist uses resolvePrintGeometry for validity checks");
-assert(workspaceCode.includes("resolveCalibratedGeometry(template, mode"), "A4CarrierPreview uses resolveCalibratedGeometry");
-assert(workspaceCode.includes("resolveCalibratedGeometry(template, mode, { x: calX, y: calY })"), "PrintOutput A4 path uses resolveCalibratedGeometry with current calibration");
+assert(sheetLayoutSource.includes("resolveCalibratedGeometry(template, mode, calibration)"), "the shared layout resolves calibrated geometry once for preview and print");
+assert(workspaceCode.includes('variant="preview"') && workspaceCode.includes('variant="print"'), "one renderer serves preview and print at two scales");
 
 // Verify the @page injection uses the same geometry resolver
 assert(workspaceCode.includes("geom.pageW.toFixed(1)"), "Injected @page size uses resolved pageW from shared geometry");

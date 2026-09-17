@@ -51,9 +51,12 @@ export default function AdminLayout({ children, title = "Admin" }: AdminLayoutPr
           Sign Out
         </button>
       </div>
-      <nav style={{ marginBottom: 16, display: "flex", gap: 8 }}>
+      <nav style={{ marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Link href="/admin" className="text-button">Dashboard</Link>
-        <Link href="/admin/templates" className="text-button">Bank Templates</Link>
+        <Link href="/admin/banks" className="text-button">Banks</Link>
+        <Link href="/admin/templates" className="text-button">Cheque Templates</Link>
+        <Link href="/admin/calibration" className="text-button">Calibration</Link>
+        <Link href="/banks" className="text-button">Public catalogue</Link>
       </nav>
       {children}
     </div>
