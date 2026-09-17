@@ -1,38 +1,51 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getAllTemplates, getAllActiveTemplates, getTemplate, initRuntimeTemplates } from "@/lib/templates";
+import Link from "next/link";
+import { getAllActiveTemplates, getTemplate, initRuntimeTemplates } from "@/lib/templates";
+import {
+  formatBankLabel,
+  getActiveTemplatesForBank,
+  getBank,
+  getBankOptions,
+  initBankCatalogue,
+} from "@/lib/catalogue";
+import { initChequeSizes } from "@/lib/sizes";
 import type { BankTemplate, ProfileKey, Calibration } from "@/lib/types";
 import { isDirectFeed } from "@/lib/types";
 import {
-    amountToWordsFromPaisa,
-  formatDateDigits,
-  formatAmountDisplay,
-  validateAmount,
   checkAmountWordsConsistency,
+  formatAmountDisplay,
+  amountToWordsFromPaisa,
+  isValidDate,
+  validateAmount,
   validateChequeDate,
   validatePayee,
-  isValidDate,
 } from "@/lib/amountWords";
-import { clampCalibration, validateCalibrationPair } from "@/lib/calibration";
-import { resolvePrintGeometry, resolveCalibratedGeometry, STANDARD_CHEQUE_W_MM, STANDARD_CHEQUE_H_MM } from "@/lib/printGeometry";
-import { validatePrintGeometry, validateCalibratedBounds } from "@/lib/validation";
-
-// Global minimum font size floor to prevent unreadable output
-export const MIN_PAYEE_FONT_SIZE = 6;
+import {
+  CALIBRATION_MAX_MM,
+  CALIBRATION_MIN_MM,
+  CALIBRATION_STEP_MM,
+  clampCalibration,
+  formatCalibration,
+  getCalibrationFor,
+  isNeutralCalibration,
+  loadCalibrations,
+  persistCalibrations,
+  resetCalibrationFor,
+  setCalibrationFor,
+  templateDefaultCalibration,
+  validateCalibrationPair,
+  type CalibrationMap,
+} from "@/lib/calibration";
+import { resolvePaper, resolvePrintGeometry } from "@/lib/printGeometry";
+import { validateCalibratedBounds, validatePrintGeometry, validateSafeZoneClearance, validateTemplateForPrint } from "@/lib/validation";
+import { computeSheetLayout, fieldsWithinCheque, type ChequeData } from "@/lib/sheetLayout";
+import ChequeSheet, { PREVIEW_SCALE } from "@/components/ChequeSheet";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
 // ---------------------------------------------------------------------------
-
-const PROFILE_LABELS: Record<ProfileKey, string> = {
-  custom_short: "Direct Feed · Short Edge First",
-  custom_long: "Direct Feed · Long Edge First",
-  a4_vertical: "A4 Carrier · Portrait",
-  a4_horizontal: "A4 Carrier · Landscape",
-};
-
-const SCALE = 2.4;
 
 export const PRINT_MODE_LABELS: Record<ProfileKey, { mode: string; paper: string; orientation: string }> = {
   custom_short: { mode: "Custom Cheque Size", paper: "Custom Cheque", orientation: "Landscape" },
@@ -41,51 +54,31 @@ export const PRINT_MODE_LABELS: Record<ProfileKey, { mode: string; paper: string
   a4_horizontal: { mode: "A4 Carrier", paper: "A4", orientation: "Landscape" },
 };
 
+const PROFILE_LABELS: Record<ProfileKey, string> = {
+  custom_short: "Direct Feed · Short Edge First",
+  custom_long: "Direct Feed · Long Edge First",
+  a4_vertical: "A4 Carrier · Portrait",
+  a4_horizontal: "A4 Carrier · Landscape",
+};
+
+/** Kept as an alias of the shared screen scale so older readers still resolve. */
+const SCALE = PREVIEW_SCALE;
+
 // Explicit workflow states — a single, unambiguous indicator of where the
 // user is in the print pipeline. The UI renders a state badge and the print
 // button surfaces the concrete reason it is blocked.
 type FormState =
-  | "empty"              // EMPTY — no template selected
-  | "template-selected"    // BANK SELECTED — template picked, fields empty
-  | "data-entering"        // DATA ENTERING — some fields filled (incomplete)
-  | "ready-preview"        // READY TO PREVIEW — all fields populated, validation passes
-  | "ready-print"          // READY TO PRINT — preview reviewed, print button active
-  | "printing"             // PRINTING — window.print() dialog is open
-  | "done";                // PRINT FINISHED / CANCELLED — print cycle complete
+  | "empty"
+  | "template-selected"
+  | "data-entering"
+  | "ready-preview"
+  | "ready-print"
+  | "printing"
+  | "done";
 
-// Map each validation rule to the message the print button should show.
 interface PrintReadiness {
   ready: boolean;
   reason: string | null;
-}
-
-function fitFontSize(text: string, field: { fontSize?: number; minFontSize?: number; letterSpacing?: number; width: number }): number {
-  const preferred = Number(field.fontSize || 10);
-  const rawMinimum = Number(field.minFontSize ?? Math.max(7, preferred - 3));
-  // Enforce a hard floor so text is never rendered at an unreadable size
-  const minimum = Math.max(rawMinimum, MIN_PAYEE_FONT_SIZE);
-  const spacing = Number(field.letterSpacing ?? 0);
-  const widthMm = Number(field.width);
-  for (let size = preferred; size >= minimum; size -= 0.25) {
-    const estimated = [...String(text)].length * (size * 0.352778 * 0.55 + spacing);
-    if (estimated <= widthMm - 0.8) return Math.round(size * 100) / 100;
-  }
-  return minimum;
-}
-
-function splitWordsToLines(words: string, template: BankTemplate): [string, string] {
-  const wordList = words.trim().split(/\s+/);
-  const first: string[] = [];
-  const second: string[] = [];
-  for (const word of wordList) {
-    const candidate = [...first, word].join(" ");
-    if (!second.length && fitFontSize(candidate, template.fields.words1) > Number(template.fields.words1.minFontSize ?? 7)) {
-      first.push(word);
-    } else {
-      second.push(word);
-    }
-  }
-  return [first.join(" "), second.join(" ")];
 }
 
 /**
@@ -94,925 +87,51 @@ function splitWordsToLines(words: string, template: BankTemplate): [string, stri
  */
 function sanitizeError(err: unknown): string {
   if (typeof err === "string") return err;
-  if (err instanceof Error) {
-    // Return only the message, never the stack trace
-    return err.message;
-  }
+  if (err instanceof Error) return err.message;
   return "An unexpected error occurred. Please try again.";
 }
 
 function safeFormatDate(date: string): string {
   if (!date) return "";
   try {
-    return formatDateDigits(date);
+    if (!isValidDate(date)) return "";
+    return date;
   } catch {
     return "";
   }
 }
 
-/**
- * Safely normalize a payee string. Returns "" if the payee is invalid.
- * On invalid input the caller (print gate) will surface a user-facing error.
- */
-function safeNormalizePayee(payee: string): string {
-  const result = validatePayee(payee);
-  return result.valid ? result.payee : "";
+/** Validate a mode set from a template, defaulting to the built-in order. */
+function supportedModesOf(template: BankTemplate | null): ProfileKey[] {
+  const modes = template?.print?.supportedModes ?? [];
+  const order: ProfileKey[] = ["custom_short", "custom_long", "a4_vertical", "a4_horizontal"];
+  const filtered = order.filter((m) => modes.includes(m));
+  return filtered.length > 0 ? filtered : ["custom_short"];
 }
 
 // ---------------------------------------------------------------------------
-// ChequePreview — Direct Feed mode (screen, scaled for readability)
-// ---------------------------------------------------------------------------
-
-interface PreviewProps {
-  template: BankTemplate;
-  date: string;
-  payee: string;
-  amount: string;
-  amountWords: string;
-  accountPayee: boolean;
-  offsetX: number;
-  offsetY: number;
-  debugMode?: boolean;
-}
-
-function DirectFeedPreview({ template, date, payee, amount, amountWords, accountPayee, offsetX, offsetY, debugMode = false }: PreviewProps) {
-  const dateDigits = date ? safeFormatDate(date) : "";
-  const amountPaisa = validateAmount(amount).paisa;
-  const words = amountWords || (amountPaisa > 0 ? amountToWordsFromPaisa(amountPaisa) : "");
-  const [words1, words2] = amountPaisa > 0 ? splitWordsToLines(words, template) : ["", ""];
-  const normalizedPayee = safeNormalizePayee(payee);
-
-  const calX = Number(offsetX ?? 0);
-  const calY = Number(offsetY ?? 0);
-  const displayW = Math.round(template.widthMm * SCALE);
-  const displayH = Math.round(template.heightMm * SCALE);
-
-  function pos(fieldX: number, fieldY: number) {
-    return { x: (fieldX + calX) * SCALE, y: (fieldY + calY) * SCALE };
-  }
-
-  type FieldCoords = { x: number; y: number; width: number; fontSize?: number; minFontSize?: number; letterSpacing?: number; align?: "left" | "center" | "right" };
-  function renderField(key: string, text: string, coords: FieldCoords, extraClass = "") {
-    if (!text) return null;
-    const p = pos(coords.x, coords.y);
-    const fs = fitFontSize(text, coords);
-    const style: React.CSSProperties = {
-      position: "absolute",
-      left: `${p.x}px`,
-      top: `${p.y}px`,
-      width: `${coords.width * SCALE}px`,
-      fontSize: `${fs * SCALE}px`,
-      letterSpacing: `${(coords.letterSpacing ?? 0) * SCALE}px`,
-      textAlign: coords.align ?? "left",
-      fontFamily: '"Courier New", monospace',
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      lineHeight: 1.1,
-      color: "#111",
-    };
-    return <div key={key} className={`preview-field ${extraClass}`} style={style}>{text}</div>;
-  }
-
-  return (
-    <div
-      className="cheque-preview print-direct-feed"
-      style={{ width: displayW, height: displayH }}
-      role="img"
-      aria-label={`Cheque preview for ${template.bankName} — Direct Feed mode`}
-    >
-      <div className="cheque-watermark" aria-hidden="true">PREVIEW</div>
-
-      {/* Bank name */}
-      <div style={{ position: "absolute", top: 4 * SCALE, left: 8 * SCALE, fontWeight: 800, fontSize: 11 * SCALE, color: "#111" }}>
-        {template.bankName}
-      </div>
-
-      {/* A/C Payee only */}
-      {accountPayee &&
-        renderField("accountPayee", "// A/C PAYEE ONLY //", {
-          x: 0,
-          y: template.fields.accountPayee?.y ?? 16,
-          width: template.widthMm,
-          fontSize: template.fields.accountPayee?.fontSize ?? 9,
-          align: "center",
-        }, "account-payee-line")}
-
-      {/* Date */}
-      {dateDigits &&
-        renderField("date", dateDigits, template.fields.date ?? { x: 128, y: 6, width: 52 })}
-
-      {/* Pay label */}
-      <div style={{
-        position: "absolute",
-        left: (template.structural?.payLabel?.x ?? 12) * SCALE,
-        top: (template.structural?.payLabel?.y ?? 24) * SCALE,
-        fontSize: 7 * SCALE,
-        color: "#555",
-      }}>
-        Pay against this cheque to
-      </div>
-
-       {/* Payee */}
-       {normalizedPayee &&
-         renderField("payee", normalizedPayee, {
-           ...template.fields.payee,
-           minFontSize: Math.max(template.fields.payee?.minFontSize ?? 7, MIN_PAYEE_FONT_SIZE),
-         })}
-
-      {/* Or Bearer */}
-      <div style={{
-        position: "absolute",
-        left: (template.structural?.orBearer?.x ?? 100) * SCALE,
-        top: (template.structural?.orBearer?.y ?? 24) * SCALE,
-        fontSize: 7 * SCALE,
-        color: "#555",
-      }}>
-        Or Bearer
-      </div>
-
-      {/* Amount in words */}
-      {words1 && renderField("words1", words1, template.fields.words1 ?? { x: 12, y: 44, width: 150 })}
-      {words2 && renderField("words2", words2, template.fields.words2 ?? { x: 12, y: 54, width: 150 })}
-
-      {/* Numeric amount */}
-      {amountPaisa > 0 &&
-        renderField("amount", `Rs. ${formatAmountDisplay(amountPaisa)}`, template.fields.amount ?? { x: 110, y: 66, width: 65 }, "amount-field")}
-
-      {/* Signature placeholders */}
-      <SignatureBox x={template.structural?.sig1?.x ?? 12} y={template.structural?.sig1?.y ?? 78} w={template.structural?.sig1?.width ?? 55} h={template.structural?.sig1?.height ?? 8} scale={SCALE} />
-      <SignatureBox x={template.structural?.sig2?.x ?? 72} y={template.structural?.sig2?.y ?? 78} w={template.structural?.sig2?.width ?? 55} h={template.structural?.sig2?.height ?? 8} scale={SCALE} />
-
-      {/* MICR line */}
-      <div style={{
-        position: "absolute",
-        bottom: 2 * SCALE,
-        left: 8 * SCALE,
-        fontSize: 6 * SCALE,
-        color: "#444",
-        letterSpacing: "0.12em",
-        fontFamily: "monospace",
-      }}>
-        ⑆ 000000000 ⑈ 000000 ⑆ 00
-      </div>
-
-      {debugMode && (
-        <DebugGuides
-          template={template}
-          mode="custom_long"
-          calibration={{ x: calX, y: calY }}
-          scale={SCALE}
-        />
-      )}
-    </div>
-  );
-}
-
-function A4CarrierPreview({ template, profile, mode, date, payee, amount, amountWords, accountPayee, offsetX, offsetY, debugMode = false }: PreviewProps & { profile: { x: number; y: number; pageWidth: number; pageHeight: number }; mode: ProfileKey }) {
-  const dateDigits = date ? safeFormatDate(date) : "";
-  const amountPaisa = validateAmount(amount).paisa;
-  const words = amountWords || (amountPaisa > 0 ? amountToWordsFromPaisa(amountPaisa) : "");
-  const [words1, words2] = amountPaisa > 0 ? splitWordsToLines(words, template) : ["", ""];
-  const normalizedPayee = safeNormalizePayee(payee);
-
-  const calX = Number(offsetX ?? 0);
-  const calY = Number(offsetY ?? 0);
-
-  // Page dimensions sourced from the single geometry resolver so the screen
-  // preview and the print @page can never disagree.
-  // Calibration is clamped at runtime so the cheque never leaves the page.
-  const geom = useMemo(() => resolveCalibratedGeometry(template, mode, { x: calX, y: calY }), [template, mode, calX, calY]);
-  const paperW = geom.pageW;
-  const paperH = geom.pageH;
-  const displayPW = Math.round(paperW * SCALE);
-  const displayPH = Math.round(paperH * SCALE);
-
-  // Cheque position on A4 paper in mm, with calibration (clamped to keep on-page)
-  const chequeX = geom.finalChequeX;
-  const chequeY = geom.finalChequeY;
-  const chequeW = template.widthMm;
-  const chequeH = template.heightMm;
-
-  function pos(fieldX: number, fieldY: number) {
-    return { x: (chequeX + fieldX) * SCALE, y: (chequeY + fieldY) * SCALE };
-  }
-
-  type FieldCoords = { x: number; y: number; width: number; fontSize?: number; minFontSize?: number; letterSpacing?: number; align?: "left" | "center" | "right" };
-  function renderField(key: string, text: string, coords: FieldCoords, extraClass = "") {
-    if (!text) return null;
-    const p = pos(coords.x, coords.y);
-    const fs = fitFontSize(text, coords);
-    const style: React.CSSProperties = {
-      position: "absolute",
-      left: `${p.x}px`,
-      top: `${p.y}px`,
-      width: `${coords.width * SCALE}px`,
-      fontSize: `${fs * SCALE}px`,
-      letterSpacing: `${(coords.letterSpacing ?? 0) * SCALE}px`,
-      textAlign: coords.align ?? "left",
-      fontFamily: '"Courier New", monospace',
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      lineHeight: 1.1,
-      color: "#111",
-    };
-    return <div key={key} className={`preview-field ${extraClass}`} style={style}>{text}</div>;
-  }
-
-  return (
-    <div
-      className="cheque-preview print-a4-carrier"
-      style={{ width: displayPW, height: displayPH }}
-      role="img"
-      aria-label={`A4 carrier preview for ${template.bankName}`}
-    >
-      {/* A4 paper background */}
-      <div
-        className="a4-paper"
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "#fff",
-          border: "1px solid #bbb",
-        }}
-      />
-
-      {/* Cheque area — positioned on A4 */}
-      <div
-        className="cheque-on-paper"
-        style={{
-          position: "absolute",
-          left: `${chequeX * SCALE}px`,
-          top: `${chequeY * SCALE}px`,
-          width: `${chequeW * SCALE}px`,
-          height: `${chequeH * SCALE}px`,
-          background: "#fff",
-          border: "1px solid #999",
-          overflow: "hidden",
-        }}
-      >
-        <div className="cheque-watermark" aria-hidden="true">PREVIEW</div>
-
-        {/* Bank name */}
-        <div style={{ position: "absolute", top: 4 * SCALE, left: 8 * SCALE, fontWeight: 800, fontSize: 11 * SCALE, color: "#111" }}>
-          {template.bankName}
-        </div>
-
-        {/* A/C Payee only */}
-        {accountPayee &&
-          renderField("accountPayee", "// A/C PAYEE ONLY //", {
-            x: 0,
-            y: template.fields.accountPayee?.y ?? 16,
-            width: template.widthMm,
-            fontSize: template.fields.accountPayee?.fontSize ?? 9,
-            align: "center",
-          }, "account-payee-line")}
-
-        {/* Date */}
-        {dateDigits &&
-          renderField("date", dateDigits, template.fields.date ?? { x: 128, y: 6, width: 52 })}
-
-        {/* Pay label */}
-        <div style={{
-          position: "absolute",
-          left: (template.structural?.payLabel?.x ?? 12) * SCALE,
-          top: (template.structural?.payLabel?.y ?? 24) * SCALE,
-          fontSize: 7 * SCALE,
-          color: "#555",
-        }}>
-          Pay against this cheque to
-        </div>
-
-         {/* Payee */}
-         {normalizedPayee &&
-           renderField("payee", normalizedPayee, {
-             ...template.fields.payee,
-             minFontSize: Math.max(template.fields.payee?.minFontSize ?? 7, MIN_PAYEE_FONT_SIZE),
-           })}
-
-        {/* Or Bearer */}
-        <div style={{
-          position: "absolute",
-          left: (template.structural?.orBearer?.x ?? 100) * SCALE,
-          top: (template.structural?.orBearer?.y ?? 24) * SCALE,
-          fontSize: 7 * SCALE,
-          color: "#555",
-        }}>
-          Or Bearer
-        </div>
-
-        {/* Amount in words */}
-        {words1 && renderField("words1", words1, template.fields.words1 ?? { x: 12, y: 44, width: 150 })}
-        {words2 && renderField("words2", words2, template.fields.words2 ?? { x: 12, y: 54, width: 150 })}
-
-        {/* Numeric amount */}
-        {amountPaisa > 0 &&
-          renderField("amount", `Rs. ${formatAmountDisplay(amountPaisa)}`, template.fields.amount ?? { x: 110, y: 66, width: 65 }, "amount-field")}
-
-        {/* Signature placeholders */}
-        <SignatureBox x={template.structural?.sig1?.x ?? 12} y={template.structural?.sig1?.y ?? 78} w={template.structural?.sig1?.width ?? 55} h={template.structural?.sig1?.height ?? 8} scale={SCALE} />
-        <SignatureBox x={template.structural?.sig2?.x ?? 72} y={template.structural?.sig2?.y ?? 78} w={template.structural?.sig2?.width ?? 55} h={template.structural?.sig2?.height ?? 8} scale={SCALE} />
-
-        {/* MICR line */}
-        <div style={{
-          position: "absolute",
-          bottom: 2 * SCALE,
-          left: 8 * SCALE,
-          fontSize: 6 * SCALE,
-          color: "#444",
-          letterSpacing: "0.12em",
-          fontFamily: "monospace",
-        }}>
-          ⑆ 000000000 ⑈ 000000 ⑆ 00
-        </div>
-      </div>
-
-      {/* Dimension labels */}
-      <div style={{ position: "absolute", bottom: 4, right: 6, fontSize: 9 * SCALE, color: "#888", fontFamily: "monospace" }}>
-        {paperW}×{paperH} mm
-      </div>
-
-      {debugMode && (
-        <DebugGuides
-          template={template}
-          mode={mode}
-          calibration={{ x: calX, y: calY }}
-          scale={SCALE}
-        />
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// DebugGuides — Visual measurement overlays for development/admin calibration.
-// Shown only when debugMode is enabled. Renders:
-// - page boundary
-// - cheque boundary
-// - X/Y origin
-// - center line
-// - physical width/height
-// - calibration offset
-// - rotation state
-// Never affects the actual printed cheque (screen-only, no-print class).
-// ---------------------------------------------------------------------------
-
-interface DebugGuidesProps {
-  template: BankTemplate;
-  mode: ProfileKey;
-  calibration: Calibration;
-  scale: number;
-}
-
-function DebugGuides({ template, mode, calibration, scale }: DebugGuidesProps) {
-  if (!template) return null;
-  const geom = useMemo(() => resolveCalibratedGeometry(template, mode, calibration), [template, mode, calibration]);
-  const isDF = isDirectFeed(mode);
-  const { pageW, pageH, chequeW, chequeH, chequeX, chequeY, finalChequeX, finalChequeY } = geom;
-
-  const pageLeft = 0;
-  const pageTop = 0;
-  const pageRight = pageW;
-  const pageBottom = pageH;
-
-  // For DF, the cheque fills the page box (offset by rotation origin). For A4, cheque is inset.
-  const cx = isDF ? 0 : finalChequeX;
-  const cy = isDF ? 0 : finalChequeY;
-  const cRight = cx + chequeW;
-  const cBottom = cy + chequeH;
-
-  // Center lines — relative to the page box
-  const hCenterX = (pageW / 2) * scale;
-  const vCenterY = (pageH / 2) * scale;
-
-  // Label positions
-  const labelStyle: React.CSSProperties = {
-    position: "absolute",
-    fontSize: `${8 * scale}px`,
-    fontFamily: '"Courier New", monospace',
-    color: "#dc2626",
-    fontWeight: 700,
-    pointerEvents: "none",
-    whiteSpace: "nowrap",
-  };
-
-  return (
-    <div className="debug-guides no-print" style={{ position: "absolute", inset: 0, pointerEvents: "none", border: "none" }}>
-      {/* Page boundary */}
-      <div style={{
-        position: "absolute", left: `${pageLeft * scale}px`, top: `${pageTop * scale}px`,
-        width: `${(pageRight - pageLeft) * scale}px`, height: `${(pageBottom - pageTop) * scale}px`,
-        border: "1px dashed #ef4444", boxSizing: "border-box",
-      }} />
-      <span style={{ ...labelStyle, left: `${pageLeft * scale}px`, top: `${pageTop * scale}px` }}>PAGE BOUNDARY</span>
-
-      {/* Cheque boundary */}
-      <div style={{
-        position: "absolute", left: `${cx * scale}px`, top: `${cy * scale}px`,
-        width: `${chequeW * scale}px`, height: `${chequeH * scale}px`,
-        border: "1px dashed #2563eb", boxSizing: "border-box",
-      }} />
-      <span style={{ ...labelStyle, left: `${cx * scale}px`, top: `${(cy - 6) * scale}px`, color: "#2563eb" }}>CHEQUE BOUNDARY</span>
-
-      {/* X/Y origin */}
-      <div style={{
-        position: "absolute", left: `${cx * scale}px`, top: `${cy * scale}px`,
-        width: `${scale}px`, height: `${scale}px`, background: "#dc2626", borderRadius: "2px",
-      }} />
-      <div style={{ ...labelStyle, left: `${(cx + 4) * scale}px`, top: `${cy * scale}px`, color: "#dc2626" }}>X={cx.toFixed(1)}, Y={cy.toFixed(1)}</div>
-
-      {/* Horizontal center line */}
-      <div style={{
-        position: "absolute", left: `${pageLeft * scale}px`, top: `${vCenterY}px`,
-        width: `${pageW * scale}px`, height: `${scale}px`, background: "#f59e0b", opacity: 0.5,
-      }} />
-      <span style={{ ...labelStyle, left: `${pageLeft * scale}px`, top: `${(vCenterY + 4) * scale}px`, color: "#f59e0b" }}>CENTER LINE (H)</span>
-
-      {/* Vertical center line */}
-      <div style={{
-        position: "absolute", left: `${hCenterX}px`, top: `${pageTop * scale}px`,
-        width: `${scale}px`, height: `${pageH * scale}px`, background: "#f59e0b", opacity: 0.5,
-      }} />
-      <span style={{ ...labelStyle, left: `${(hCenterX + 4) * scale}px`, top: `${pageTop * scale}px`, color: "#f59e0b" }}>CENTER LINE (V)</span>
-
-      {/* Physical dimensions */}
-      <span style={{ ...labelStyle, left: `${pageLeft * scale}px`, top: `${(pageBottom + 2) * scale}px` }}>
-        PAGE: {pageW.toFixed(1)}×{pageH.toFixed(1)} mm
-      </span>
-      <span style={{ ...labelStyle, left: `${cx * scale}px`, top: `${(cBottom + 2) * scale}px`, color: "#2563eb" }}>
-        CHEQUE: {chequeW.toFixed(1)}×{chequeH.toFixed(1)} mm
-      </span>
-
-      {/* Calibration offset */}
-      <span style={{ ...labelStyle, left: `${pageRight * scale - 60}px`, top: `${pageTop * scale}px`, color: "#be185d" }}>
-        CAL: X={calibration.x.toFixed(1)} Y={calibration.y.toFixed(1)} mm
-      </span>
-
-       {/* Rotation state */}
-       <span style={{ ...labelStyle, left: `${pageRight * scale - 60}px`, top: `${(pageTop + 12) * scale}px`, color: "#059769" }}>
-         ROT: 0° ({isDF ? "Direct Feed" : "A4"})
-       </span>
-    </div>
-  );
-}
-
-function SignatureBox({ x, y, w, h, scale }: { x: number; y: number; w: number; h: number; scale: number }) {
-  return (
-    <div style={{
-      position: "absolute",
-      left: x * scale,
-      top: y * scale,
-      width: w * scale,
-      height: h * scale,
-    }}>
-      <div style={{ borderBottom: "1px solid #111", width: "100%", marginTop: 6 * scale }} />
-      <span style={{ fontSize: 6 * scale, color: "#555", textAlign: "center" as const, display: "block" }}>
-        Authorized Signature
-      </span>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// PrintOutput — Actual-size rendering (1:1 mm, no SCALE)
-// Used only for browser print, hidden on screen
-// ---------------------------------------------------------------------------
-
-interface PrintOutputProps {
-  template: BankTemplate;
-  date: string;
-  payee: string;
-  amount: string;
-  amountWords: string;
-  accountPayee: boolean;
-  offsetX: number;
-  offsetY: number;
-  mode: ProfileKey;
-  profile: { x: number; y: number; pageWidth: number; pageHeight: number };
-}
-
-function PrintOutput({ template, date, payee, amount, amountWords, accountPayee, offsetX, offsetY, mode, profile }: PrintOutputProps) {
-  const dateDigits = date ? safeFormatDate(date) : "";
-  const amountPaisa = validateAmount(amount).paisa;
-  const words = amountWords || (amountPaisa > 0 ? amountToWordsFromPaisa(amountPaisa) : "");
-  const [words1, words2] = amountPaisa > 0 ? splitWordsToLines(words, template) : ["", ""];
-  const normalizedPayee = safeNormalizePayee(payee);
-
-  const calX = Number(offsetX ?? 0);
-  const calY = Number(offsetY ?? 0);
-  const isDF = isDirectFeed(mode);
-
-  // Direct Feed (Custom Cheque Size): the @page is the cheque's physical size
-  // (190.5×88.9 mm, landscape). Content is rendered unrotated — the cheque's
-  // own coordinate system (origin top-left, X right, Y down) maps directly onto
-  // the page box. Short Edge First vs Long Edge First is a printer hardware
-  // feed-direction setting, not a CSS transform. Calibration shifts fields
-  // within the cheque's local coordinate space.
-  if (isDF) {
-    const geom = resolvePrintGeometry(template, mode);
-    return (
-      <div
-        className="print-direct-feed"
-        style={{
-          width: `${geom.containerW}mm`,
-          height: `${geom.containerH}mm`,
-          position: "relative",
-          background: "#fff",
-          overflow: "hidden",
-          fontFamily: '"Courier New", monospace',
-          color: "#111",
-        }}
-      >
-        {/* Bank name */}
-        <div style={{ position: "absolute", top: "4mm", left: "8mm", fontWeight: 800, fontSize: "11pt", color: "#111" }}>
-          {template.bankName}
-        </div>
-
-        {/* A/C Payee only */}
-        {accountPayee && (
-          <PrintField
-            key="accountPayee"
-            text="// A/C PAYEE ONLY //"
-            x={0}
-            y={template.fields.accountPayee?.y ?? 16}
-            width={template.widthMm}
-            fontSize={template.fields.accountPayee?.fontSize ?? 9}
-            align="center"
-            offsetX={calX}
-            offsetY={calY}
-          />
-        )}
-
-        {/* Date */}
-        {dateDigits && (
-          <PrintField
-            key="date"
-            text={dateDigits}
-            x={(template.fields.date?.x ?? 128) + calX}
-            y={(template.fields.date?.y ?? 6) + calY}
-            width={template.fields.date?.width ?? 52}
-            fontSize={template.fields.date?.fontSize}
-            letterSpacing={template.fields.date?.letterSpacing}
-          />
-        )}
-
-        {/* Pay label */}
-        <div style={{
-          position: "absolute",
-          left: `${(template.structural?.payLabel?.x ?? 12) + calX}mm`,
-          top: `${(template.structural?.payLabel?.y ?? 24) + calY}mm`,
-          fontSize: "7pt",
-          color: "#555",
-        }}>
-          Pay against this cheque to
-        </div>
-
-        {/* Payee */}
-        {normalizedPayee && (
-          <PrintField
-            key="payee"
-            text={normalizedPayee}
-            x={(template.fields.payee?.x ?? 12) + calX}
-            y={(template.fields.payee?.y ?? 28) + calY}
-            width={template.fields.payee?.width ?? 90}
-            fontSize={template.fields.payee?.fontSize}
-            letterSpacing={template.fields.payee?.letterSpacing}
-          />
-        )}
-
-        {/* Or Bearer */}
-        <div style={{
-          position: "absolute",
-          left: `${(template.structural?.orBearer?.x ?? 100) + calX}mm`,
-          top: `${(template.structural?.orBearer?.y ?? 24) + calY}mm`,
-          fontSize: "7pt",
-          color: "#555",
-        }}>
-          Or Bearer
-        </div>
-
-        {/* Amount in words */}
-        {words1 && (
-          <PrintField
-            key="words1"
-            text={words1}
-            x={(template.fields.words1?.x ?? 12) + calX}
-            y={(template.fields.words1?.y ?? 44) + calY}
-            width={template.fields.words1?.width ?? 150}
-            fontSize={template.fields.words1?.fontSize}
-            letterSpacing={template.fields.words1?.letterSpacing}
-          />
-        )}
-        {words2 && (
-          <PrintField
-            key="words2"
-            text={words2}
-            x={(template.fields.words2?.x ?? 12) + calX}
-            y={(template.fields.words2?.y ?? 54) + calY}
-            width={template.fields.words2?.width ?? 150}
-            fontSize={template.fields.words2?.fontSize}
-            letterSpacing={template.fields.words2?.letterSpacing}
-          />
-        )}
-
-        {/* Numeric amount */}
-        {amountPaisa > 0 && (
-          <PrintField
-            key="amount"
-            text={`Rs. ${formatAmountDisplay(amountPaisa)}`}
-            x={(template.fields.amount?.x ?? 110) + calX}
-            y={(template.fields.amount?.y ?? 66) + calY}
-            width={template.fields.amount?.width ?? 65}
-            fontSize={template.fields.amount?.fontSize}
-          />
-        )}
-
-        {/* Signature boxes */}
-        <PrintSignatureBox
-          x={(template.structural?.sig1?.x ?? 12) + calX}
-          y={(template.structural?.sig1?.y ?? 78) + calY}
-          w={template.structural?.sig1?.width ?? 55}
-          h={template.structural?.sig1?.height ?? 8}
-        />
-        <PrintSignatureBox
-          x={(template.structural?.sig2?.x ?? 72) + calX}
-          y={(template.structural?.sig2?.y ?? 78) + calY}
-          w={template.structural?.sig2?.width ?? 55}
-          h={template.structural?.sig2?.height ?? 8}
-        />
-
-        {/* MICR line */}
-        <div style={{
-          position: "absolute",
-          bottom: "2mm",
-          left: `${8 + calX}mm`,
-          fontSize: "6pt",
-          color: "#444",
-          letterSpacing: "0.12em",
-          fontFamily: "monospace",
-        }}>
-          ⑆ 000000000 ⑈ 000000 ⑆ 00
-        </div>
-      </div>
-    );
-  }
-
-  // A4 Carrier mode — page box from the shared geometry resolver (portrait or
-  // landscape), container = A4 box, cheque inset at profile.x/y + calibration.
-  // Calibration is clamped by resolveCalibratedGeometry so the cheque never
-  // leaves the page — preview and print use the SAME clamped geometry.
-  const geom = resolveCalibratedGeometry(template, mode, { x: calX, y: calY });
-  const paperW = geom.pageW;
-  const paperH = geom.pageH;
-  const chequeX = geom.finalChequeX;
-  const chequeY = geom.finalChequeY;
-
-  return (
-    <div
-      className="print-a4-carrier"
-      style={{
-        width: `${paperW}mm`,
-        height: `${paperH}mm`,
-        position: "relative",
-        background: "#fff",
-        overflow: "hidden",
-        fontFamily: '"Courier New", monospace',
-        color: "#111",
-      }}
-    >
-      {/* Cheque bounding box */}
-      <div
-        style={{
-          position: "absolute",
-          left: `${chequeX}mm`,
-          top: `${chequeY}mm`,
-          width: `${template.widthMm}mm`,
-          height: `${template.heightMm}mm`,
-          overflow: "hidden",
-        }}
-      >
-        {/* Bank name */}
-        <div style={{ position: "absolute", top: "4mm", left: "8mm", fontWeight: 800, fontSize: "11pt", color: "#111" }}>
-          {template.bankName}
-        </div>
-
-        {/* A/C Payee only */}
-        {accountPayee && (
-          <PrintField
-            key="accountPayee"
-            text="// A/C PAYEE ONLY //"
-            x={0}
-            y={template.fields.accountPayee?.y ?? 16}
-            width={template.widthMm}
-            fontSize={template.fields.accountPayee?.fontSize ?? 9}
-            align="center"
-            offsetX={0}
-            offsetY={0}
-          />
-        )}
-
-        {/* Date */}
-        {dateDigits && (
-          <PrintField
-            key="date"
-            text={dateDigits}
-            x={template.fields.date?.x ?? 128}
-            y={template.fields.date?.y ?? 6}
-            width={template.fields.date?.width ?? 52}
-            fontSize={template.fields.date?.fontSize}
-            letterSpacing={template.fields.date?.letterSpacing}
-          />
-        )}
-
-        {/* Pay label */}
-        <div style={{
-          position: "absolute",
-          left: `${template.structural?.payLabel?.x ?? 12}mm`,
-          top: `${template.structural?.payLabel?.y ?? 24}mm`,
-          fontSize: "7pt",
-          color: "#555",
-        }}>
-          Pay against this cheque to
-        </div>
-
-        {/* Payee */}
-        {normalizedPayee && (
-          <PrintField
-            key="payee"
-            text={normalizedPayee}
-            x={template.fields.payee?.x ?? 12}
-            y={template.fields.payee?.y ?? 28}
-            width={template.fields.payee?.width ?? 90}
-            fontSize={template.fields.payee?.fontSize}
-            letterSpacing={template.fields.payee?.letterSpacing}
-          />
-        )}
-
-        {/* Or Bearer */}
-        <div style={{
-          position: "absolute",
-          left: `${template.structural?.orBearer?.x ?? 100}mm`,
-          top: `${template.structural?.orBearer?.y ?? 24}mm`,
-          fontSize: "7pt",
-          color: "#555",
-        }}>
-          Or Bearer
-        </div>
-
-        {/* Amount in words */}
-        {words1 && (
-          <PrintField
-            key="words1"
-            text={words1}
-            x={template.fields.words1?.x ?? 12}
-            y={template.fields.words1?.y ?? 44}
-            width={template.fields.words1?.width ?? 150}
-            fontSize={template.fields.words1?.fontSize}
-            letterSpacing={template.fields.words1?.letterSpacing}
-          />
-        )}
-        {words2 && (
-          <PrintField
-            key="words2"
-            text={words2}
-            x={template.fields.words2?.x ?? 12}
-            y={template.fields.words2?.y ?? 54}
-            width={template.fields.words2?.width ?? 150}
-            fontSize={template.fields.words2?.fontSize}
-            letterSpacing={template.fields.words2?.letterSpacing}
-          />
-        )}
-
-        {/* Numeric amount */}
-        {amountPaisa > 0 && (
-          <PrintField
-            key="amount"
-            text={`Rs. ${formatAmountDisplay(amountPaisa)}`}
-            x={template.fields.amount?.x ?? 110}
-            y={template.fields.amount?.y ?? 66}
-            width={template.fields.amount?.width ?? 65}
-            fontSize={template.fields.amount?.fontSize}
-          />
-        )}
-
-        {/* Signature boxes */}
-        <PrintSignatureBox
-          x={template.structural?.sig1?.x ?? 12}
-          y={template.structural?.sig1?.y ?? 78}
-          w={template.structural?.sig1?.width ?? 55}
-          h={template.structural?.sig1?.height ?? 8}
-        />
-        <PrintSignatureBox
-          x={template.structural?.sig2?.x ?? 72}
-          y={template.structural?.sig2?.y ?? 78}
-          w={template.structural?.sig2?.width ?? 55}
-          h={template.structural?.sig2?.height ?? 8}
-        />
-
-        {/* MICR line */}
-        <div style={{
-          position: "absolute",
-          bottom: "2mm",
-          left: "8mm",
-          fontSize: "6pt",
-          color: "#444",
-          letterSpacing: "0.12em",
-          fontFamily: "monospace",
-        }}>
-          ⑆ 000000000 ⑈ 000000 ⑆ 00
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// PrintField — Renders a single text field at mm coordinates (for print output)
-// ---------------------------------------------------------------------------
-
-interface PrintFieldProps {
-  text: string;
-  x: number;
-  y: number;
-  width: number;
-  fontSize?: number;
-  letterSpacing?: number;
-  align?: "left" | "center" | "right";
-  offsetX?: number;
-  offsetY?: number;
-}
-
-function PrintField({ text, x, y, width, fontSize, letterSpacing, align, offsetX = 0, offsetY = 0 }: PrintFieldProps) {
-  if (!text) return null;
-  const fs = fitFontSize(text, { fontSize, minFontSize: undefined, letterSpacing, width });
-  const finalX = x + offsetX;
-  const finalY = y + offsetY;
-  return (
-    <div
-      style={{
-        position: "absolute",
-        left: `${finalX}mm`,
-        top: `${finalY}mm`,
-        width: `${width}mm`,
-        fontSize: `${fs}pt`,
-        letterSpacing: `${letterSpacing ?? 0}mm`,
-        textAlign: align ?? "left",
-        fontFamily: '"Courier New", monospace',
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        lineHeight: 1.1,
-        color: "#111",
-      }}
-    >
-      {text}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// PrintSignatureBox — Signature line for print output
-// ---------------------------------------------------------------------------
-
-function PrintSignatureBox({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
-  return (
-    <div style={{
-      position: "absolute",
-      left: `${x}mm`,
-      top: `${y}mm`,
-      width: `${w}mm`,
-      height: `${h}mm`,
-    }}>
-      <div style={{ borderBottom: "1px solid #111", width: "100%", marginTop: "6mm" }} />
-      <span style={{ fontSize: "6pt", color: "#555", textAlign: "center" as const, display: "block" }}>
-        Authorized Signature
-      </span>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// CalibrationControl
+// Calibration controls
 // ---------------------------------------------------------------------------
 
 interface CalibrationControlProps {
   label: string;
   value: number;
-  onChange: (val: number) => void;
-  disabled: boolean;
+  onChange: (value: number) => void;
+  disabled?: boolean;
 }
 
 function CalibrationControl({ label, value, onChange, disabled }: CalibrationControlProps) {
-  const step = 0.1;
+  const step = CALIBRATION_STEP_MM;
   const increase = () => onChange(clampCalibration(value + step));
   const decrease = () => onChange(clampCalibration(value - step));
   const reset = () => onChange(0);
 
   // Strictly parse the input: only accept strings that are valid numbers
-  // (optionally with leading +/-, decimal point, but NOT "30mm" → 30).
-  // Invalid strings are rejected — the value stays unchanged.
+  // (optionally signed with a decimal point, but NOT "30mm" → 30). Invalid
+  // strings are rejected and the value stays unchanged.
   function parseCalibrationInput(raw: string): number | null {
     const trimmed = raw.trim();
     if (trimmed === "") return null;
-    // Must be a valid number: integer or decimal, optionally signed
     if (!/^[-+]?\d*\.?\d*$/.test(trimmed)) return null;
     const parsed = Number(trimmed);
     if (!Number.isFinite(parsed)) return null;
@@ -1036,15 +155,12 @@ function CalibrationControl({ label, value, onChange, disabled }: CalibrationCon
         <input
           type="number"
           step={step}
-          min={-25}
-          max={25}
+          min={CALIBRATION_MIN_MM}
+          max={CALIBRATION_MAX_MM}
           value={value}
           onChange={(e) => {
             const parsed = parseCalibrationInput(e.target.value);
-            if (parsed !== null) {
-              onChange(clampCalibration(parsed));
-            }
-            // Invalid input: value stays unchanged (not silently coerced)
+            if (parsed !== null) onChange(clampCalibration(parsed));
           }}
           disabled={disabled}
           style={{ borderRadius: "0 var(--radius-control) var(--radius-control) 0 !important", textAlign: "center", fontVariantNumeric: "tabular-nums" }}
@@ -1074,92 +190,55 @@ function CalibrationControl({ label, value, onChange, disabled }: CalibrationCon
   );
 }
 
-interface CalibrationGroupProps {
-  dfCalibration: Calibration;
-  a4Calibration: Calibration;
-  currentCalibration: Calibration;
-  setCurrentCalibration: React.Dispatch<React.SetStateAction<Calibration>>;
-  template: BankTemplate | null;
-}
+// ---------------------------------------------------------------------------
+// Template selector
+// ---------------------------------------------------------------------------
 
-function CalibrationGroup({
-  dfCalibration,
-  a4Calibration,
-  currentCalibration,
-  setCurrentCalibration,
-  template,
-}: CalibrationGroupProps) {
-  function setCalX(val: number) {
-    setCurrentCalibration((prev) => ({ ...prev, x: clampCalibration(val) }));
-  }
-
-  function setCalY(val: number) {
-    setCurrentCalibration((prev) => ({ ...prev, y: clampCalibration(val) }));
-  }
-
-  function resetAll() {
-    setCurrentCalibration({ x: 0, y: 0 });
-  }
-
+function BankSelector({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;
+  onChange: (id: string) => void;
+  disabled?: boolean;
+}) {
+  const options = useMemo(() => getBankOptions(), []);
   return (
-    <>
-      <CalibrationControl
-        label="X Offset"
-        value={currentCalibration.x}
-        onChange={setCalX}
-        disabled={!template}
-      />
-      <CalibrationControl
-        label="Y Offset"
-        value={currentCalibration.y}
-        onChange={setCalY}
-        disabled={!template}
-      />
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
-        <button
-          type="button"
-          className="text-button"
-          disabled={!(template && (dfCalibration.x !== 0 || dfCalibration.y !== 0 || a4Calibration.x !== 0 || a4Calibration.y !== 0))}
-          onClick={resetAll}
-          title="Reset X and Y to 0 for current print mode"
-          style={{ fontSize: "0.8rem", padding: "4px 6px" }}
-        >
-          Reset All
-        </button>
-        <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-          DF: X:{dfCalibration.x.toFixed(1)} Y:{dfCalibration.y.toFixed(1)} · A4: X:{a4Calibration.x.toFixed(1)} Y:{a4Calibration.y.toFixed(1)}
-        </span>
-      </div>
-    </>
+    <div className="field">
+      <label htmlFor="bank-select">Bank</label>
+      <select id="bank-select" required value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
+        <option value="">— Select a Bank —</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value} disabled={!option.hasTemplate}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <small>Banks marked “template pending” have no measured cheque layout yet.</small>
+    </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Template Selector
-// ---------------------------------------------------------------------------
 
 function BankTemplateSelector({
   templates,
   selectedId,
   onChange,
+  disabled,
 }: {
   templates: BankTemplate[];
   selectedId: string;
   onChange: (id: string) => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="field">
       <label htmlFor="template-select">Bank Template</label>
-      <select
-        id="template-select"
-        required
-        value={selectedId}
-        onChange={(e) => onChange(e.target.value)}
-      >
+      <select id="template-select" required value={selectedId} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
         <option value="">— Select a Bank Template —</option>
         {templates.map((t) => (
           <option key={t.id} value={t.id}>
-            {t.bankName}
+            {t.label}
           </option>
         ))}
       </select>
@@ -1169,10 +248,8 @@ function BankTemplateSelector({
 }
 
 // ---------------------------------------------------------------------------
-// PrepChecklist — visual pre-print validation summary (not a gate; the real
-// gate is printReadiness + handlePrint's sequential guards).  This component
-// only *shows* the checklist so users see exactly what is checked before the
-// browser print dialog opens.
+// Prep checklist — shows what is verified before the print dialog opens. The
+// real gate is the sequential validation inside handlePrint.
 // ---------------------------------------------------------------------------
 
 interface PrepChecklistProps {
@@ -1184,102 +261,100 @@ interface PrepChecklistProps {
   printMode: ProfileKey;
   calibration: Calibration;
   isDF: boolean;
+  safeZonesClear: boolean;
 }
 
-function PrepChecklist({ template, date, payee, amount, amountWords, printMode, calibration, isDF }: PrepChecklistProps) {
+function PrepChecklist({
+  template,
+  date,
+  payee,
+  amount,
+  amountWords,
+  printMode,
+  calibration,
+  isDF,
+  safeZonesClear,
+}: PrepChecklistProps) {
   const payeeCheck = validatePayee(payee);
   const amountCheck = validateAmount(amount);
-  const consistency = amountCheck.valid && amountWords.trim() !== ""
-    ? checkAmountWordsConsistency(amount, amountWords)
-    : { consistent: false, expected: "" };
+  const consistency =
+    amountCheck.valid && amountWords.trim() !== ""
+      ? checkAmountWordsConsistency(amount, amountWords)
+      : { consistent: false, expected: "" };
+  const dateCheck = date ? validateChequeDate(date) : { valid: false, error: "Enter cheque date" };
+  const calOk = validateCalibrationPair(calibration.x, calibration.y) === null;
+  const geometryOk = template ? validatePrintGeometry(resolvePrintGeometry(template, printMode), template, printMode) === null : false;
 
-  // Print geometry check — verifies the resolved layout fits within the page
-  // bounds. This is an *application-level* check only; it confirms the template
-  // geometry is valid, not that a physical printer is ready.
-  const geometryOk = useMemo(() => {
-    if (!template) return false;
-    try {
-      const geom = resolvePrintGeometry(template, printMode);
-      const geomErrors = validatePrintGeometry(geom, template, printMode);
-      if (geomErrors) return false;
-      const boundsErrors = validateCalibratedBounds(template, printMode);
-      if (boundsErrors) return false;
-      return true;
-    } catch {
-      return false;
-    }
-  }, [template, printMode]);
-
-  const items: { label: string; ok: boolean; fieldId?: string }[] = [
-    { label: "Bank template", ok: !!template, fieldId: "template-select" },
-    { label: "Date", ok: validateChequeDate(date).valid, fieldId: "date-input" },
-    { label: "Payee", ok: payeeCheck.valid, fieldId: "payee-input" },
-    { label: "Amount", ok: amountCheck.valid && amountCheck.paisa > 0, fieldId: "amount-input" },
-    { label: "Amount in words", ok: amountWords.trim() !== "" && consistency.consistent, fieldId: "words-input" },
-    { label: "Print mode", ok: printMode !== undefined && printMode !== null, fieldId: "print-mode" },
-    { label: `Calibration (${isDF ? "Direct Feed" : "A4 Carrier"})`, ok: validateCalibrationPair(calibration.x, calibration.y) === null },
+  const items: { label: string; ok: boolean }[] = [
+    { label: "Bank template", ok: !!template && validateTemplateForPrint(template) === null },
+    { label: "Date", ok: dateCheck.valid },
+    { label: "Payee", ok: payeeCheck.valid },
+    { label: "Amount", ok: amountCheck.valid && amountCheck.paisa > 0 },
+    { label: "Amount in words", ok: consistency.consistent },
+    { label: "Print mode", ok: !!printMode },
+    { label: `Calibration (${isDF ? "Direct Feed" : "A4 Carrier"})`, ok: calOk },
     { label: "Print geometry", ok: geometryOk },
+    { label: "Reserved zones clear (MICR band)", ok: safeZonesClear },
   ];
-
   const allOk = items.every((i) => i.ok);
 
   return (
-    <div className="prep-checklist" aria-label="Print readiness checklist (application-level checks only)" style={{ marginTop: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span
-          className="step"
-          style={{ background: allOk ? "color-mix(in srgb, var(--success) 14%, transparent)" : undefined }}
-          aria-hidden="true"
-        >
-          {allOk ? "✓" : "…"}
-        </span>
-        <strong style={{ fontSize: "0.9rem", color: allOk ? "var(--success)" : "var(--text-secondary)" }}>
-          {allOk ? "Ready to print" : "Complete all fields to enable printing"}
-        </strong>
-      </div>
-      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 4, fontSize: "0.85rem" }}>
+    <div aria-label="Print readiness checklist (application-level checks only)" className="card" style={{ marginTop: 12 }}>
+      <strong style={{ fontSize: "0.85rem", display: "block", marginBottom: 6 }}>
+        {allOk ? "Ready to print" : "Complete all fields to enable printing"}
+      </strong>
+      <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 4, fontSize: "0.82rem" }}>
         {items.map((item) => (
-          <li key={item.label} style={{ display: "flex", alignItems: "center", gap: 6, color: item.ok ? "var(--text-primary)" : "var(--text-muted)" }}>
-            <span style={{ width: 14, textAlign: "center", color: item.ok ? "var(--success)" : "var(--text-muted)" }}>
+          <li key={item.label} style={{ display: "flex", gap: 8 }}>
+            <span aria-hidden="true" style={{ color: item.ok ? "var(--success)" : "var(--danger)" }}>
               {item.ok ? "✓" : "✗"}
             </span>
             <span>{item.label}</span>
-            {!item.ok && item.fieldId && (
-              <span className="sr-only">Field needs attention: {item.label}</span>
-            )}
+            {!item.ok && <span className="sr-only">Field needs attention: {item.label}</span>}
           </li>
         ))}
       </ul>
-      <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 8, marginBottom: 0 }}>
-        This checklist verifies application-level data only. It does not confirm physical printer readiness — always check your printer before printing real cheques.
+      <p style={{ margin: "8px 0 0 0", fontSize: "0.76rem", color: "var(--text-muted)" }}>
+        This checklist verifies application-level data only. It does not confirm physical printer readiness — always check your printer
+        before printing real cheques.
       </p>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Main Workspace
+// Workspace
 // ---------------------------------------------------------------------------
 
-export default function Workspace() {
+export interface WorkspaceProps {
+  /** When set (deep-linked bank route), the bank selection is locked. */
+  bankId?: string;
+  /** When set (deep-linked template route), the template selection is locked. */
+  templateId?: string;
+}
+
+export default function Workspace({ bankId: boundBankId, templateId: boundTemplateId }: WorkspaceProps = {}) {
   useEffect(() => {
+    // Order matters: sizes and banks must be loaded before templates are
+    // validated against them.
+    initChequeSizes();
+    initBankCatalogue();
     initRuntimeTemplates();
   }, []);
 
-  const templates = useMemo(() => getAllActiveTemplates(), []);
-  const [templateId, setTemplateId] = useState("");
+  const [selectedBankId, setSelectedBankId] = useState(boundBankId ?? "");
+  const [templateId, setTemplateId] = useState(boundTemplateId ?? "");
   const [date, setDate] = useState("");
   const [payee, setPayee] = useState("");
   const [amount, setAmount] = useState("");
   const [amountWords, setAmountWords] = useState("");
   const [accountPayee, setAccountPayee] = useState(true);
   const [printMode, setPrintMode] = useState<ProfileKey>("custom_short");
-
-   // Independent calibrations per mode group
-  const [dfCalibration, setDfCalibration] = useState<Calibration>({ x: 0, y: 0 });
-  const [a4Calibration, setA4Calibration] = useState<Calibration>({ x: 0, y: 0 });
-
+  const [calibrations, setCalibrations] = useState<CalibrationMap>({});
   const [debugMode, setDebugMode] = useState(false);
+  const [printError, setPrintError] = useState("");
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printCompleted, setPrintCompleted] = useState(false);
 
   const wordOverrideRef = useRef(false);
   const printStyleRef = useRef<HTMLStyleElement | null>(null);
@@ -1288,16 +363,71 @@ export default function Workspace() {
   const printLockRef = useRef(false);
   const afterPrintRef = useRef<(() => void) | null>(null);
   const beforePrintRef = useRef<(() => void) | null>(null);
-  const [printError, setPrintError] = useState("");
-  const [isPrinting, setIsPrinting] = useState(false);
-  const [printCompleted, setPrintCompleted] = useState(false);
+  const calibrationsLoadedRef = useRef(false);
 
-  const template = useMemo(() => getTemplate(templateId) ?? null, [templateId]);
-  const isDF = template ? isDirectFeed(printMode) : true;
-  const currentCalibration = isDF ? dfCalibration : a4Calibration;
-  const setCurrentCalibration = isDF ? setDfCalibration : setA4Calibration;
+  // Persisted per (template, mode) calibration, restored once on mount.
+  useEffect(() => {
+    setCalibrations(loadCalibrations());
+    calibrationsLoadedRef.current = true;
+  }, []);
 
-  const profile = template?.profiles[printMode];
+  useEffect(() => {
+    if (!calibrationsLoadedRef.current) return;
+    persistCalibrations(calibrations);
+  }, [calibrations]);
+
+  const bank = useMemo(() => (selectedBankId ? getBank(selectedBankId) : undefined), [selectedBankId]);
+
+  const templates = useMemo(() => {
+    if (boundBankId) return getActiveTemplatesForBank(boundBankId);
+    if (selectedBankId) return getActiveTemplatesForBank(selectedBankId);
+    return getAllActiveTemplates();
+  }, [boundBankId, selectedBankId]);
+
+  const template = useMemo(() => {
+    if (!templateId) return null;
+    const found = getTemplate(templateId) ?? null;
+    // Deep-link safety: never serve a template under a different bank.
+    if (found && boundBankId && found.bankId !== boundBankId) return null;
+    return found;
+  }, [templateId, boundBankId]);
+
+  // Keep the selected template inside the bank's own template list.
+  useEffect(() => {
+    if (!templateId) return;
+    const allowed = templates.some((t) => t.id === templateId);
+    if (!allowed) setTemplateId("");
+  }, [templates, templateId]);
+
+  const supportedModes = useMemo(() => supportedModesOf(template), [template]);
+
+  useEffect(() => {
+    if (!supportedModes.includes(printMode)) setPrintMode(supportedModes[0]);
+  }, [supportedModes, printMode]);
+
+  const isDF = isDirectFeed(printMode);
+  const paper = template ? resolvePaper(template, printMode) : null;
+  const profile = template?.profiles[printMode];  const currentCalibration = useMemo<Calibration>(() => {
+    if (!template) return { x: 0, y: 0 };
+    return getCalibrationFor(calibrations, template.id, printMode, templateDefaultCalibration(template));
+  }, [template, calibrations, printMode]);
+
+  function updateCalibration(next: Calibration) {
+    if (!template) return;
+    setCalibrations((prev) => setCalibrationFor(prev, template.id, printMode, next));
+  }
+
+  function resetAllCalibration() {
+    if (!template) return;
+    setCalibrations((prev) => resetCalibrationFor(prev, template.id, printMode));
+  }
+
+  const chequeData: ChequeData = { date, payee, amount, amountWords, accountPayee };
+
+  const safeZonesClear = useMemo(
+    () => (template ? validateSafeZoneClearance(template).length === 0 : true),
+    [template],
+  );
 
   const autoWords = useMemo(() => {
     const v = validateAmount(amount);
@@ -1311,8 +441,7 @@ export default function Workspace() {
 
   const amountError = useMemo(() => {
     const v = validateAmount(amount);
-    if (!v.valid) return v.error ?? "";
-    return "";
+    return v.valid ? "" : v.error ?? "";
   }, [amount]);
 
   const hasAmount = useMemo(() => {
@@ -1321,64 +450,67 @@ export default function Workspace() {
   }, [amount]);
 
   // -----------------------------------------------------------------------
-  // Explicit workflow state + print-readiness (single source of truth for
-  // the disabled reason the print button surfaces).
+  // Explicit workflow state + print-readiness (single source of truth for the
+  // reason the print button surfaces).
   // -----------------------------------------------------------------------
   const printReadiness = useMemo<PrintReadiness>(() => {
-        if (!template) return { ready: false, reason: "Select a bank template" };
-        if (!date || !validateChequeDate(date).valid) {
-          const dc = date ? validateChequeDate(date) : { valid: false, error: "Enter cheque date" };
-          return { ready: false, reason: dc.error ?? "Enter cheque date" };
-        }
-        const payeeVal = validatePayee(payee);
-        if (!payeeVal.valid) return { ready: false, reason: payeeVal.error ?? "Enter payee name" };
-        const amountVal = validateAmount(amount);
-        if (!amountVal.valid) return { ready: false, reason: amountVal.error ?? "Enter a valid amount" };
-        if (amountVal.paisa === 0) return { ready: false, reason: "Enter an amount greater than zero" };
-        if (amountWords.trim() === "") return { ready: false, reason: "Enter amount in words" };
-        const consistency = checkAmountWordsConsistency(amount, amountWords);
-        if (!consistency.consistent) {
-          return { ready: false, reason: "Amount and words do not match" };
-        }
-        if (!printMode) return { ready: false, reason: "Select print mode" };
-        const cal = isDF ? dfCalibration : a4Calibration;
-        if (validateCalibrationPair(cal.x, cal.y) !== null) {
-          return { ready: false, reason: "Correct calibration" };
-        }
-        return { ready: true, reason: null };
-      }, [template, date, payee, amount, amountWords, printMode, isDF, dfCalibration, a4Calibration]);
+    if (!template) return { ready: false, reason: "Select a bank template" };
+    if (!date || !validateChequeDate(date).valid) {
+      const dc = date ? validateChequeDate(date) : { valid: false, error: "Enter cheque date" };
+      return { ready: false, reason: dc.error ?? "Enter cheque date" };
+    }
+    const payeeVal = validatePayee(payee);
+    if (!payeeVal.valid) return { ready: false, reason: payeeVal.error ?? "Enter payee name" };
+    const amountVal = validateAmount(amount);
+    if (!amountVal.valid) return { ready: false, reason: amountVal.error ?? "Enter a valid amount" };
+    if (amountVal.paisa === 0) return { ready: false, reason: "Enter an amount greater than zero" };
+    if (amountWords.trim() === "") return { ready: false, reason: "Enter amount in words" };
+    if (!checkAmountWordsConsistency(amount, amountWords).consistent) {
+      return { ready: false, reason: "Amount and words do not match" };
+    }
+    if (!printMode) return { ready: false, reason: "Select print mode" };
+    if (validateCalibrationPair(currentCalibration.x, currentCalibration.y) !== null) {
+      return { ready: false, reason: "Correct calibration" };
+    }
+    if (!safeZonesClear) return { ready: false, reason: "A field overlaps a reserved zone" };
+    return { ready: true, reason: null };
+  }, [template, date, payee, amount, amountWords, printMode, currentCalibration, safeZonesClear]);
 
-  // Derive the explicit form state for the state badge.
   const derivedFormState = useMemo<FormState>(() => {
-      if (isPrinting) return "printing";
-      if (printCompleted) return "done";
-      if (!template) return "empty";
-      // Bank SELECTED but no data yet — shows the user template is chosen
-      // but no cheque data has been entered (or any that was, has been cleared).
-      const hasDate = isValidDate(date) && validateChequeDate(date).valid;
-      const hasPayee = validatePayee(payee).valid;
-      const hasAmountVal = hasAmount;
-      const hasWords = amountWords.trim() !== "";
-      if (!hasDate && !hasPayee && !hasAmountVal && !hasWords) {
-        return "template-selected";
-      }
-      const cal = isDF ? dfCalibration : a4Calibration;
-      const calOk = validateCalibrationPair(cal.x, cal.y) === null;
-      const hasMode = !!printMode;
-      if (!hasDate || !hasPayee || !hasAmountVal || !hasWords || !hasMode || !calOk) {
-        return "data-entering";
-      }
-      return "ready-print";
-    }, [template, isPrinting, printCompleted, date, payee, hasAmount, amountWords, printMode, isDF, dfCalibration, a4Calibration]);
+    if (isPrinting) return "printing";
+    if (printCompleted) return "done";
+    if (!template) return "empty";
+    const hasDate = isValidDate(date) && validateChequeDate(date).valid;
+    const hasPayee = validatePayee(payee).valid;
+    const hasWords = amountWords.trim() !== "";
+    if (!hasDate && !hasPayee && !hasAmount && !hasWords) return "template-selected";
+    const calOk = validateCalibrationPair(currentCalibration.x, currentCalibration.y) === null;
+    if (!hasDate || !hasPayee || !hasAmount || !hasWords || !printMode || !calOk) return "data-entering";
+    return "ready-print";
+  }, [template, isPrinting, printCompleted, date, payee, hasAmount, amountWords, printMode, currentCalibration]);
 
-  // Reset terminal states (printCompleted, printError, isPrinting) when the
-  // bank template changes. This keeps the state machine deterministic —
-  // selecting a new bank (or clearing) returns the flow to the data-entry
-  // phase rather than lingering in "Print Finished".
-  // Also aborts any in-progress print cycle: removes injected print styles,
-  // removes lingering beforeprint/afterprint/pagehide listeners, and releases
-  // the print lock so a new print can proceed without stale DOM/CSS state.
-    useEffect(() => {
+  // Reset terminal states when the bank template changes and abort any
+  // in-progress print cycle: remove injected print styles, drop lingering
+  // beforeprint/afterprint/pagehide listeners, and release the print lock.
+  useEffect(() => {
+    if (printStyleRef.current) {
+      printStyleRef.current.remove();
+      printStyleRef.current = null;
+    }
+    if (beforePrintRef.current) {
+      window.removeEventListener("beforeprint", beforePrintRef.current);
+      beforePrintRef.current = null;
+    }
+    if (afterPrintRef.current) {
+      window.removeEventListener("afterprint", afterPrintRef.current);
+      window.removeEventListener("pagehide", afterPrintRef.current);
+      afterPrintRef.current = null;
+    }
+    setPrintCompleted(false);
+    setPrintError("");
+    setIsPrinting(false);
+    printLockRef.current = false;
+    return () => {
       if (printStyleRef.current) {
         printStyleRef.current.remove();
         printStyleRef.current = null;
@@ -1392,39 +524,15 @@ export default function Workspace() {
         window.removeEventListener("pagehide", afterPrintRef.current);
         afterPrintRef.current = null;
       }
-      setPrintCompleted(false);
-      setPrintError("");
-      setIsPrinting(false);
       printLockRef.current = false;
-      return () => {
-        if (printStyleRef.current) {
-          printStyleRef.current.remove();
-          printStyleRef.current = null;
-        }
-        if (beforePrintRef.current) {
-          window.removeEventListener("beforeprint", beforePrintRef.current);
-          beforePrintRef.current = null;
-        }
-        if (afterPrintRef.current) {
-          window.removeEventListener("afterprint", afterPrintRef.current);
-          window.removeEventListener("pagehide", afterPrintRef.current);
-          afterPrintRef.current = null;
-        }
-        printLockRef.current = false;
-      };
-    }, [templateId]);
+    };
+  }, [templateId]);
 
-  // Auto-sync words when amount changes.
-  // - When amount is valid & > 0: regenerate words (clears stale words automatically).
-  // - When amount becomes invalid/zero: clear words so stale text doesn't persist.
+  // Auto-sync words when the amount changes (user edits are preserved).
   useEffect(() => {
     if (!wordOverrideRef.current) {
-      if (autoWords) {
-        setAmountWords(autoWords);
-      } else if (amount !== "") {
-        // Amount is invalid or zero — clear stale words
-        setAmountWords("");
-      }
+      if (autoWords) setAmountWords(autoWords);
+      else if (amount !== "") setAmountWords("");
     }
   }, [autoWords, amount]);
 
@@ -1438,11 +546,14 @@ export default function Workspace() {
     setAmountWords(val);
   }
 
+  function handleModeChange(newMode: ProfileKey) {
+    setPrintMode(newMode);
+    setPrintError("");
+  }
+
   function handlePrint() {
     // DUPLICATE-PRINT GUARD: synchronously lock to prevent double-click from
-    // triggering duplicate print attempts. The ref is set immediately on the
-    // first invocation, so the second click is blocked even before React
-    // re-renders with isPrinting=true.
+    // triggering duplicate print attempts.
     if (printLockRef.current || isPrinting) return;
     printLockRef.current = true;
     setIsPrinting(true);
@@ -1450,73 +561,89 @@ export default function Workspace() {
     setPrintError("");
     setPrintCompleted(false);
 
+    const release = () => {
+      printLockRef.current = false;
+      setIsPrinting(false);
+    };
+
     // STEP 1: VALIDATE DATA
     const dateCheck = validateChequeDate(date);
-    if (!dateCheck.valid) { setPrintError(dateCheck.error ?? "Invalid date."); printLockRef.current = false; setIsPrinting(false); return; }
+    if (!dateCheck.valid) { setPrintError(dateCheck.error ?? "Invalid date."); release(); return; }
     const payeeCheck = validatePayee(payee);
-    if (!payeeCheck.valid) { setPrintError(payeeCheck.error ?? "Payee name is required."); printLockRef.current = false; setIsPrinting(false); return; }
+    if (!payeeCheck.valid) { setPrintError(payeeCheck.error ?? "Payee name is required."); release(); return; }
     const amountValidation = validateAmount(amount);
-    if (!amountValidation.valid) { setPrintError(amountValidation.error ?? "Invalid amount."); printLockRef.current = false; setIsPrinting(false); return; }
-    if (amountValidation.paisa === 0) { setPrintError("Amount must be greater than zero."); printLockRef.current = false; setIsPrinting(false); return; }
-    if (!amountWords.trim()) { setPrintError("Amount in words is required."); printLockRef.current = false; setIsPrinting(false); return; }
-
-    // Amount-to-words consistency: prevent printing when numeric amount and
-    // printed words represent different values.
+    if (!amountValidation.valid) { setPrintError(amountValidation.error ?? "Invalid amount."); release(); return; }
+    if (amountValidation.paisa === 0) { setPrintError("Amount must be greater than zero."); release(); return; }
+    if (!amountWords.trim()) { setPrintError("Amount in words is required."); release(); return; }
     const consistency = checkAmountWordsConsistency(amount, amountWords);
     if (!consistency.consistent) {
       setPrintError("Amount in words does not match the numeric amount. Regenerate or correct it before printing.");
-      printLockRef.current = false;
-      setIsPrinting(false);
+      release();
       return;
     }
 
     // STEP 2: VALIDATE BANK TEMPLATE
-    if (!template) { setPrintError("No bank template selected."); printLockRef.current = false; setIsPrinting(false); return; }
+    if (!template) { setPrintError("No bank template selected."); release(); return; }
     const resolvedTemplate = template; // narrow for closure safety
+    const templateErrors = validateTemplateForPrint(resolvedTemplate);
+    if (templateErrors) {
+      setPrintError("The selected bank template is not available for printing. Please choose another template.");
+      release();
+      return;
+    }
+    const owningBank = getBank(resolvedTemplate.bankId);
+    if (!owningBank || !owningBank.enabled) {
+      setPrintError("This bank is disabled. Please choose another bank.");
+      release();
+      return;
+    }
 
     // STEP 3: VALIDATE PRINT MODE
-    if (!printMode) { setPrintError("Print mode not selected."); printLockRef.current = false; setIsPrinting(false); return; }
+    if (!printMode) { setPrintError("Print mode not selected."); release(); return; }
+    if (!supportedModes.includes(printMode)) {
+      setPrintError("This print mode is not supported by the selected template.");
+      release();
+      return;
+    }
 
-    // STEP 4: APPLY CALIBRATION (independent per mode group; range + finiteness checked)
-    const cal = isDirectFeed(printMode) ? dfCalibration : a4Calibration;
+    // STEP 4: APPLY CALIBRATION (per template + print mode; range + finiteness checked)
+    const cal = currentCalibration;
     const calError = validateCalibrationPair(cal.x, cal.y);
-    if (calError) { setPrintError(sanitizeError(calError)); printLockRef.current = false; setIsPrinting(false); return; }
+    if (calError) { setPrintError(sanitizeError(calError)); release(); return; }
 
     // STEP 5: PREPARE PRINT LAYOUT
-    const profile = resolvedTemplate.profiles[printMode];
-    if (!profile) { setPrintError("Print layout not available for selected mode."); printLockRef.current = false; setIsPrinting(false); return; }
+    const resolvedProfile = resolvedTemplate.profiles[printMode];
+    if (!resolvedProfile) { setPrintError("Print layout not available for selected mode."); release(); return; }
 
-    // STEP 5b: VALIDATE GEOMETRY (single source of truth guard) — confirms the
-    // resolved @page/container math, A4 cheque bounds under max calibration,
-    // NaN/Infinity safety, and Direct-Feed rotation sanity. Prevents printing a
-    // template whose geometry would place fields off-page.
+    // STEP 5b: VALIDATE GEOMETRY (single source of truth guard)
     const geom = resolvePrintGeometry(resolvedTemplate, printMode);
     const geomErrors = validatePrintGeometry(geom, resolvedTemplate, printMode);
     if (geomErrors) {
       setPrintError("The selected template has an invalid layout. Please choose a different bank template.");
-      printLockRef.current = false;
-      setIsPrinting(false);
+      release();
       return;
     }
 
-    // STEP 5c: CALIBRATED BOUNDS CHECK — verify the cheque stays within the
-    // page even at maximum ±25 mm calibration. This is the safety net that
-    // prevents printing a template whose base position is too close to an edge.
+    // STEP 5c: CALIBRATED BOUNDS CHECK — the cheque must stay within the page.
     const calBoundsErrors = validateCalibratedBounds(resolvedTemplate, printMode);
     if (calBoundsErrors) {
       setPrintError("Calibration would push the cheque off the page. Adjust the X/Y offset values.");
-      printLockRef.current = false;
-      setIsPrinting(false);
+      release();
       return;
     }
 
-    // STEP 6: INJECT PAGE RULES — top-level @page (max browser compatibility)
-    // plus mode-specific container sizing before window.print() is called.
-    // Geometry comes from the same resolver the print DOM uses, so the @page
-    // size and the container box can never disagree.
+    // STEP 5d: RESERVED ZONE CHECK — no printable field may enter the MICR band.
+    if (validateSafeZoneClearance(resolvedTemplate).length > 0) {
+      setPrintError("A field overlaps the reserved MICR band. Correct the template before printing.");
+      release();
+      return;
+    }
+
+    // STEP 6: INJECT PAGE RULES — top-level @page plus mode-specific container
+    // sizing before window.print(). Both come from the same resolver the print
+    // DOM uses, so @page and the container box can never disagree.
     const currentPrintKey = ++printKeyRef.current;
 
-    // Remove any previous injected style
     if (printStyleRef.current) {
       printStyleRef.current.remove();
       printStyleRef.current = null;
@@ -1542,15 +669,14 @@ export default function Workspace() {
     document.head.appendChild(style);
     printStyleRef.current = style;
 
-     // STEP 7: TRIGGER BROWSER PRINT via beforeprint event for deterministic timing
+    // STEP 7: TRIGGER BROWSER PRINT via beforeprint for deterministic timing
     function onBeforePrint() {
-      // Ensure print output is synced to current state
       if (printOutputRef.current) {
         printOutputRef.current.dataset.printKey = String(currentPrintKey);
         printOutputRef.current.dataset.templateId = resolvedTemplate.id;
         printOutputRef.current.dataset.mode = printMode;
-        printOutputRef.current.dataset.calX = String(cal.x);
-        printOutputRef.current.dataset.calY = String(cal.y);
+        printOutputRef.current.dataset.calx = String(cal.x);
+        printOutputRef.current.dataset.caly = String(cal.y);
       }
     }
 
@@ -1574,7 +700,6 @@ export default function Workspace() {
     afterPrintRef.current = onAfterPrint;
     window.addEventListener("beforeprint", onBeforePrint);
     window.addEventListener("afterprint", onAfterPrint);
-    // Fallback for browsers that don't fire afterprint (e.g. some mobile browsers)
     window.addEventListener("pagehide", onAfterPrint);
     try {
       window.print();
@@ -1582,59 +707,60 @@ export default function Workspace() {
       setPrintError(sanitizeError(err));
       printLockRef.current = false;
       setIsPrinting(false);
-      // Remove listeners on catch since afterprint won't fire
       window.removeEventListener("beforeprint", onBeforePrint);
       window.removeEventListener("afterprint", onAfterPrint);
       window.removeEventListener("pagehide", onAfterPrint);
       beforePrintRef.current = null;
       afterPrintRef.current = null;
     }
-    // afterprint fires asynchronously when the dialog closes or print is cancelled
   }
 
   function handleClear() {
-    // Preserve system configuration (printMode is a persistent UI preference);
-    // only reset cheque data and transient state.  An explicit confirmation
-    // guard prevents accidental wipes when the user has entered data.
+    // Preserve system configuration (print mode is a persistent UI preference);
+    // only reset cheque data and transient state, with an explicit confirmation.
+    const calibrationDirty = Object.keys(calibrations).length > 0;
     if (
       templateId !== "" ||
       date !== "" ||
       payee !== "" ||
       amount !== "" ||
       amountWords !== "" ||
-      (dfCalibration.x !== 0 || dfCalibration.y !== 0) ||
-      (a4Calibration.x !== 0 || a4Calibration.y !== 0)
+      calibrationDirty
     ) {
-      if (!window.confirm("Clear all cheque details and calibration? This cannot be undone.")) {
-        return;
-      }
+      if (!window.confirm("Clear all cheque details and calibration? This cannot be undone.")) return;
     }
 
-    setTemplateId("");
     setDate("");
     setPayee("");
     setAmount("");
     setAmountWords("");
-    wordOverrideRef.current = false;
     setAccountPayee(true);
-    setDfCalibration({ x: 0, y: 0 });
-    setA4Calibration({ x: 0, y: 0 });
-    setPrintError("");
     setPrintCompleted(false);
-    // Also clean up any stale print DOM/CSS and release the lock so the
-    // next print cycle starts from a clean slate.
+    setPrintError("");
+    setIsPrinting(false);
+    wordOverrideRef.current = false;
+    printLockRef.current = false;
+    printKeyRef.current = 0;
     if (printStyleRef.current) {
       printStyleRef.current.remove();
       printStyleRef.current = null;
     }
-    printLockRef.current = false;
-    printKeyRef.current = 0;
+    // Deep-linked selection is restored by the URL, so only an unbound
+    // selection is cleared here.
+    if (!boundTemplateId) setTemplateId("");
+    if (!boundBankId) setSelectedBankId("");
+    setCalibrations({});
   }
 
-  function handleModeChange(newMode: ProfileKey) {
-    setPrintMode(newMode);
-    setPrintError("");
-  }
+  const calibrationRows = useMemo(() => {
+    if (!template) return [];
+    return supportedModes.map((mode) => ({
+      mode,
+      calibration: getCalibrationFor(calibrations, template.id, mode, templateDefaultCalibration(template)),
+    }));
+  }, [template, calibrations, supportedModes]);
+
+  const dateWarning = date && !validateChequeDate(date).valid ? validateChequeDate(date).error : "";
 
   return (
     <>
@@ -1666,17 +792,13 @@ export default function Workspace() {
                         ? "color-mix(in srgb, var(--success) 14%, transparent)"
                         : derivedFormState === "printing"
                           ? "color-mix(in srgb, var(--info) 14%, transparent)"
-                          : derivedFormState === "done"
-                            ? "color-mix(in srgb, var(--text-muted) 14%, transparent)"
-                            : "color-mix(in srgb, var(--text-secondary) 10%, transparent)",
+                          : "color-mix(in srgb, var(--text-secondary) 10%, transparent)",
                     color:
                       derivedFormState === "ready-print" || derivedFormState === "ready-preview"
                         ? "var(--success)"
                         : derivedFormState === "printing"
                           ? "var(--info)"
-                          : derivedFormState === "done"
-                            ? "var(--text-secondary)"
-                            : "var(--text-secondary)",
+                          : "var(--text-secondary)",
                   }}
                   aria-label={`Workflow state: ${derivedFormState}`}
                 >
@@ -1684,17 +806,15 @@ export default function Workspace() {
                     ? "Select Bank"
                     : derivedFormState === "template-selected"
                       ? "Bank Selected"
-                    : derivedFormState === "data-entering"
-                      ? "Filling Details"
-                      : derivedFormState === "ready-preview"
-                        ? "Review Preview"
-                        : derivedFormState === "ready-print"
-                          ? "Ready to Print"
-                          : derivedFormState === "printing"
-                            ? "Printing…"
-                            : derivedFormState === "done"
-                              ? "Print Finished"
-                              : "Select Bank Template"}
+                      : derivedFormState === "data-entering"
+                        ? "Filling Details"
+                        : derivedFormState === "ready-preview"
+                          ? "Review Preview"
+                          : derivedFormState === "ready-print"
+                            ? "Ready to Print"
+                            : derivedFormState === "printing"
+                              ? "Printing…"
+                              : "Print Finished"}
                 </span>
               </div>
               <button type="button" className="text-button" onClick={handleClear} aria-label="Clear all cheque details and calibration">
@@ -1702,7 +822,29 @@ export default function Workspace() {
               </button>
             </div>
 
-            <BankTemplateSelector templates={templates} selectedId={templateId} onChange={setTemplateId} />
+            {boundBankId ? (
+              <div className="field">
+                <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>BANK</span>
+                <div style={{ fontWeight: 700 }}>{bank ? formatBankLabel(bank) : boundBankId}</div>
+                <small>
+                  Selected from the address bar. <Link href="/" className="text-button">Choose another bank</Link>
+                </small>
+              </div>
+            ) : (
+              <BankSelector value={selectedBankId} onChange={(id) => { setSelectedBankId(id); setTemplateId(""); }} />
+            )}
+
+            <BankTemplateSelector
+              templates={templates}
+              selectedId={templateId}
+              onChange={setTemplateId}
+              disabled={templates.length === 0}
+            />
+            {templates.length === 0 && (
+              <p className="error-state" role="status">
+                No measured cheque template exists for this bank yet. Templates are added only after a physical sample is measured.
+              </p>
+            )}
 
             {/* Print Mode + Date */}
             <div className="two-columns">
@@ -1718,12 +860,22 @@ export default function Workspace() {
                   aria-disabled={!template}
                 >
                   <optgroup label="Direct Feed (actual-size cheque)">
-                    <option value="custom_short">{PROFILE_LABELS.custom_short}</option>
-                    <option value="custom_long">{PROFILE_LABELS.custom_long}</option>
+                    {supportedModes
+                      .filter((m) => isDirectFeed(m))
+                      .map((m) => (
+                        <option key={m} value={m}>
+                          {PROFILE_LABELS[m]}
+                        </option>
+                      ))}
                   </optgroup>
                   <optgroup label="A4 Carrier (cheque on A4 sheet)">
-                    <option value="a4_vertical">{PROFILE_LABELS.a4_vertical}</option>
-                    <option value="a4_horizontal">{PROFILE_LABELS.a4_horizontal}</option>
+                    {supportedModes
+                      .filter((m) => !isDirectFeed(m))
+                      .map((m) => (
+                        <option key={m} value={m}>
+                          {PROFILE_LABELS[m]}
+                        </option>
+                      ))}
                   </optgroup>
                 </select>
                 <small id="print-mode-help">Choose Direct Feed for blank cheques or A4 Carrier for test prints on paper.</small>
@@ -1738,37 +890,40 @@ export default function Workspace() {
                   onChange={(e) => setDate(e.target.value)}
                   disabled={!template}
                   aria-required={true}
-                  aria-describedby={template ? undefined : "field-disabled-bank"}
+                  aria-describedby={template ? "date-help" : "field-disabled-bank"}
                   aria-disabled={!template}
                 />
+                <small id="date-help">
+                  {dateWarning ? <span className="error-state">{dateWarning}</span> : "Printed as eight digits (DDMMYYYY)."}
+                </small>
               </div>
             </div>
 
             {/* Payee */}
             <div className="field">
               <label htmlFor="payee-input">Payee Name</label>
-               <input
-                 id="payee-input"
-                 type="text"
-                 maxLength={120}
-                 placeholder={template ? "e.g. Ram Bahadur Thapa" : ""}
-                 value={payee}
-                 onChange={(e) => setPayee(e.target.value.slice(0, 120))}
-                 disabled={!template}
-                 aria-describedby={template ? "payee-help" : "field-disabled-bank"}
-                 aria-disabled={!template}
-               />
-               {(() => {
-                 const pc = validatePayee(payee);
-                 return !pc.valid && payee !== "" ? <span className="error-state" id="payee-error" role="alert">{pc.error}</span> : null;
-               })()}
-                <small id="payee-help">Leading/trailing spaces are trimmed automatically. Up to 120 characters.</small>
-                {!template && (
-                  <span id="field-disabled-bank" className="sr-only">
-                    Select a bank template to enable this field.
-                  </span>
-                )}
-             </div>
+              <input
+                id="payee-input"
+                type="text"
+                maxLength={120}
+                placeholder={template ? "e.g. Ram Bahadur Thapa" : ""}
+                value={payee}
+                onChange={(e) => setPayee(e.target.value.slice(0, 120))}
+                disabled={!template}
+                aria-describedby={template ? "payee-help" : "field-disabled-bank"}
+                aria-disabled={!template}
+              />
+              {(() => {
+                const pc = validatePayee(payee);
+                return !pc.valid && payee !== "" ? <span className="error-state" role="alert">{pc.error}</span> : null;
+              })()}
+              <small id="payee-help">Leading/trailing spaces are trimmed automatically. Up to 120 characters.</small>
+              {!template && (
+                <span id="field-disabled-bank" className="sr-only">
+                  Select a bank template to enable this field.
+                </span>
+              )}
+            </div>
 
             {/* Amount + Amount in Words */}
             <div className="two-columns">
@@ -1777,50 +932,50 @@ export default function Workspace() {
                 <div className="input-prefix">
                   <b aria-hidden="true">Rs.</b>
                   <label htmlFor="amount-input" className="sr-only">Amount</label>
-                   <input
-                     id="amount-input"
-                     type="text"
-                     inputMode="decimal"
-                     placeholder={template ? "0.00" : ""}
-                     value={amount}
-                     onChange={(e) => handleAmountChange(e.target.value)}
-                     disabled={!template}
-                     aria-invalid={!!amountError}
-                     aria-describedby={amountError ? "amount-error" : template ? undefined : "field-disabled-bank"}
-                     aria-required={true}
-                   />
-                 </div>
-                 {amountError && <span className="error-state" id="amount-error" role="alert">{amountError}</span>}
-                 <small>Enter whole numbers or decimals up to 2 places.</small>
+                  <input
+                    id="amount-input"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={template ? "0.00" : ""}
+                    value={amount}
+                    onChange={(e) => handleAmountChange(e.target.value)}
+                    disabled={!template}
+                    aria-invalid={!!amountError}
+                    aria-describedby={amountError ? "amount-error" : template ? undefined : "field-disabled-bank"}
+                    aria-required={true}
+                  />
+                </div>
+                {amountError && <span className="error-state" id="amount-error" role="alert">{amountError}</span>}
+                <small>Enter whole numbers or decimals up to 2 places.</small>
               </div>
               <div className="field">
                 <label htmlFor="words-input">Amount in Words</label>
                 <textarea
-                   id="words-input"
-                   rows={3}
-                   maxLength={240}
-                   placeholder={template ? "Auto-generated" : ""}
-                   value={amountWords}
-                   onChange={(e) => handleWordEdit(e.target.value)}
-                   disabled={!template}
-                   aria-describedby={template ? "words-help" : "field-disabled-bank"}
-                   aria-disabled={!template}
-                 />
-                 <small id="words-help">You may edit the generated wording before printing.</small>
-               </div>
-             </div>
+                  id="words-input"
+                  rows={3}
+                  maxLength={240}
+                  placeholder={template ? "Auto-generated" : ""}
+                  value={amountWords}
+                  onChange={(e) => handleWordEdit(e.target.value)}
+                  disabled={!template}
+                  aria-describedby={template ? "words-help" : "field-disabled-bank"}
+                  aria-disabled={!template}
+                />
+                <small id="words-help">You may edit the generated wording before printing.</small>
+              </div>
+            </div>
 
             {/* A/C Payee Only */}
             <div className="field check">
-               <input
-                 id="ac-payee"
-                 type="checkbox"
-                 checked={accountPayee}
-                 onChange={(e) => setAccountPayee(e.target.checked)}
-                 disabled={!template}
-                 aria-describedby={template ? undefined : "field-disabled-bank"}
-                 aria-disabled={!template}
-               />
+              <input
+                id="ac-payee"
+                type="checkbox"
+                checked={accountPayee}
+                onChange={(e) => setAccountPayee(e.target.checked)}
+                disabled={!template}
+                aria-describedby={template ? undefined : "field-disabled-bank"}
+                aria-disabled={!template}
+              />
               <label htmlFor="ac-payee" style={{ margin: 0, fontWeight: 600, fontSize: "0.88rem", color: "var(--text-secondary)" }}>
                 Print <b>A/C PAYEE ONLY</b>
                 <span style={{ fontWeight: 400, fontSize: "0.8rem", color: "var(--text-muted)" }}>
@@ -1830,7 +985,7 @@ export default function Workspace() {
             </div>
 
             {/* Print Settings / Size Management */}
-            {template && (
+            {template && paper && (
               <div className="field" style={{ marginTop: 16, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
                 <h3 style={{ margin: "0 0 10px 0", fontSize: "0.82rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
                   Print Settings / Size Management
@@ -1847,25 +1002,37 @@ export default function Workspace() {
                     <b>{template.widthMm} mm × {template.heightMm} mm</b>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>PAPER</span>
-                    <b>{isDF ? "Custom Cheque" : "A4"}</b>
+                    <span style={{ color: "var(--text-muted)" }}>ORIENTATION</span>
+                    <b>{template.orientation === "portrait" ? "Portrait" : "Landscape"} cheque</b>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>ORIENTATION</span>
-                    <b>{PRINT_MODE_LABELS[printMode].orientation} for {isDF ? "Custom Cheque" : "A4 Carrier"}</b>
+                    <span style={{ color: "var(--text-muted)" }}>PAPER</span>
+                    <b>{paper.label}</b>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
                     <span style={{ color: "var(--text-muted)" }}>CALIBRATION</span>
-                    <b>X: {currentCalibration.x.toFixed(1)} mm · Y: {currentCalibration.y.toFixed(1)} mm</b>
+                    <b>{formatCalibration(currentCalibration)}</b>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
                     <span style={{ color: "var(--text-muted)" }}>SCALE</span>
                     <b>100% / Actual Size</b>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
+                    <span style={{ color: "var(--text-muted)" }}>TEMPLATE STATUS</span>
+                    <b>
+                      {template.verification?.status === "physically-calibrated"
+                        ? "Physically calibrated"
+                        : template.verification?.status === "browser-verified"
+                          ? "Browser verified — physical test pending"
+                          : "Unverified layout"}
+                    </b>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
                     <span style={{ color: "var(--text-muted)" }}>MODE CALIBRATIONS (independent)</span>
                     <b style={{ fontSize: "0.8rem" }}>
-                      DF: X:{dfCalibration.x.toFixed(1)} Y:{dfCalibration.y.toFixed(1)} · A4: X:{a4Calibration.x.toFixed(1)} Y:{a4Calibration.y.toFixed(1)}
+                      {calibrationRows
+                        .map((row) => `${PROFILE_LABELS[row.mode].split(" · ")[0]}: ${formatCalibration(row.calibration)}`)
+                        .join(" · ")}
                     </b>
                   </div>
                 </div>
@@ -1886,47 +1053,62 @@ export default function Workspace() {
               </div>
             )}
 
-             {/* Calibration — mode-aware heading */}
-             <div className="field" style={{ marginTop: 8 }}>
-               <span>
-                 Calibration (mm offset) ·{" "}
-                 <b style={{ color: isDF ? "var(--brand-blue)" : "var(--brand-teal)" }}>
-                   {isDF ? "Direct Feed" : "A4 Carrier"}
-                 </b>
-               </span>
-               <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
-                 <CalibrationGroup
-                   dfCalibration={dfCalibration}
-                   a4Calibration={a4Calibration}
-                   currentCalibration={currentCalibration}
-                   setCurrentCalibration={setCurrentCalibration}
-                   template={template}
-                 />
-               </div>
-               <small>
-                 Fine adjustment in 0.1 mm steps. ±25 mm range. Calibration is independent per print mode — changing A4 Carrier values will not affect Direct Feed calibration and vice versa.
-               </small>
-             </div>
+            {/* Calibration — mode-aware heading */}
+            <div className="field" style={{ marginTop: 8 }}>
+              <span>
+                Calibration (mm offset) ·{" "}
+                <b style={{ color: isDF ? "var(--brand-blue)" : "var(--brand-teal)" }}>
+                  {isDF ? "Direct Feed" : "A4 Carrier"}
+                </b>
+              </span>
+              <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
+                <CalibrationControl
+                  label="X Offset"
+                  value={currentCalibration.x}
+                  onChange={(v) => updateCalibration({ ...currentCalibration, x: clampCalibration(v) })}
+                  disabled={!template}
+                />
+                <CalibrationControl
+                  label="Y Offset"
+                  value={currentCalibration.y}
+                  onChange={(v) => updateCalibration({ ...currentCalibration, y: clampCalibration(v) })}
+                  disabled={!template}
+                />
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+                  <button
+                    type="button"
+                    className="text-button"
+                    disabled={!template || isNeutralCalibration(currentCalibration)}
+                    onClick={resetAllCalibration}
+                    title="Reset X and Y to 0 for the current template and print mode"
+                    style={{ fontSize: "0.8rem", padding: "4px 6px" }}
+                  >
+                    Reset All
+                  </button>
+                  <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                    {calibrationRows
+                      .map((row) => `${PROFILE_LABELS[row.mode].split(" · ")[0]}: X ${row.calibration.x.toFixed(1)} Y ${row.calibration.y.toFixed(1)}`)
+                      .join(" · ")}
+                  </span>
+                </div>
+              </div>
+              <small>
+                Fine adjustment in {CALIBRATION_STEP_MM} mm steps, ±{CALIBRATION_MAX_MM} mm range. Calibration is stored per cheque
+                template and per print mode, moves X and Y independently, and never changes the cheque&apos;s physical size.
+              </small>
+            </div>
 
-             {/* Current calibration summary */}
-             {template && (
-               <div className="template-summary" aria-label="Selected template info">
-                 <div><span>Bank · </span><b>{template.bankName}</b></div>
-                 <div><span>Size · </span><b>{template.widthMm} × {template.heightMm} mm</b></div>
-                 <div><span>Mode · </span><b>{PROFILE_LABELS[printMode]}</b></div>
-                 {profile && (
-                   <div><span>Page · </span><b>{profile.pageWidth} × {profile.pageHeight} mm</b></div>
-                 )}
-                 <div><span>Calibration · </span><b>X: {currentCalibration.x.toFixed(1)} mm · Y: {currentCalibration.y.toFixed(1)} mm</b></div>
-                 <div><span>Mode calibrations · </span>
-                   <b>
-                     DF X:{dfCalibration.x.toFixed(1)} Y:{dfCalibration.y.toFixed(1)} ·
-                     A4 X:{a4Calibration.x.toFixed(1)} Y:{a4Calibration.y.toFixed(1)}
-                   </b>
-                 </div>
-               </div>
-             )}
-
+            {/* Selected template summary */}
+            {template && profile && (
+              <div className="template-summary" aria-label="Selected template info">
+                <div><span>Bank · </span><b>{template.bankName}</b></div>
+                <div><span>Layout · </span><b>{template.label}</b></div>
+                <div><span>Size · </span><b>{template.widthMm} × {template.heightMm} mm ({template.orientation})</b></div>
+                <div><span>Mode · </span><b>{PROFILE_LABELS[printMode]}</b></div>
+                <div><span>Page · </span><b>{profile.pageWidth} × {profile.pageHeight} mm</b></div>
+                <div><span>Calibration · </span><b>{formatCalibration(currentCalibration)}</b></div>
+              </div>
+            )}
 
             <PrepChecklist
               template={template}
@@ -1937,7 +1119,9 @@ export default function Workspace() {
               printMode={printMode}
               calibration={currentCalibration}
               isDF={isDF}
+              safeZonesClear={safeZonesClear}
             />
+
             <div className="form-actions" style={{ marginTop: 16, flexDirection: "column", alignItems: "stretch", gap: 8 }}>
               <button
                 type="button"
@@ -1958,7 +1142,6 @@ export default function Workspace() {
               >
                 {isPrinting ? "Printing…" : printCompleted ? "Print Again" : "Print Cheque"}
               </button>
-              {/* Specific reason the print button is disabled */}
               {!printReadiness.ready && !isPrinting && (
                 <p id="print-reason" className="error-state" role="status" aria-live="polite">
                   {printReadiness.reason}
@@ -1972,14 +1155,14 @@ export default function Workspace() {
             {printError && (
               <p className="error-state" style={{ marginTop: 8 }} role="alert" aria-live="assertive">{printError}</p>
             )}
-               {isPrinting && (
-               <p className="info-state" style={{ marginTop: 8 }} aria-live="polite">
-                 Opening print dialog. Please confirm <b>Actual Size (100%)</b> in your printer settings.
-               </p>
-             )}
+            {isPrinting && (
+              <p className="info-state" style={{ marginTop: 8 }} aria-live="polite">
+                Opening print dialog. Please confirm <b>Actual Size (100%)</b> in your printer settings.
+              </p>
+            )}
           </form>
 
-          {/* ---------- RIGHT: Preview (stays outside no-print scope during print) ---------- */}
+          {/* ---------- RIGHT: Preview ---------- */}
           <section className="preview-column">
             <div className="preview-heading">
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1993,37 +1176,18 @@ export default function Workspace() {
 
             <div className="preview-stage" id="preview-stage" tabIndex={-1}>
               {template ? (
-                isDirectFeed(printMode) ? (
-                   <DirectFeedPreview
-                     template={template}
-                     date={date}
-                     payee={payee}
-                     amount={amount}
-                     amountWords={amountWords}
-                     accountPayee={accountPayee}
-                     offsetX={dfCalibration.x}
-                     offsetY={dfCalibration.y}
-                     debugMode={debugMode}
-                   />
-                 ) : (
-                    <A4CarrierPreview
-                      template={template}
-                      profile={profile!}
-                      mode={printMode}
-                      date={date}
-                      payee={payee}
-                      amount={amount}
-                      amountWords={amountWords}
-                      accountPayee={accountPayee}
-                      offsetX={a4Calibration.x}
-                      offsetY={a4Calibration.y}
-                      debugMode={debugMode}
-                    />
-                )
+                <ChequeSheet
+                  template={template}
+                  data={chequeData}
+                  mode={printMode}
+                  calibration={currentCalibration}
+                  variant="preview"
+                  debugMode={debugMode}
+                />
               ) : (
                 <div
                   className="cheque-preview"
-                  style={{ width: Math.round(STANDARD_CHEQUE_W_MM * SCALE), height: Math.round(STANDARD_CHEQUE_H_MM * SCALE) }}
+                  style={{ width: Math.round(190.5 * SCALE), height: Math.round(88.9 * SCALE) }}
                   role="img"
                   aria-label="No bank template selected — preview unavailable"
                 >
@@ -2035,12 +1199,19 @@ export default function Workspace() {
               )}
             </div>
 
+            {template && (
+              <p style={{ margin: "8px 0 0 0", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                Preview box: {Math.round(template.widthMm * SCALE)} × {Math.round(template.heightMm * SCALE)} px at 1 mm = {SCALE} px.
+                Reserved MICR band: bottom {Math.max(0, Math.round(template.heightMm * SCALE * 0.08))} px — never printed.
+              </p>
+            )}
+
             <div className="tip-card">
               <div className="tip-icon" aria-hidden="true">i</div>
               <div>
                 <strong>Before printing a real cheque</strong>
                 <p>
-                  {isDirectFeed(printMode) ? (
+                  {isDF ? (
                     <>
                       For <b>Direct Feed</b>: feed a blank cheque directly into your printer. Set print dialog to <b>Actual Size (100%)</b> — do NOT fit to page. Ensure margins are set to minimum/none. Use X/Y calibration to align if needed.
                     </>
@@ -2057,34 +1228,48 @@ export default function Workspace() {
       </div>
 
       {/* ================================================================
-          PRINT OUTPUT — Hidden off-screen on display, visible only during browser print.
-          Renders at 1:1 mm scale for actual-size output.
+          PRINT OUTPUT — hidden off-screen on display, visible only during
+          browser print. Rendered by the SAME component as the preview, at
+          physical 1:1 mm scale.
           ================================================================ */}
       {template && profile && (
-         <div
-           ref={printOutputRef}
-           data-print-key={printKeyRef.current}
-           data-template-id={template.id}
-           data-mode={printMode}
-           data-calX={String(isDF ? dfCalibration.x : a4Calibration.x)}
-           data-calY={String(isDF ? dfCalibration.y : a4Calibration.y)}
-           className="print-output-screen"
-         >
+        <div
+          ref={printOutputRef}
+          data-print-key={printKeyRef.current}
+          data-template-id={template.id}
+          data-mode={printMode}
+          data-calx={String(currentCalibration.x)}
+          data-caly={String(currentCalibration.y)}
+          className="print-output-screen"
+        >
           <PrintOutput
-            key={printKeyRef.current}
             template={template}
-            date={date}
-            payee={payee}
-            amount={amount}
-            amountWords={amountWords}
-            accountPayee={accountPayee}
-            offsetX={isDF ? dfCalibration.x : a4Calibration.x}
-            offsetY={isDF ? dfCalibration.y : a4Calibration.y}
+            data={chequeData}
             mode={printMode}
-            profile={profile}
+            calibration={currentCalibration}
           />
         </div>
       )}
     </>
   );
+}
+
+/** The print payload: the same sheet, at 1:1 physical scale. */
+function PrintOutput({
+  template,
+  data,
+  mode,
+  calibration,
+}: {
+  template: BankTemplate;
+  data: ChequeData;
+  mode: ProfileKey;
+  calibration: Calibration;
+}) {
+  return <ChequeSheet template={template} data={data} mode={mode} calibration={calibration} variant="print" />;
+}
+
+/** Screen-only guard: the print payload must fit inside its cheque box. */
+export function layoutFits(template: BankTemplate, data: ChequeData, mode: ProfileKey, calibration: Calibration): boolean {
+  return fieldsWithinCheque(computeSheetLayout(template, data, mode, calibration));
 }

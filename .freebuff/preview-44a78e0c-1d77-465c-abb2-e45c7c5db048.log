@@ -28,3 +28,11 @@
  GET /admin/login 200 in 20ms (next.js: 5ms, application-code: 15ms)
  GET /admin/login 200 in 23ms (next.js: 5ms, application-code: 17ms)
 ✓ Compiled in 29ms
+✓ Compiled in 96ms
+ GET /admin/login 200 in 87ms (next.js: 26ms, application-code: 61ms)
+ GET /admin/login 200 in 39ms (next.js: 6ms, application-code: 33ms)
+ GET /admin/login 200 in 14ms (next.js: 5ms, application-code: 9ms)
+ GET /admin/login 200 in 14ms (next.js: 6ms, application-code: 7ms)
+ GET /admin/login 200 in 22ms (next.js: 6ms, application-code: 15ms)
+ GET /admin/login 200 in 19ms (next.js: 6ms, application-code: 13ms)
+ GET /admin/login 200 in 25ms (next.js: 5ms, application-code: 20ms)
