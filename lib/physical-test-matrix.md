@@ -32,9 +32,10 @@
 
 ### 1. Direct Feed — Short Edge First (custom_short)
 
-**Geometry model:** Page box = 88.9 × 190.5 mm (cheque rotated 90°). CSS
-`rotate(90deg)` with `transform-origin: 0 0` (top-left) and an offset of
-(88.9mm, 0) fills the container exactly. Printer feeds along the 190.5 mm edge.
+**Geometry model:** Page box = 190.5 × 88.9 mm (cheque unrotated). No CSS
+rotation applied. Short Edge First is a printer paper-feed setting. Content is
+rendered flat — the cheque coordinate system (origin top-left, X right, Y down)
+maps directly onto the landscape @page box.
 
 | Field                 | Expected X (mm) | Expected Y (mm) | Actual X (mm) | Actual Y (mm) | Correction (mm) | Final Calibration X | Final Calibration Y |
 |-----------------------|-----------------|-----------------|---------------|---------------|-----------------|---------------------|---------------------|
@@ -47,7 +48,7 @@
 ### 2. Direct Feed — Long Edge First (custom_long)
 
 **Geometry model:** Page box = 190.5 × 88.9 mm (cheque unrotated). No CSS
-rotation applied. Printer feeds along the 88.9 mm edge.
+rotation applied. Long Edge First is a printer paper-feed setting.
 
 | Field                 | Expected X (mm) | Expected Y (mm) | Actual X (mm) | Actual Y (mm) | Correction (mm) | Final Calibration X | Final Calibration Y |
 |-----------------------|-----------------|-----------------|---------------|---------------|-----------------|---------------------|---------------------|
