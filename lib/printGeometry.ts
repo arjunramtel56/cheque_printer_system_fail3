@@ -114,11 +114,12 @@ export function resolvePrintGeometry(template: BankTemplate, mode: ProfileKey): 
  * system (origin = top-left, X right, Y down) maps directly onto the page box,
  * so the content offset is always zero.
  *
- * This function is retained for API compatibility and always returns zero offset.
+ * The `geom` parameter is accepted for backward compatibility but ignored —
+ * no CSS rotation means no offset is ever needed.
  */
-export function rotatedContentOffset(): { leftMm: number; topMm: number } {
+export function rotatedContentOffset(_geom?: PrintGeometry): { leftMm: number; topMm: number } {
   // No CSS rotation is applied. Content fills the page box directly.
-  // Always returns zero — kept for backward compatibility.
+  // Always returns zero — kept for API compatibility.
   return { leftMm: 0, topMm: 0 };
 }
 
