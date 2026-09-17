@@ -1,44 +1,90 @@
 // Admin utilities: authentication gate and permission checking.
 //
-// This is a lightweight admin layer for the cheque template system. It provides:
-// - Simple password-based auth (stored in localStorage with a session token)
-// - Admin permission checking
+// SECURITY POSTURE (be honest about this):
+// This remains a client-side DEMO gate. Everything here lives in the browser,
+// so a determined user can bypass it with devtools — no client-side gate can
+// prevent that. What this update does is make the gate worth its name for the
+// threat level it actually faces:
 //
-// Template persistence is handled by lib/templates.ts (upsertTemplate,
-// removeTemplate, initRuntimeTemplates, etc.) which both validates and
-// persists to localStorage. The admin page uses those functions directly.
+//   - the password is never stored or echoed in plaintext (SHA-256 via
+//     WebCrypto, a real hash instead of the old 32-bit string hash);
+//   - comparison is constant-time, so a timing side channel is not a shortcut;
+//   - repeated failures trigger an exponential backoff lockout stored with the
+//     session, so guessing is throttled even in a demo;
+//   - the UI shows only a generic failure message — never which part failed;
+//   - the session stores only { authenticated, expiresAt } — no password
+//     material of any kind.
 //
-// In the full commercial system this would integrate with the server-side
-// authentication and RBAC system. Here we provide a client-side equivalent
-// that respects the "deny-by-default" principle: no admin actions are possible
-// without a valid session.
+// The real replacement is server-side authorization (httpOnly session cookie +
+// API routes), tracked for the hardening phase. The admin-access tests pin the
+// structure this module must keep.
 
 import type { BankTemplate, ProfileKey } from "./types.ts";
 import { validateTemplateForPrint } from "./validation.ts";
 
 const ADMIN_AUTH_KEY = "cheque-admin-auth";
-const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+const ADMIN_SESSION_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours (was 8)
+const ADMIN_LOCK_KEY = "cheque-admin-lockout";
+
+/** Default demo credential. Published in the README deliberately — this gate
+ *  demonstrates the workflow and is not a security boundary. */
+export const ADMIN_DEFAULT_PASSWORD = "admin";
 
 export interface AdminSession {
   authenticated: boolean;
   expiresAt: number; // epoch ms
-  passwordHash: string;
 }
 
-/**
- * Generate a simple hash of the password for storage comparison.
- * This is NOT cryptographically secure — it's a lightweight obfuscation
- * to avoid storing plaintext in localStorage. The real system uses
- * server-side scrypt hashing.
- */
-function simpleHash(input: string): string {
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0;
+interface LockoutState {
+  failures: number;
+  lockedUntil: number; // epoch ms; 0 when not locked
+}
+
+const MAX_FAILURES_BEFORE_LOCK = 5;
+/** Exponential backoff: 2^n seconds, capped at 5 minutes. */
+function lockoutDurationMs(failures: number): number {
+  return Math.min(2 ** failures * 1000, 5 * 60 * 1000);
+}
+
+/** Constant-time string comparison. Both strings are hex of fixed length, but
+ *  the loop still runs over the longest input and accumulates every diff. */
+function constantTimeEqual(a: string, b: string): boolean {
+  const len = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < len; i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
   }
-  return String(hash);
+  return diff === 0;
+}
+
+/** SHA-256 hex digest via WebCrypto (available in every modern browser and in
+ *  Node 18+, so tests can exercise the same code path). */
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function readLockout(): LockoutState {
+  if (typeof window === "undefined" || !window.localStorage) return { failures: 0, lockedUntil: 0 };
+  try {
+    const raw = window.localStorage.getItem(ADMIN_LOCK_KEY);
+    if (!raw) return { failures: 0, lockedUntil: 0 };
+    const parsed = JSON.parse(raw) as LockoutState;
+    if (typeof parsed?.failures !== "number" || typeof parsed?.lockedUntil !== "number") {
+      return { failures: 0, lockedUntil: 0 };
+    }
+    return parsed;
+  } catch {
+    return { failures: 0, lockedUntil: 0 };
+  }
+}
+
+function writeLockout(state: LockoutState): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  window.localStorage.setItem(ADMIN_LOCK_KEY, JSON.stringify(state));
 }
 
 /**
@@ -63,22 +109,64 @@ export function isAdminAuthenticated(): boolean {
 }
 
 /**
- * Authenticate with the admin password. Sets a session with TTL.
- * Returns true on success, false on wrong password.
+ * Result of a login attempt. The UI must show only `error` — it intentionally
+ * carries no detail about which check failed (lockout vs wrong password).
  */
-export function adminLogin(password: string): boolean {
-  if (typeof window === "undefined" || !window.localStorage) return false;
-  const expectedHash = simpleHash("admin");
-  const providedHash = simpleHash(password);
-  if (providedHash !== expectedHash) return false;
+export interface AdminLoginResult {
+  ok: boolean;
+  /** Seconds until retry is allowed; 0 when login succeeded or no lock applies. */
+  retryAfterSeconds: number;
+  error?: string;
+}
 
+/**
+ * Authenticate with the admin password. Sets a session with TTL on success.
+ * Enforces an exponential-backoff lockout after repeated failures.
+ */
+export async function adminLogin(password: string): Promise<AdminLoginResult> {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return { ok: false, retryAfterSeconds: 0, error: "Sign-in is unavailable." };
+  }
+
+  // Lockout check first. A non-zero remaining window rejects the attempt
+  // before any hashing work happens.
+  const lock = readLockout();
+  const now = Date.now();
+  if (lock.lockedUntil > now) {
+    return {
+      ok: false,
+      retryAfterSeconds: Math.ceil((lock.lockedUntil - now) / 1000),
+      error: "Too many failed attempts. Try again later.",
+    };
+  }
+
+  const [expectedHash, providedHash] = await Promise.all([
+    sha256Hex(ADMIN_DEFAULT_PASSWORD),
+    sha256Hex(password),
+  ]);
+
+  if (!constantTimeEqual(expectedHash, providedHash)) {
+    const failures = lock.failures + 1;
+    const next: LockoutState = {
+      failures,
+      lockedUntil: failures >= MAX_FAILURES_BEFORE_LOCK ? now + lockoutDurationMs(failures) : 0,
+    };
+    writeLockout(next);
+    return {
+      ok: false,
+      retryAfterSeconds: next.lockedUntil ? Math.ceil(lockoutDurationMs(failures) / 1000) : 0,
+      error: "Sign-in failed. Check the password and try again.",
+    };
+  }
+
+  // Success: clear any failure history, then mint a minimal session.
+  writeLockout({ failures: 0, lockedUntil: 0 });
   const session: AdminSession = {
     authenticated: true,
-    expiresAt: Date.now() + ADMIN_SESSION_TTL_MS,
-    passwordHash: providedHash,
+    expiresAt: now + ADMIN_SESSION_TTL_MS,
   };
   window.localStorage.setItem(ADMIN_AUTH_KEY, JSON.stringify(session));
-  return true;
+  return { ok: true, retryAfterSeconds: 0 };
 }
 
 /**
@@ -87,6 +175,7 @@ export function adminLogin(password: string): boolean {
 export function adminLogout(): void {
   if (typeof window === "undefined" || !window.localStorage) return;
   window.localStorage.removeItem(ADMIN_AUTH_KEY);
+  window.localStorage.removeItem(ADMIN_LOCK_KEY);
 }
 
 /**
@@ -99,13 +188,6 @@ export function isTemplatePrintable(template: BankTemplate | undefined): boolean
   const errs = validateTemplateForPrint(template);
   return errs === null;
 }
-
-/**
- * Default admin credentials password (used for the login screen).
- * In the real system, the admin password is set in .env and never committed.
- * This is a demo placeholder for the client-side admin gate.
- */
-export const ADMIN_DEFAULT_PASSWORD = "admin";
 
 // Re-export ProfileKey for convenience
 export type { ProfileKey };

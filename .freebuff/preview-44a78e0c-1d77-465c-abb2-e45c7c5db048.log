@@ -37,3 +37,9 @@
 ✓ Compiled in 80ms
  GET /banks/siddhartha/cheque/siddhartha 200 in 107ms (next.js: 14ms, generate-params: 7ms, application-code: 86ms)
  GET /banks/siddhartha/cheque/siddhartha 200 in 62ms (next.js: 5ms, generate-params: 0.0ms, application-code: 57ms)
+▲ Next.js 16.3.5 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.67:3000
+✓ Ready in 555ms
+✓ Running next.config.mjs took 16ms
+

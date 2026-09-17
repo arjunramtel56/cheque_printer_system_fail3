@@ -2,3 +2,4 @@
 ⚠ Fast Refresh had to perform a full reload when ./lib/sizes.ts changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
 ⚠ Fast Refresh had to perform a full reload when ./components/Workspace.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
 ⚠ Fast Refresh had to perform a full reload when ./components/Workspace.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+⚠ Found a change in next.config.mjs. Restarting the server to apply the changes...
