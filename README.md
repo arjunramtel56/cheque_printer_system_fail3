@@ -616,17 +616,18 @@ Always perform a plain-paper overlay test before using a new bank template or pr
 
 ### Print Profiles
 
-| Profile               | Paper / Cheque Size | Orientation  |
-| --------------------- | ------------------- | ------------ |
-| Custom Short          | 88.9 × 190.5 mm     | 90° rotation |
-| Custom Long           | 190.5 × 88.9 mm     | No rotation  |
-| A4 Vertical Carrier   | 210 × 297 mm        | Portrait     |
-| A4 Horizontal Carrier | 210 × 297 mm        | Landscape    |
+| Profile               | Paper / Cheque Size | Orientation  | Rotation       |
+| --------------------- | ------------------- | ------------ | -------------- |
+| Custom Short          | 190.5 × 88.9 mm     | Landscape    | None (feed setting) |
+| Custom Long           | 190.5 × 88.9 mm     | Landscape    | None (feed setting) |
+| A4 Vertical Carrier   | 210 × 297 mm        | Portrait     | None            |
+| A4 Horizontal Carrier | 297 × 210 mm        | Landscape    | None            |
 
 The default calibration values are based on the documented Nepal printer workflow and tray-centering requirements.
 
-* Rotated vertical cheque: **60.55 mm X**
-* Horizontal cheque: **9.75 mm X**
+* Custom Cheque (Direct Feed, both Short/Long Edge): **X = 0.0 mm** (cheque fills the page box; feed direction is a printer setting)
+* A4 Vertical Carrier: **X = 9.75 mm**
+* A4 Horizontal Carrier: **X = 20.0 mm**
 
 Per-user X/Y calibration values are applied as printer-specific corrections to these defaults.
 
