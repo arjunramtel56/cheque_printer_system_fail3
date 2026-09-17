@@ -118,13 +118,6 @@ export function validateBankTemplate(template: BankTemplate): ValidationResult {
       if (p.pageWidth <= 0 || p.pageHeight <= 0) {
          errors.push({ code: "PROFILE_DIMENSION_INVALID", message: `${id}: profile '${key}' has non-positive page dimensions.`, path: ctx(`profiles.${key}`) });
        }
-      // rotate must be 0 — CSS rotation is deprecated; feed direction is a
-      // printer driver setting. Non-zero values are rejected to prevent
-      // accidental 90° rotation of cheque content in print preview.
-      if (p.rotate !== 0) {
-        errors.push({ code: "PROFILE_ROTATE_INVALID", message: `${id}: profile '${key}' rotate must be 0 (got ${p.rotate}). CSS rotation is deprecated; use printer paper-feed settings.`, path: ctx(`profiles.${key}.rotate`) });
-      }
-
       // 2b. Profile page dimensions must match the expected page size for the mode.
       // Direct Feed: page box = cheque (no rotation; feed direction is a printer setting).
       // A4 Carrier: page box = A4 portrait (210×297) or landscape (297×210).

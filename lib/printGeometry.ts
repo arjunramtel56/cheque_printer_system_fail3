@@ -45,10 +45,6 @@ export interface PrintGeometry {
   containerW: number;
   /** print container height in mm (always equals page box) */
   containerH: number;
-  /** CSS content rotation in degrees — always 0. Direct Feed content is
-   *  rendered unrotated in a landscape page box; Short Edge First vs
-   *  Long Edge First is a printer paper-feed setting, not a CSS transform. */
-  rotate: 0;
   /** raw cheque dimensions */
   chequeW: number;
   chequeH: number;
@@ -79,7 +75,6 @@ export function resolvePrintGeometry(template: BankTemplate, mode: ProfileKey): 
       pageH: chequeH,
       containerW: chequeW,
       containerH: chequeH,
-      rotate: 0,
       chequeW,
       chequeH,
       chequeX: 0,
@@ -97,7 +92,6 @@ export function resolvePrintGeometry(template: BankTemplate, mode: ProfileKey): 
     pageH,
     containerW: pageW,
     containerH: pageH,
-    rotate: 0,
     chequeW: template.widthMm,
     chequeH: template.heightMm,
     chequeX: profile.x,

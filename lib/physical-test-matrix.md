@@ -115,7 +115,7 @@ Each mode group has its own calibration state. Editing DF X offset does
 | Out-of-range calibration (>±25) | `validateCalibratedBounds` | Block print        |
 | Cheque off-page at max cal (A4) | `validateCalibratedBounds` | Block print        |
 | Template field overflow         | `validateBankTemplate`   | Block at load      |
-| DF rotation bounding box        | `resolvePrintGeometry`   | Math-verified    |
+| DF no-rotation page box          | `resolvePrintGeometry`   | Math-verified    |
 
 ---
 
@@ -153,19 +153,10 @@ for a template with bank-default field coordinates (e.g. Siddhartha Bank):
 
 ### Direct Feed — Short Edge First (custom_short)
 
-- **Page box:** 88.9 mm (W) × 190.5 mm (H)
+- **Page box:** 190.5 mm (W) × 88.9 mm (H) — same as cheque, landscape, no swap
 - **Cheque raw size:** 190.5 mm (W) × 88.9 mm (H)
-- **CSS rotation:** `rotate(90deg)`, `transform-origin: 0 0`
-- **Rotation matrix:** (x, y) → (-y, x) — clockwise 90° in Y-down coords
-- **Corner mapping** (cheque-local → page-box-local):
-  - (0, 0) → (0, 0)
-  - (190.5, 0) → (0, 190.5)
-  - (190.5, 88.9) → (-88.9, 190.5)
-  - (0, 88.9) → (-88.9, 0)
-- **Rotated bounding box:** X ∈ [-88.9, 0], Y ∈ [0, 190.5]
-- **Page box bounds:** X ∈ [0, 88.9], Y ∈ [0, 190.5]
-- **Required offset to fill page box:** (left=88.9mm, top=0mm)
-- **Verification:** `rotatedContentOffset()` returns `{ leftMm: 88.9, topMm: 0 }` ✓
+- **No CSS rotation** — feed direction is a printer paper-feed setting
+- **offset:** `(0, 0)` ✓ (no rotation compensation needed)
 
 ### Direct Feed — Long Edge First (custom_long)
 
