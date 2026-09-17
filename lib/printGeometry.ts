@@ -8,12 +8,13 @@
 // resolvePrintGeometry, so the two can never disagree.
 //
 // Direct Feed (Custom Cheque Size):
-//   The cheque IS the paper. The @page is always landscape 190.5×88.9 mm.
-//   - Long Edge First: paper fed long-edge first (printer hardware setting).
-//   - Short Edge First: paper fed short-edge first (printer hardware setting).
-//   In BOTH cases content is rendered unrotated (rotate: 0) — the feed
-//   direction is a printer setting, NOT a CSS transform. This ensures
-//   Chrome print preview shows landscape, horizontally-readable content.
+//   The cheque IS the paper. The @page is always the cheque's physical size
+//   (190.5×88.9 mm, landscape). Content is rendered unrotated — the X/Y
+//   coordinate system of the cheque (origin = top-left, X right, Y down) maps
+//   directly onto the page box. Short Edge First vs Long Edge First is a
+//   printer paper-feed setting (selected in the printer driver), NOT a CSS
+//   transform. This guarantees Chrome print preview shows a landscape cheque
+//   with horizontally-readable text.
 //
 // A4 Carrier:
 //   The paper is A4; the cheque sits at profile.x/y (plus calibration at
@@ -44,7 +45,9 @@ export interface PrintGeometry {
   containerW: number;
   /** print container height in mm (always equals page box) */
   containerH: number;
-  /** CSS content rotation in degrees — always 0 (feed direction is a printer setting) */
+  /** CSS content rotation in degrees — always 0. Direct Feed content is
+   *  rendered unrotated in a landscape page box; Short Edge First vs
+   *  Long Edge First is a printer paper-feed setting, not a CSS transform. */
   rotate: 0;
   /** raw cheque dimensions */
   chequeW: number;
@@ -57,9 +60,9 @@ export interface PrintGeometry {
 /**
  * Resolve the authoritative print geometry for a given template + profile.
  *
- * Direct Feed: @page is always landscape cheque size (190.5×88.9 mm).
- *   rotate is always 0 — no CSS rotation. Short Edge First vs Long Edge
- *   First is a printer paper-feed setting.
+ * Direct Feed: @page is always the cheque's physical size (190.5×88.9 mm,
+ *   landscape). No CSS rotation — Short Edge First vs Long Edge First is a
+ *   printer paper-feed setting.
  *
  * A4 Carrier:  page box = A4 (portrait/landscape); cheque at profile.x/y.
  */
@@ -69,7 +72,7 @@ export function resolvePrintGeometry(template: BankTemplate, mode: ProfileKey): 
   if (isDirectFeed(mode)) {
     const chequeW = template.widthMm;
     const chequeH = template.heightMm;
-    // Direct Feed: @page is ALWAYS landscape cheque size.
+    // Direct Feed: @page is ALWAYS the cheque's physical size (landscape).
     // No CSS rotation — feed direction is a printer setting.
     return {
       pageW: chequeW,
@@ -105,12 +108,15 @@ export function resolvePrintGeometry(template: BankTemplate, mode: ProfileKey): 
 /**
  * Content offset for Direct-Feed mode.
  *
- * Direct Feed no longer applies CSS rotation — content is rendered flat
- * in a landscape 190.5×88.9 mm page box. Short Edge First vs Long Edge First
- * is a printer paper-feed setting, not a CSS transform. This function is
- * retained for API compatibility and always returns zero offset.
+ * Direct Feed no longer applies CSS rotation — content is rendered flat in a
+ * landscape 190.5×88.9 mm page box. Short Edge First vs Long Edge First is a
+ * printer paper-feed setting, not a CSS transform. The cheque's coordinate
+ * system (origin = top-left, X right, Y down) maps directly onto the page box,
+ * so the content offset is always zero.
+ *
+ * This function is retained for API compatibility and always returns zero offset.
  */
-export function rotatedContentOffset(geom: PrintGeometry): { leftMm: number; topMm: number } {
+export function rotatedContentOffset(): { leftMm: number; topMm: number } {
   // No CSS rotation is applied. Content fills the page box directly.
   // Always returns zero — kept for backward compatibility.
   return { leftMm: 0, topMm: 0 };

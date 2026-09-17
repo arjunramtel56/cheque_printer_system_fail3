@@ -112,30 +112,33 @@ export function validateBankTemplate(template: BankTemplate): ValidationResult {
       continue;
     }
     if (!isFiniteNumber(p.x) || !isFiniteNumber(p.y) || !isFiniteNumber(p.pageWidth) || !isFiniteNumber(p.pageHeight)) {
-      errors.push({ code: "PROFILE_NAN", message: `${id}: profile '${key}' has non-finite values.`, path: ctx(`profiles.${key}`) });
-      continue;
-    }
-    if (p.rotate !== 0 && p.rotate !== 90) {
-      errors.push({ code: "PROFILE_ROTATE_INVALID", message: `${id}: profile '${key}' rotate must be 0 or 90 (got ${p.rotate}).`, path: ctx(`profiles.${key}.rotate`) });
-    }
-     if (p.pageWidth <= 0 || p.pageHeight <= 0) {
-       errors.push({ code: "PROFILE_DIMENSION_INVALID", message: `${id}: profile '${key}' has non-positive page dimensions.`, path: ctx(`profiles.${key}`) });
-     }
-
-     // 2b. Profile page dimensions must match the expected page size for the mode.
-     // Direct Feed: page box = cheque (swapped when rotate=90).
-     // A4 Carrier: page box = A4 portrait (210×297) or landscape (297×210).
-     if (isDirectFeed(key)) {
-       const expW = p.rotate === 90 ? heightMm : widthMm;
-       const expH = p.rotate === 90 ? widthMm : heightMm;
-       if (Math.abs(p.pageWidth - expW) > 0.05 || Math.abs(p.pageHeight - expH) > 0.05) {
-         errors.push({
-           code: "DF_PROFILE_DIM_MISMATCH",
-           message: `${id}: profile '${key}' page dimensions (${p.pageWidth}×${p.pageHeight}) should be ${expW}×${expH} for rotate ${p.rotate}.`,
-           path: ctx(`profiles.${key}`),
-         });
+         errors.push({ code: "PROFILE_NAN", message: `${id}: profile '${key}' has non-finite values.`, path: ctx(`profiles.${key}`) });
+         continue;
        }
-     } else {
+      if (p.pageWidth <= 0 || p.pageHeight <= 0) {
+         errors.push({ code: "PROFILE_DIMENSION_INVALID", message: `${id}: profile '${key}' has non-positive page dimensions.`, path: ctx(`profiles.${key}`) });
+       }
+      // rotate must be 0 — CSS rotation is deprecated; feed direction is a
+      // printer driver setting. Non-zero values are rejected to prevent
+      // accidental 90° rotation of cheque content in print preview.
+      if (p.rotate !== 0) {
+        errors.push({ code: "PROFILE_ROTATE_INVALID", message: `${id}: profile '${key}' rotate must be 0 (got ${p.rotate}). CSS rotation is deprecated; use printer paper-feed settings.`, path: ctx(`profiles.${key}.rotate`) });
+      }
+
+      // 2b. Profile page dimensions must match the expected page size for the mode.
+      // Direct Feed: page box = cheque (no rotation; feed direction is a printer setting).
+      // A4 Carrier: page box = A4 portrait (210×297) or landscape (297×210).
+      if (isDirectFeed(key)) {
+        const expW = widthMm;
+        const expH = heightMm;
+        if (Math.abs(p.pageWidth - expW) > 0.05 || Math.abs(p.pageHeight - expH) > 0.05) {
+          errors.push({
+            code: "DF_PROFILE_DIM_MISMATCH",
+            message: `${id}: profile '${key}' page dimensions (${p.pageWidth}×${p.pageHeight}) should be ${expW}×${expH}.`,
+            path: ctx(`profiles.${key}`),
+          });
+        }
+      } else {
        const expW = key === "a4_vertical" ? 210 : 297;
        const expH = key === "a4_vertical" ? 297 : 210;
        if (Math.abs(p.pageWidth - expW) > 0.05 || Math.abs(p.pageHeight - expH) > 0.05) {
@@ -207,7 +210,7 @@ export function validateBankTemplate(template: BankTemplate): ValidationResult {
  */
 export function validatePrintGeometry(geom: PrintGeometry, template: BankTemplate, mode: ProfileKey): ValidationResult {
   const errors: ValidationError[] = [];
-  const { pageW, pageH, containerW, containerH, chequeW, chequeH, chequeX, chequeY, rotate } = geom;
+  const { pageW, pageH, containerW, containerH, chequeW, chequeH, chequeX, chequeY } = geom;
 
   // Finite check
   const check = (v: unknown, label: string) => {

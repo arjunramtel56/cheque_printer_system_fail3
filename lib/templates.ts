@@ -34,7 +34,7 @@ export const BANK_TEMPLATES: BankTemplate[] = [
        sig2: { x: 72, y: 78, width: 55, height: 8 },
       },
     profiles: {
-      custom_short: { x: 0, y: 0, pageWidth: STANDARD_HEIGHT_MM, pageHeight: STANDARD_WIDTH_MM, rotate: 90 },
+      custom_short: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
       custom_long: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
       a4_vertical: { x: 9.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
       a4_horizontal: { x: 20, y: 50.75, pageWidth: 297, pageHeight: 210, rotate: 0 },
@@ -61,7 +61,7 @@ export const BANK_TEMPLATES: BankTemplate[] = [
       sig2: { x: 70, y: 77, width: 55, height: 8 },
     },
     profiles: {
-      custom_short: { x: 0, y: 0, pageWidth: STANDARD_HEIGHT_MM, pageHeight: STANDARD_WIDTH_MM, rotate: 90 },
+      custom_short: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
       custom_long: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
       a4_vertical: { x: 9.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
       a4_horizontal: { x: 20, y: 50.75, pageWidth: 297, pageHeight: 210, rotate: 0 },
@@ -88,7 +88,7 @@ export const BANK_TEMPLATES: BankTemplate[] = [
       sig2: { x: 72, y: 80, width: 52, height: 8 },
     },
     profiles: {
-      custom_short: { x: 0, y: 0, pageWidth: STANDARD_HEIGHT_MM, pageHeight: STANDARD_WIDTH_MM, rotate: 90 },
+      custom_short: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
       custom_long: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
       a4_vertical: { x: 9.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
       a4_horizontal: { x: 20, y: 50.75, pageWidth: 297, pageHeight: 210, rotate: 0 },
@@ -112,17 +112,17 @@ export const BANK_TEMPLATES: BankTemplate[] = [
        payLabel: { x: 8, y: 21, width: 92, height: 5 },
        orBearer: { x: 100, y: 21, width: 40, height: 5 },
        sig1: { x: 8, y: 76, width: 55, height: 8 },
-       sig2: { x: 68, y: 76, width: 55, height: 8 },
-     },
-     profiles: {
-       custom_short: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
-      custom_long: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
-      a4_vertical: { x: 9.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
-      a4_horizontal: { x: 20, y: 50.75, pageWidth: 297, pageHeight: 210, rotate: 0 },
+      sig2: { x: 68, y: 76, width: 55, height: 8 },
+      },
+      profiles: {
+        custom_short: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
+        custom_long: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
+        a4_vertical: { x: 9.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
+        a4_horizontal: { x: 20, y: 50.75, pageWidth: 297, pageHeight: 210, rotate: 0 },
+      },
     },
-  },
-  {
-    id: "bankpokhara",
+    {
+      id: "bankpokhara",
     bankName: "Bank of Pokhara Limited",
     widthMm: STANDARD_WIDTH_MM,
     heightMm: STANDARD_HEIGHT_MM,
@@ -142,7 +142,7 @@ export const BANK_TEMPLATES: BankTemplate[] = [
       sig2: { x: 70, y: 80, width: 52, height: 8 },
     },
     profiles: {
-      custom_short: { x: 0, y: 0, pageWidth: STANDARD_HEIGHT_MM, pageHeight: STANDARD_WIDTH_MM, rotate: 90 },
+      custom_short: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
       custom_long: { x: 0, y: 0, pageWidth: STANDARD_WIDTH_MM, pageHeight: STANDARD_HEIGHT_MM, rotate: 0 },
       a4_vertical: { x: 9.75, y: 20, pageWidth: 210, pageHeight: 297, rotate: 0 },
       a4_horizontal: { x: 20, y: 50.75, pageWidth: 297, pageHeight: 210, rotate: 0 },

@@ -63,15 +63,10 @@ for (const t of templates) {
     const geom = resolvePrintGeometry(t, mode);
     const offset = rotatedContentOffset(geom);
     const valid = validatePrintGeometry(geom, t, mode);
-    if (mode === "custom_short") {
-      assert(geom.pageW === STANDARD_CHEQUE_H_MM && geom.pageH === STANDARD_CHEQUE_W_MM, `${t.id}: short-edge page = ${STANDARD_CHEQUE_H_MM}x${STANDARD_CHEQUE_W_MM} mm`);
-      assert(geom.rotate === 90, `${t.id}: short-edge rotate=90`);
-      assert(offset.leftMm === STANDARD_CHEQUE_H_MM && offset.topMm === 0, `${t.id}: short-edge offset correct`);
-    } else {
-      assert(geom.pageW === STANDARD_CHEQUE_W_MM && geom.pageH === STANDARD_CHEQUE_H_MM, `${t.id}: long-edge page = ${STANDARD_CHEQUE_W_MM}x${STANDARD_CHEQUE_H_MM} mm`);
-      assert(geom.rotate === 0, `${t.id}: long-edge rotate=0`);
-      assert(offset.leftMm === 0 && offset.topMm === 0, `${t.id}: long-edge offset zero`);
-    }
+    // Direct Feed: page box is always the cheque's physical size (190.5×88.9 mm).
+    // No CSS rotation — feed direction is a printer setting.
+    assert(geom.pageW === STANDARD_CHEQUE_W_MM && geom.pageH === STANDARD_CHEQUE_H_MM, `${t.id}: DF page = ${STANDARD_CHEQUE_W_MM}x${STANDARD_CHEQUE_H_MM} mm`);
+    assert(offset.leftMm === 0 && offset.topMm === 0, `${t.id}: DF no rotation offset`);
     assert(valid === null, `${t.id}: ${mode} geometry valid`);
   }
 }

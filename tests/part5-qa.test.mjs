@@ -142,18 +142,16 @@ assert(siddhartha !== undefined, "siddhartha template exists");
 // 1. Direct Feed · Short Edge First
 {
   const g = resolvePrintGeometry(siddhartha, "custom_short");
-  assert(g.pageW === 88.9 && g.pageH === 190.5, "DF Short Edge: page=88.9x190.5");
-  assert(g.rotate === 90, "DF Short Edge: rotate=90");
-  assert(g.containerW === 88.9 && g.containerH === 190.5, "DF Short Edge: container=88.9x190.5");
+  assert(g.pageW === 190.5 && g.pageH === 88.9, "DF Short Edge: page=190.5x88.9 (cheque physical size, no rotation)");
+  assert(g.containerW === 190.5 && g.containerH === 88.9, "DF Short Edge: container=190.5x88.9");
   const off = rotatedContentOffset(g);
-  assert(off.leftMm === 88.9 && off.topMm === 0, "DF Short Edge: offset=(88.9, 0)");
+  assert(off.leftMm === 0 && off.topMm === 0, "DF Short Edge: offset=(0, 0) — no CSS rotation");
 }
 
 // 2. Direct Feed · Long Edge First
 {
   const g = resolvePrintGeometry(siddhartha, "custom_long");
   assert(g.pageW === 190.5 && g.pageH === 88.9, "DF Long Edge: page=190.5x88.9");
-  assert(g.rotate === 0, "DF Long Edge: rotate=0");
   assert(g.containerW === 190.5 && g.containerH === 88.9, "DF Long Edge: container=190.5x88.9");
   const off = rotatedContentOffset(g);
   assert(off.leftMm === 0 && off.topMm === 0, "DF Long Edge: offset=(0,0)");
@@ -270,28 +268,30 @@ console.log("\n  Orientation:");
 for (const t of all) {
   const gShort = resolvePrintGeometry(t, "custom_short");
   const gLong = resolvePrintGeometry(t, "custom_long");
-  assert(gShort.rotate === 90, t.id + " custom_short rotated 90°");
-  assert(gLong.rotate === 0, t.id + " custom_long not rotated");
+  assert(!("rotate" in gShort), t.id + " custom_short has no rotate field (feed direction is printer setting)");
+  assert(!("rotate" in gLong), t.id + " custom_long has no rotate field");
+  assert(gShort.pageW === 190.5 && gShort.pageH === 88.9, t.id + " custom_short: page = cheque physical size");
+  assert(gLong.pageW === 190.5 && gLong.pageH === 88.9, t.id + " custom_long: page = cheque physical size");
 }
 
-console.log("\n  Rotation (DF Short Edge bounding box):");
+console.log("\n  Rotation (DF — no CSS rotation, feed direction is printer setting):");
 for (const t of all) {
   const g = resolvePrintGeometry(t, "custom_short");
   const off = rotatedContentOffset(g);
-  // Verify corners map into page box [0, 88.9] x [0, 190.5]
+  // No rotation: cheque corners (0,0),(W,0),(W,H),(0,H) map directly to page box [0,W]×[0,H]
   const W = g.chequeW, H = g.chequeH; // 190.5, 88.9
   const corners = [
-    { x: 0 + off.leftMm, y: 0 + off.topMm },
-    { x: 0 + off.leftMm, y: W + off.topMm },
-    { x: -H + off.leftMm, y: W + off.topMm },
-    { x: -H + off.leftMm, y: 0 + off.topMm },
+    { x: 0, y: 0 },
+    { x: W, y: 0 },
+    { x: W, y: H },
+    { x: 0, y: H },
   ];
   let allOk = true;
   for (const c of corners) {
-    if (c.x < -0.001 || c.x > H + 0.001 || c.y < -0.001 || c.y > W + 0.001) { allOk = false; }
+    if (c.x < -0.001 || c.x > W + 0.001 || c.y < -0.001 || c.y > H + 0.001) { allOk = false; }
   }
-  assert(allOk, t.id + " rotated corners within page box");
-  assert(off.leftMm === H && off.topMm === 0, t.id + " offset (chequeH, 0)");
+  assert(allOk, t.id + " corners within page box (no rotation)");
+  assert(off.leftMm === 0 && off.topMm === 0, t.id + " offset (0, 0) — no rotation");
 }
 
 console.log("\n  Scaling:");

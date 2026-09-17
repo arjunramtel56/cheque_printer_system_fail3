@@ -28,12 +28,14 @@ export interface PrintProfile {
   y: number;
   pageWidth: number;
   pageHeight: number;
-  /** CSS rotation of content in degrees (0 or 90).
-   *  - Long Edge First (custom_long): rotate 0 — cheque prints flat.
-   *  - Short Edge First (custom_short): rotate 90 — cheque content rotated
-   *    90° CW to fill the swapped page box; physical paper rotation is done
-   *    by the printer feed direction. */
-  rotate: 0 | 90;
+  /** Legacy feed-direction field. Direct Feed profiles historically
+   *  declared rotate=90 for Short-Edge-First (content rotated 90° CW to
+   *  fill the swapped page box). This rotation model is deprecated: the
+   *  system now renders content unrotated in a landscape 190.5×88.9 mm
+   *  @page box, with feed direction handled by the printer driver.
+   *  The field is retained for metadata compatibility and is always
+   *  expected to be 0 for all modes. */
+  rotate: number;
 }
 
 export interface BankTemplate {

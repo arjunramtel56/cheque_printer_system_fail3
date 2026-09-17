@@ -516,15 +516,15 @@ assert(
   "accountPayee prop identical in preview and print",
 );
 
-// Rotation-compensated calibration: preview and print use consistent axes
-// Preview (DirectFeedPreview) uses calX/calY directly on unrotated cheque.
-// Print (PrintOutput) swaps calX/calY for rotate=90 so on-paper direction
-// matches the preview direction. Both produce the SAME physical result.
-assertContains(ws, "geom.rotate === 90 ? calY : calX", "PrintOutput applies rotation compensation (calY->X for rotate=90)");
-assertContains(ws, "geom.rotate === 90 ? -calX : calY", "PrintOutput applies rotation compensation (-calX->Y for rotate=90)");
-// Preview uses uncompensated (calX, calY) — correct because preview is unrotated
+// Calibration: preview and print both apply calX/calY directly on the unrotated
+// cheque coordinate system. No rotation compensation is needed because no CSS
+// rotation is applied — Short Edge First vs Long Edge First is a printer
+// paper-feed setting, not a CSS transform.
 const previewFnMatch = ws.match(/function DirectFeedPreview[\s\S]*?^  \}/m)?.[0] ?? "";
 assert(previewFnMatch.includes("(fieldX + calX) * SCALE") || previewFnMatch.includes("+ calX"), "DirectFeedPreview applies calX directly (unrotated canvas matches physical cheque)");
+// PrintOutput DF branch also applies calX/calY directly (no axis swap)
+assertContains(ws, "x={(template.fields.date?.x ?? 128) + calX}", "PrintOutput applies calX directly to date field (no rotation compensation)");
+assertContains(ws, "y={(template.fields.date?.y ?? 6) + calY}", "PrintOutput applies calY directly to date field (no rotation compensation)");
 
 // ---------------------------------------------------------------------------
 // Responsive UI check

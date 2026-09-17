@@ -120,18 +120,14 @@ if (!isA4Carrier("a4_vertical")) throw new Error("a4_vertical should be A4 carri
 if (!isA4Carrier("a4_horizontal")) throw new Error("a4_horizontal should be A4 carrier");
 console.log("TEST_19_IS_A4_CARRIER: OK");
 
-// Test 20: Direct Feed profiles use cheque dimensions, not A4
+// Test 20: Direct Feed profiles use cheque dimensions, no rotation
 for (const t of all) {
   const dfShort = t.profiles.custom_short;
   const dfLong = t.profiles.custom_long;
-  // Direct feed: pageWidth/pageHeight should match or relate to cheque size
-  // custom_short rotates 90° so page dimensions swap relative to cheque
-  // custom_long keeps same orientation
-  if (dfShort.rotate !== 90) throw new Error(t.bankName + " custom_short should rotate 90");
-  if (dfLong.rotate !== 0) throw new Error(t.bankName + " custom_long should rotate 0");
-  // Page sizes for direct feed should match cheque dimensions (page box = cheque)
-  if (dfShort.pageWidth !== 88.9 || dfShort.pageHeight !== 190.5) throw new Error(t.bankName + " custom_short page dimensions should match cheque height x width (88.9 x 190.5)");
-  if (dfLong.pageWidth !== 190.5 || dfLong.pageHeight !== 88.9) throw new Error(t.bankName + " custom_long page dimensions should match cheque size (190.5 x 88.9)");
+  // Direct Feed: pageWidth/pageHeight should match cheque size (190.5×88.9)
+  // No CSS rotation — Short Edge First vs Long Edge First is a printer feed setting
+  if (dfShort.pageWidth !== 190.5 || dfShort.pageHeight !== 88.9) throw new Error(t.bankName + " custom_short page dimensions should match cheque (190.5 x 88.9)");
+  if (dfLong.pageWidth !== 190.5 || dfLong.pageHeight !== 88.9) throw new Error(t.bankName + " custom_long page dimensions should match cheque size (190.5 x 88.9)")
 }
 console.log("TEST_20_DIRECT_FEED_PROFILES: OK");
 
@@ -161,9 +157,6 @@ for (const t of all) {
     }
     if (typeof p.pageWidth !== "number" || typeof p.pageHeight !== "number") {
       throw new Error(t.bankName + " profile " + key + " missing numeric pageWidth/pageHeight");
-    }
-    if (p.rotate !== 0 && p.rotate !== 90) {
-      throw new Error(t.bankName + " profile " + key + " has invalid rotate: " + p.rotate);
     }
   }
 }

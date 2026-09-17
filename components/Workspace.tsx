@@ -15,7 +15,7 @@ import {
   isValidDate,
 } from "@/lib/amountWords";
 import { clampCalibration, validateCalibrationPair } from "@/lib/calibration";
-import { resolvePrintGeometry, rotatedContentOffset, resolveCalibratedGeometry } from "@/lib/printGeometry";
+import { resolvePrintGeometry, resolveCalibratedGeometry, STANDARD_CHEQUE_W_MM, STANDARD_CHEQUE_H_MM } from "@/lib/printGeometry";
 import { validatePrintGeometry, validateCalibratedBounds } from "@/lib/validation";
 
 // Global minimum font size floor to prevent unreadable output
@@ -26,8 +26,8 @@ export const MIN_PAYEE_FONT_SIZE = 6;
 // ---------------------------------------------------------------------------
 
 const PROFILE_LABELS: Record<ProfileKey, string> = {
-  custom_short: "Direct Feed · Short Edge First (90°)",
-  custom_long: "Direct Feed · Long Edge First (0°)",
+  custom_short: "Direct Feed · Short Edge First",
+  custom_long: "Direct Feed · Long Edge First",
   a4_vertical: "A4 Carrier · Portrait",
   a4_horizontal: "A4 Carrier · Landscape",
 };
@@ -36,7 +36,7 @@ const SCALE = 2.4;
 
 export const PRINT_MODE_LABELS: Record<ProfileKey, { mode: string; paper: string; orientation: string }> = {
   custom_short: { mode: "Custom Cheque Size", paper: "Custom Cheque", orientation: "Landscape" },
-  custom_long: { mode: "Custom Cheque Size", paper: "Custom Cheque", orientation: "Portrait" },
+  custom_long: { mode: "Custom Cheque Size", paper: "Custom Cheque", orientation: "Landscape" },
   a4_vertical: { mode: "A4 Carrier", paper: "A4", orientation: "Portrait" },
   a4_horizontal: { mode: "A4 Carrier", paper: "A4", orientation: "Landscape" },
 };
@@ -267,7 +267,7 @@ function DirectFeedPreview({ template, date, payee, amount, amountWords, account
   );
 }
 
-function A4CarrierPreview({ template, profile, mode, date, payee, amount, amountWords, accountPayee, offsetX, offsetY, debugMode = false }: PreviewProps & { profile: { x: number; y: number; pageWidth: number; pageHeight: number; rotate: 0 | 90 }; mode: ProfileKey }) {
+function A4CarrierPreview({ template, profile, mode, date, payee, amount, amountWords, accountPayee, offsetX, offsetY, debugMode = false }: PreviewProps & { profile: { x: number; y: number; pageWidth: number; pageHeight: number }; mode: ProfileKey }) {
   const dateDigits = date ? safeFormatDate(date) : "";
   const amountPaisa = validateAmount(amount).paisa;
   const words = amountWords || (amountPaisa > 0 ? amountToWordsFromPaisa(amountPaisa) : "");
@@ -467,7 +467,7 @@ function DebugGuides({ template, mode, calibration, scale }: DebugGuidesProps) {
   if (!template) return null;
   const geom = useMemo(() => resolveCalibratedGeometry(template, mode, calibration), [template, mode, calibration]);
   const isDF = isDirectFeed(mode);
-  const { pageW, pageH, chequeW, chequeH, chequeX, chequeY, finalChequeX, finalChequeY, rotate } = geom;
+  const { pageW, pageH, chequeW, chequeH, chequeX, chequeY, finalChequeX, finalChequeY } = geom;
 
   const pageLeft = 0;
   const pageTop = 0;
@@ -547,10 +547,10 @@ function DebugGuides({ template, mode, calibration, scale }: DebugGuidesProps) {
         CAL: X={calibration.x.toFixed(1)} Y={calibration.y.toFixed(1)} mm
       </span>
 
-      {/* Rotation state */}
-      <span style={{ ...labelStyle, left: `${pageRight * scale - 60}px`, top: `${(pageTop + 12) * scale}px`, color: "#059769" }}>
-        ROT: {rotate}° ({isDF ? "Direct Feed" : "A4"})
-      </span>
+       {/* Rotation state */}
+       <span style={{ ...labelStyle, left: `${pageRight * scale - 60}px`, top: `${(pageTop + 12) * scale}px`, color: "#059769" }}>
+         ROT: 0° ({isDF ? "Direct Feed" : "A4"})
+       </span>
     </div>
   );
 }
@@ -587,7 +587,7 @@ interface PrintOutputProps {
   offsetX: number;
   offsetY: number;
   mode: ProfileKey;
-  profile: { x: number; y: number; pageWidth: number; pageHeight: number; rotate: 0 | 90 };
+  profile: { x: number; y: number; pageWidth: number; pageHeight: number };
 }
 
 function PrintOutput({ template, date, payee, amount, amountWords, accountPayee, offsetX, offsetY, mode, profile }: PrintOutputProps) {
@@ -601,10 +601,12 @@ function PrintOutput({ template, date, payee, amount, amountWords, accountPayee,
   const calY = Number(offsetY ?? 0);
   const isDF = isDirectFeed(mode);
 
-  // Direct Feed (Custom Cheque Size): the @page is landscape 190.5×88.9 mm.
-  // Content is rendered unrotated (rotate is always 0) — Short Edge First
-  // vs Long Edge First is a printer hardware setting, not a CSS transform.
-  // Calibration shifts fields within the cheque's local coordinate space.
+  // Direct Feed (Custom Cheque Size): the @page is the cheque's physical size
+  // (190.5×88.9 mm, landscape). Content is rendered unrotated — the cheque's
+  // own coordinate system (origin top-left, X right, Y down) maps directly onto
+  // the page box. Short Edge First vs Long Edge First is a printer hardware
+  // feed-direction setting, not a CSS transform. Calibration shifts fields
+  // within the cheque's local coordinate space.
   if (isDF) {
     const geom = resolvePrintGeometry(template, mode);
     return (
@@ -2000,7 +2002,7 @@ export default function Workspace() {
               ) : (
                 <div
                   className="cheque-preview"
-                  style={{ width: Math.round(190.5 * SCALE), height: Math.round(88.9 * SCALE) }}
+                  style={{ width: Math.round(STANDARD_CHEQUE_W_MM * SCALE), height: Math.round(STANDARD_CHEQUE_H_MM * SCALE) }}
                   role="img"
                   aria-label="No bank template selected — preview unavailable"
                 >

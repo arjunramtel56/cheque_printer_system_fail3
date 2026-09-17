@@ -125,18 +125,12 @@ console.log("\n=== TEST GROUP 2: PRINT LAYOUT PREPARATION ===");
 function simulatePreparePrintLayout(template, printMode) {
   const profile = template.profiles[printMode];
   if (!profile) return { error: "No profile" };
-  const isDF = isDirectFeed(printMode);
   let pageSizeW, pageSizeH;
-  if (isDF) {
-    const pw = template.widthMm;
-    const ph = template.heightMm;
-    if (printMode === "custom_short") {
-      pageSizeW = ph;
-      pageSizeH = pw;
-    } else {
-      pageSizeW = pw;
-      pageSizeH = ph;
-    }
+  if (isDirectFeed(printMode)) {
+    // Direct Feed: page box is always the cheque's physical size (190.5×88.9mm).
+    // Short Edge First vs Long Edge First is a printer feed setting, not a CSS transform.
+    pageSizeW = template.widthMm;
+    pageSizeH = template.heightMm;
   } else {
     if (printMode === "a4_vertical") {
       pageSizeW = 210;
@@ -149,12 +143,12 @@ function simulatePreparePrintLayout(template, printMode) {
   return { pageSizeW, pageSizeH, profile };
 }
 
-// 2.1 Direct Feed short edge first — page swaps dimensions
+// 2.1 Direct Feed short edge first — page is landscape cheque size (no swap/rotation)
 const layout1 = simulatePreparePrintLayout(siddhartha, "custom_short");
-assert(layout1.pageSizeW === 88.9, "custom_short page width = cheque height (88.9mm)");
-assert(layout1.pageSizeH === 190.5, "custom_short page height = cheque width (190.5mm)");
+assert(layout1.pageSizeW === 190.5, "custom_short page width = cheque width (190.5mm)");
+assert(layout1.pageSizeH === 88.9, "custom_short page height = cheque height (88.9mm)");
 
-// 2.2 Direct Feed long edge first — page keeps dimensions
+// 2.2 Direct Feed long edge first — page keeps dimensions (same as short edge)
 const layout2 = simulatePreparePrintLayout(siddhartha, "custom_long");
 assert(layout2.pageSizeW === 190.5, "custom_long page width = cheque width (190.5mm)");
 assert(layout2.pageSizeH === 88.9, "custom_long page height = cheque height (88.9mm)");
@@ -174,9 +168,9 @@ assert(layout4.pageSizeH === 210, "a4_horizontal page height = 210mm");
 import { resolvePrintGeometry } from "../lib/printGeometry.ts";
 
 const dfShortG = resolvePrintGeometry(siddhartha, "custom_short");
-assert(dfShortG.containerW === 88.9 && dfShortG.containerH === 190.5, "DF short-edge: container is the swapped page box (88.9×190.5)");
-assert(dfShortG.pageW === 88.9 && dfShortG.pageH === 190.5, "DF short-edge: @page is 88.9×190.5");
-assert(dfShortG.rotate === 90, "DF short-edge: content rotation is 90°");
+assert(dfShortG.containerW === 190.5 && dfShortG.containerH === 88.9, "DF short-edge: container is cheque size (190.5×88.9) — no rotation, page box = cheque");
+assert(dfShortG.pageW === 190.5 && dfShortG.pageH === 88.9, "DF short-edge: @page is 190.5×88.9 (landscape, no swap)");
+assert(dfShortG.rotate === 0, "DF short-edge: no content rotation (feed direction is printer setting)");
 assert(dfShortG.chequeW === 190.5 && dfShortG.chequeH === 88.9, "DF short-edge: raw cheque dimensions preserved");
 
 const dfLongG = resolvePrintGeometry(siddhartha, "custom_long");
@@ -194,14 +188,13 @@ const a4hG = resolvePrintGeometry(siddhartha, "a4_horizontal");
 assert(a4hG.pageW === 297 && a4hG.pageH === 210, "A4 landscape: @page is 297×210");
 assert(a4hG.rotate === 0, "A4 modes never rotate content");
 
-// 2.6 rotatedContentOffset — mathematically verified for short-edge-first rotation.
-//     Page box = 88.9×190.5 mm (H×W), cheque = 190.5×88.9 mm (W×H). With
-//     transform-origin: 0 0 and 90° CW CSS rotation (matrix [0 -1; 1 0]),
-//     the rotated bounding box is [-H, 0] × [0, W] = [-88.9, 0] × [0, 190.5].
-//     To fill the page box [0, 88.9] × [0, 190.5], the offset is (chequeH, 0).
+// 2.6 rotatedContentOffset — no CSS rotation is applied; all modes return (0, 0).
+//     The @page is always the cheque's physical size (190.5×88.9 mm, landscape)
+//     for Direct Feed, with content rendered unrotated. Short Edge First vs
+//     Long Edge First is handled by the printer paper-feed direction.
 import { rotatedContentOffset } from "../lib/printGeometry.ts";
 const off90 = rotatedContentOffset(dfShortG);
-assert(off90.leftMm === 88.9 && off90.topMm === 0, "DF short-edge rotation offset is (88.9, 0)mm with transform-origin 0 0");
+assert(off90.leftMm === 0 && off90.topMm === 0, "DF short-edge: no rotation offset (content rendered flat, no CSS rotation)");
 
 const off0 = rotatedContentOffset(dfLongG);
 assert(off0.leftMm === 0 && off0.topMm === 0, "DF long-edge rotation offset is 0,0 (no rotation)");
@@ -360,11 +353,11 @@ for (const t of getAllTemplates()) {
   }
 }
 
-// 6.5 Direct Feed profiles have correct page dimensions (cheque size, swapped for rotate=90)
+// 6.5 Direct Feed profiles have correct page dimensions (cheque size, no rotation/swap)
 for (const t of getAllTemplates()) {
   const cs = t.profiles.custom_short;
-  assert(cs.pageWidth === 88.9 && cs.pageHeight === 190.5, t.bankName + " custom_short: page dims = 88.9×190.5 (cheque H×W, swapped)");
-  assert(cs.rotate === 90, t.bankName + " custom_short: rotate=90");
+  assert(cs.pageWidth === 190.5 && cs.pageHeight === 88.9, t.bankName + " custom_short: page dims = 190.5×88.9 (cheque W×H, landscape, no swap)");
+  assert(cs.rotate === 0, t.bankName + " custom_short: rotate=0 (no CSS rotation — feed direction is printer setting)");
   assert(cs.x === 0 && cs.y === 0, t.bankName + " custom_short: x=y=0 (cheque fills page box)");
 
   const cl = t.profiles.custom_long;
@@ -491,58 +484,51 @@ assert(!/\.print-output-screen\s*{[^}]*overflow:\s*hidden/.test(printCss), "prin
 assert(!globalsCss.includes(".print-output-screen"), "globals.css no longer defines .print-output-screen");
 
 // ---------------------------------------------------------------------------
-// Test Group 9: DF Short Edge First — Mathematical bounding box verification
+// Test Group 9: DF Short Edge First — No rotation (feed direction is printer setting)
 // ---------------------------------------------------------------------------
-console.log("\n=== TEST GROUP 9: DF SHORT EDGE FIRST — MATHEMATICAL VERIFICATION ===");
+console.log("\n=== TEST GROUP 9: DF SHORT EDGE FIRST — NO CSS ROTATION ===");
 
-// For custom_short: cheque is 190.5×88.9, page box is 88.9×190.5 (swapped).
-// CSS rotate(90deg) with transform-origin: 0 0 maps (x,y) → (-y, x).
-// Corners of cheque (0,0),(190.5,0),(190.5,88.9),(0,88.9) map to:
-//   (0,0), (0,190.5), (-88.9,190.5), (-88.9,0)
-// Bounding box: X ∈ [-88.9, 0], Y ∈ [0, 190.5]
-// Page box: X ∈ [0, 88.9], Y ∈ [0, 190.5]
-// Required offset: left=88.9 (shift right by chequeH), top=0
+// For custom_short: cheque is 190.5×88.9 mm. The @page is the cheque's physical
+// size (190.5×88.9 mm, landscape). No CSS rotation is applied — Short Edge First
+// vs Long Edge First is a printer paper-feed setting, not a CSS transform.
+// The cheque coordinate system (origin top-left, X right, Y down) maps directly
+// onto the page box. rotatedContentOffset returns (0, 0).
 for (const t of getAllTemplates()) {
   const geom = resolvePrintGeometry(t, "custom_short");
-  assert(geom.rotate === 90, t.bankName + " custom_short: rotate=90");
-  assert(geom.pageW === t.heightMm, t.bankName + " custom_short: pageW = chequeH (88.9)");
-  assert(geom.pageH === t.widthMm, t.bankName + " custom_short: pageH = chequeW (190.5)");
+  assert(geom.rotate === 0, t.bankName + " custom_short: rotate=0 (no CSS rotation — feed direction is printer setting)");
+  assert(geom.pageW === t.widthMm, t.bankName + " custom_short: pageW = chequeW (190.5)");
+  assert(geom.pageH === t.heightMm, t.bankName + " custom_short: pageH = chequeH (88.9)");
   assert(geom.containerW === geom.pageW, t.bankName + " custom_short: containerW = pageW");
   assert(geom.containerH === geom.pageH, t.bankName + " custom_short: containerH = pageH");
 
   const offset = rotatedContentOffset(geom);
-  assert(offset.leftMm === t.heightMm, t.bankName + " custom_short: offset.leftMm = chequeH (88.9)");
+  assert(offset.leftMm === 0, t.bankName + " custom_short: offset.leftMm = 0 (no rotation offset)");
   assert(offset.topMm === 0, t.bankName + " custom_short: offset.topMm = 0");
 
-  // Verify bounding box math: rotated cheque corners mapped to page box
-  // After applying offset (left=88.9, top=0):
-  //   (0,0) → (88.9, 0) = top-right of page box
-  //   (0,190.5) → (88.9, 190.5) = bottom-right of page box
-  //   (-88.9,190.5) → (0, 190.5) = bottom-left of page box
-  //   (-88.9,0) → (0, 0) = top-left of page box
-  // All corners must be within [0, 88.9] × [0, 190.5]
+  // Verify corners: with no rotation, corners of cheque (0,0),(W,0),(W,H),(0,H)
+  // map directly to the page box [0, W] × [0, H]. No offset needed.
   const W = t.widthMm;   // 190.5
   const H = t.heightMm;  // 88.9
   const mappedCorners = [
-    { x: 0 + offset.leftMm, y: 0 + offset.topMm },
-    { x: 0 + offset.leftMm, y: W + offset.topMm },
-    { x: -H + offset.leftMm, y: W + offset.topMm },
-    { x: -H + offset.leftMm, y: 0 + offset.topMm },
+    { x: 0, y: 0 },
+    { x: W, y: 0 },
+    { x: W, y: H },
+    { x: 0, y: H },
   ];
   for (const c of mappedCorners) {
-    assert(c.x >= -0.001 && c.x <= H + 0.001, t.bankName + " custom_short: rotated corner X (" + c.x.toFixed(2) + ") within page box [0, " + H + "]");
-    assert(c.y >= -0.001 && c.y <= W + 0.001, t.bankName + " custom_short: rotated corner Y (" + c.y.toFixed(2) + ") within page box [0, " + W + "]");
+    assert(c.x >= -0.001 && c.x <= W + 0.001, t.bankName + " custom_short: corner X (" + c.x.toFixed(2) + ") within page box [0, " + W + "]");
+    assert(c.y >= -0.001 && c.y <= H + 0.001, t.bankName + " custom_short: corner Y (" + c.y.toFixed(2) + ") within page box [0, " + H + "]");
   }
 }
 
 // ---------------------------------------------------------------------------
-// Test Group 10: DF Long Edge First — No rotation verification
+// Test Group 10: DF Long Edge First — same as Short Edge First (no rotation)
 // ---------------------------------------------------------------------------
 console.log("\n=== TEST GROUP 10: DF LONG EDGE FIRST — NO ROTATION ===");
 
 for (const t of getAllTemplates()) {
   const geom = resolvePrintGeometry(t, "custom_long");
-  assert(geom.rotate === 0, t.bankName + " custom_long: rotate=0");
+  assert(geom.rotate === 0, t.bankName + " custom_long: rotate=0 (no CSS rotation)");
   assert(geom.pageW === t.widthMm, t.bankName + " custom_long: pageW = chequeW (190.5)");
   assert(geom.pageH === t.heightMm, t.bankName + " custom_long: pageH = chequeH (88.9)");
   const offset = rotatedContentOffset(geom);
