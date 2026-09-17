@@ -170,12 +170,12 @@ import { resolvePrintGeometry } from "../lib/printGeometry.ts";
 const dfShortG = resolvePrintGeometry(siddhartha, "custom_short");
 assert(dfShortG.containerW === 190.5 && dfShortG.containerH === 88.9, "DF short-edge: container is cheque size (190.5×88.9) — no rotation, page box = cheque");
 assert(dfShortG.pageW === 190.5 && dfShortG.pageH === 88.9, "DF short-edge: @page is 190.5×88.9 (landscape, no swap)");
-assert(dfShortG.rotate === 0, "DF short-edge: no content rotation (feed direction is printer setting)");
+assert(dfShortG.rotate === undefined, "DF short-edge: no content rotation (feed direction is printer setting)");
 assert(dfShortG.chequeW === 190.5 && dfShortG.chequeH === 88.9, "DF short-edge: raw cheque dimensions preserved");
 
 const dfLongG = resolvePrintGeometry(siddhartha, "custom_long");
 assert(dfLongG.containerW === dfLongG.pageW && dfLongG.containerH === dfLongG.pageH, "DF long-edge: container equals page (no swap)");
-assert(dfLongG.rotate === 0, "DF long-edge: no content rotation");
+assert(dfLongG.rotate === undefined, "DF long-edge: no content rotation");
 assert(dfLongG.pageW === 190.5 && dfLongG.pageH === 88.9, "DF long-edge: @page matches cheque size");
 
 const a4vG = resolvePrintGeometry(siddhartha, "a4_vertical");
@@ -186,7 +186,7 @@ assert(a4vG.chequeX + siddhartha.widthMm <= a4vG.pageW, "A4 portrait: cheque fit
 
 const a4hG = resolvePrintGeometry(siddhartha, "a4_horizontal");
 assert(a4hG.pageW === 297 && a4hG.pageH === 210, "A4 landscape: @page is 297×210");
-assert(a4hG.rotate === 0, "A4 modes never rotate content");
+assert(a4hG.rotate === undefined, "A4 modes never rotate content");
 
 // 2.6 rotatedContentOffset — no CSS rotation is applied; all modes return (0, 0).
 //     The @page is always the cheque's physical size (190.5×88.9 mm, landscape)
@@ -358,13 +358,13 @@ for (const t of getAllTemplates()) {
   const cs = t.profiles.custom_short;
   assert(cs.pageWidth === 190.5 && cs.pageHeight === 88.9, t.bankName + " custom_short: page dims = 190.5×88.9 (cheque W×H, landscape, no swap)");
   const csGeom = resolvePrintGeometry(t, "custom_short");
-  assert(csGeom.rotate === 0, t.bankName + " custom_short: rotate=0 (no CSS rotation — feed direction is printer setting)");
-  assert(cs.x === 0 && cs.y === 0, t.bankName + " custom_short: x=y=0 (cheque fills page box)");
+   assert(csGeom.rotate === undefined, t.bankName + " custom_short: no rotate field (no CSS rotation — feed direction is printer setting)");
+   assert(cs.x === 0 && cs.y === 0, t.bankName + " custom_short: x=y=0 (cheque fills page box)");
 
-  const cl = t.profiles.custom_long;
-  assert(cl.pageWidth === 190.5 && cl.pageHeight === 88.9, t.bankName + " custom_long: page dims = 190.5×88.9 (cheque W×H)");
-  const clGeom = resolvePrintGeometry(t, "custom_long");
-  assert(clGeom.rotate === 0, t.bankName + " custom_long: rotate=0");
+   const cl = t.profiles.custom_long;
+   assert(cl.pageWidth === 190.5 && cl.pageHeight === 88.9, t.bankName + " custom_long: page dims = 190.5×88.9 (cheque W×H)");
+   const clGeom = resolvePrintGeometry(t, "custom_long");
+   assert(clGeom.rotate === undefined, t.bankName + " custom_long: no rotate field");
   assert(cl.x === 0 && cl.y === 0, t.bankName + " custom_long: x=y=0 (cheque fills page box)");
 }
 
@@ -497,7 +497,7 @@ console.log("\n=== TEST GROUP 9: DF SHORT EDGE FIRST — NO CSS ROTATION ===");
 // onto the page box. rotatedContentOffset returns (0, 0).
 for (const t of getAllTemplates()) {
   const geom = resolvePrintGeometry(t, "custom_short");
-  assert(geom.rotate === 0, t.bankName + " custom_short: rotate=0 (no CSS rotation — feed direction is printer setting)");
+   assert(geom.rotate === undefined, t.bankName + " custom_short: no rotate field (no CSS rotation — feed direction is printer setting)");
   assert(geom.pageW === t.widthMm, t.bankName + " custom_short: pageW = chequeW (190.5)");
   assert(geom.pageH === t.heightMm, t.bankName + " custom_short: pageH = chequeH (88.9)");
   assert(geom.containerW === geom.pageW, t.bankName + " custom_short: containerW = pageW");
@@ -530,7 +530,7 @@ console.log("\n=== TEST GROUP 10: DF LONG EDGE FIRST — NO ROTATION ===");
 
 for (const t of getAllTemplates()) {
   const geom = resolvePrintGeometry(t, "custom_long");
-  assert(geom.rotate === 0, t.bankName + " custom_long: rotate=0 (no CSS rotation)");
+   assert(geom.rotate === undefined, t.bankName + " custom_long: no rotate field (no CSS rotation)");
   assert(geom.pageW === t.widthMm, t.bankName + " custom_long: pageW = chequeW (190.5)");
   assert(geom.pageH === t.heightMm, t.bankName + " custom_long: pageH = chequeH (88.9)");
   const offset = rotatedContentOffset(geom);
