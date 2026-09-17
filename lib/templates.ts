@@ -1,4 +1,5 @@
-import type { BankTemplate, ProfileKey, DEFAULT_SUPPORTED_MODES } from "./types.ts";
+import type { BankTemplate, ProfileKey } from "./types.ts";
+import { DEFAULT_SUPPORTED_MODES } from "./types.ts";
 import { validateBankTemplate, validateNoDuplicateIds } from "./validation.ts";
 import { STANDARD_CHEQUE_W_MM as STANDARD_WIDTH_MM, STANDARD_CHEQUE_H_MM as STANDARD_HEIGHT_MM } from "./printGeometry.ts";
 

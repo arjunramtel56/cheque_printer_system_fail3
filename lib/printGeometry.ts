@@ -65,39 +65,39 @@ export interface PrintGeometry {
 export function resolvePrintGeometry(template: BankTemplate, mode: ProfileKey): PrintGeometry {
   const profile = template.profiles[mode];
 
-  if (isDirectFeed(mode)) {
-    const chequeW = template.widthMm;
-    const chequeH = template.heightMm;
-    // Direct Feed: @page is ALWAYS the cheque's physical size (landscape).
-    // No CSS rotation — feed direction is a printer setting.
+   if (isDirectFeed(mode)) {
+     const chequeW = template.widthMm;
+     const chequeH = template.heightMm;
+     // Direct Feed: @page is ALWAYS the cheque's physical size (landscape).
+     // No CSS rotation — feed direction is a printer setting.
+      return {
+        pageW: chequeW,
+        pageH: chequeH,
+        containerW: chequeW,
+        containerH: chequeH,
+        chequeW,
+        chequeH,
+        chequeX: 0,
+        chequeY: 0,
+      };
+   }
+
+   // A4 Carrier — independent portrait / landscape page boxes.
+   const portrait = mode === "a4_vertical";
+   const pageW = portrait ? A4_PORTRAIT_W_MM : A4_LANDSCAPE_W_MM;
+   const pageH = portrait ? A4_PORTRAIT_H_MM : A4_LANDSCAPE_H_MM;
+
     return {
-      pageW: chequeW,
-      pageH: chequeH,
-      containerW: chequeW,
-      containerH: chequeH,
-      chequeW,
-      chequeH,
-      chequeX: 0,
-      chequeY: 0,
-    };
-  }
-
-  // A4 Carrier — independent portrait / landscape page boxes.
-  const portrait = mode === "a4_vertical";
-  const pageW = portrait ? A4_PORTRAIT_W_MM : A4_LANDSCAPE_W_MM;
-  const pageH = portrait ? A4_PORTRAIT_H_MM : A4_LANDSCAPE_H_MM;
-
-  return {
-    pageW,
-    pageH,
-    containerW: pageW,
-    containerH: pageH,
-    chequeW: template.widthMm,
-    chequeH: template.heightMm,
-    chequeX: profile.x,
-    chequeY: profile.y,
-  };
-}
+      pageW,
+      pageH,
+      containerW: pageW,
+      containerH: pageH,
+      chequeW: template.widthMm,
+      chequeH: template.heightMm,
+      chequeX: profile.x,
+      chequeY: profile.y,
+   };
+ }
 
 /**
  * Content offset for Direct-Feed mode.
