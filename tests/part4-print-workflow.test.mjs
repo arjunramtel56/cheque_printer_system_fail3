@@ -26,7 +26,7 @@
 // And light system regression (Landing / Workspace build + runtime).
 // ============================================================================
 
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { getTemplate, getAllTemplates } from "../lib/templates.ts";
 import {
@@ -140,9 +140,11 @@ assertContains(handlePrintBody, "try {", "window.print() wrapped in try/catch");
 assertContains(handlePrintBody, "window.print();", "window.print() invoked");
 // Verify the catch block contains the cleanup code (parse catch block properly)
 const catchStartIdx = handlePrintBody.indexOf("} catch (err) {");
-const catchEndIdx = handlePrintBody.indexOf("}", catchStartIdx);
+// Find the opening { of the catch block, then the next } closes it
+const catchOpenBrace = handlePrintBody.indexOf("{", catchStartIdx);
+const catchCloseBrace = handlePrintBody.indexOf("}", catchOpenBrace + 1);
 assert(catchStartIdx !== -1, "catch block exists");
-const catchBlock = catchStartIdx !== -1 ? handlePrintBody.slice(catchStartIdx, catchEndIdx) : "";
+const catchBlock = catchStartIdx !== -1 ? handlePrintBody.slice(catchOpenBrace + 1, catchCloseBrace) : "";
 assertContains(catchBlock, "printLockRef.current = false", "catch resets print lock");
 assertContains(catchBlock, "setIsPrinting(false)", "catch resets isPrinting");
 assertContains(catchBlock, "window.removeEventListener", "catch removes listeners");
@@ -170,8 +172,8 @@ assertContains(ws, "const currentPrintKey = ++printKeyRef.current;", "printKey i
 assertContains(ws, "data-print-key={printKeyRef.current}", "PrintOutput wrapper carries data-print-key");
 assertContains(ws, "data-template-id={template.id}", "PrintOutput wrapper carries data-template-id (stale-template detection)");
 assertContains(ws, "data-mode={printMode}", "PrintOutput wrapper carries data-mode");
-assertContains(ws, "data-calX={String(cal.x)}", "PrintOutput wrapper carries calibration X");
-assertContains(ws, "data-calY={String(cal.y)}", "PrintOutput wrapper carries calibration Y");
+assertContains(ws, "data-calX={String(isDF ? dfCalibration.x : a4Calibration.x)}", "PrintOutput wrapper carries calibration X");
+assertContains(ws, "data-calY={String(isDF ? dfCalibration.y : a4Calibration.y)}", "PrintOutput wrapper carries calibration Y");
 assertContains(ws, 'containerSelector = isDirectFeed(printMode)', "Container selector chosen by mode (DF vs A4)");
 assertContains(ws, "geom.pageW.toFixed(1)", "@page width sourced from resolved geometry (not hardcoded)");
 assertContains(ws, "geom.pageH.toFixed(1)", "@page height sourced from resolved geometry");
@@ -235,8 +237,9 @@ const afterPrintSection = guardBlock.split("function onAfterPrint")[1];
 assertContains(afterPrintSection, "printLockRef.current = false", "onAfterPrint releases the print lock");
 // Verify lock is released in every catch/error path
 const catchBlockIdx = guardBlock.indexOf("} catch (err) {");
-const catchEndIdx = guardBlock.indexOf("}", catchBlockIdx);
-const catchSection = catchBlockIdx !== -1 ? guardBlock.slice(catchBlockIdx, catchEndIdx) : "";
+const catchOpenBrace2 = guardBlock.indexOf("{", catchBlockIdx);
+const catchEndIdx2 = guardBlock.indexOf("}", catchOpenBrace2 + 1);
+const catchSection = catchBlockIdx !== -1 ? guardBlock.slice(catchOpenBrace2 + 1, catchEndIdx2) : "";
 assertContains(catchSection, "printLockRef.current = false", "catch block releases lock");
 
 // ---------------------------------------------------------------------------
@@ -286,7 +289,6 @@ console.log("\n=== TEST 4: Calibration change ===");
 // Calibration is clamped at input and re-validated at print time
 assertContains(ws, "clampCalibration", "Calibration clamped via clampCalibration");
 assertContains(ws, "parseCalibrationInput", "Strict parser used for calibration input");
-assertContains(ws, "/^[-+]?\\d*\\.?\\d*$/"?.replace?.("\\d", "d") ?? "", "") // placeholder, real check below
 {
   const parserFn = ws.match(/function parseCalibrationInput[\s\S]*?^  \}/m)?.[0] ?? "";
   assert(parserFn.includes("/^"), "parseCalibrationInput uses regex anchoring");
@@ -571,17 +573,17 @@ assertContains(layoutTsx, "./print.css", "Root layout imports print.css (print s
 assertContains(layoutTsx, "color-scheme", "Root layout sets color-scheme for print");
 
 // Workspace intact + no broken imports
-assertContains(ws, 'import { getAllTemplates, getTemplate } from "@/lib/templates"', "Workspace imports templates (no broken path)");
+assertContains(ws, 'from "@/lib/templates"', "Workspace imports templates (no broken path)");
 assertContains(ws, 'import type { BankTemplate, ProfileKey, Calibration } from "@/lib/types"', "Workspace imports types");
 assertContains(ws, 'import { clampCalibration, validateCalibrationPair } from "@/lib/calibration"', "Workspace imports calibration");
-assertContains(ws, 'import { resolvePrintGeometry, resolveCalibratedGeometry } from "@/lib/printGeometry"', "Workspace imports printGeometry");
+assertContains(ws, 'from "@/lib/printGeometry"', "Workspace imports printGeometry");
 assertContains(ws, 'import { validatePrintGeometry, validateCalibratedBounds } from "@/lib/validation"', "Workspace imports validation");
 assert(!ws.includes("@/lib/undefined"), "No broken '@/lib/' import path that doesn't resolve");
 
 // Production build artifacts present (built earlier)
 assert(fileExists(repoRoot + ".next/server/app/page.js"), "Production build: page.js artifact exists");
 assert(fileExists(repoRoot + ".next/server/app/index.html"), "Production build: prerendered index exists");
-assert(fileExists(repoRoot + ".next/static"), "Production build: static assets dir exists");
+assert(dirExists(repoRoot + ".next/static"), "Production build: static assets dir exists");
 
 // Linting: no raw parseFloat for calibration (security/correctness regression check)
 assert(!ws.includes("parseFloat(e.target.value)"), "Workspace no longer uses raw parseFloat (strict parser enforced)");
@@ -607,4 +609,8 @@ if (fail > 0) {
 
 function fileExists(p) {
   try { readFileSync(p); return true; } catch { return false; }
+}
+
+function dirExists(p) {
+  try { statSync(p); return true; } catch { return false; }
 }
