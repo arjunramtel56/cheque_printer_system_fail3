@@ -79,9 +79,11 @@ console.log("\n--- SECTION 2: The demo gate is as strong as a demo can be ---");
   // Comparison: constant-time.
   assert(/constantTimeEqual/.test(admin), "password comparison goes through a constant-time helper");
   {
-    // Exercise the actual comparator logic against Node's crypto timingSafeEqual
-    // semantics: different-length inputs must not throw, equal inputs must match.
-    const src = admin.match(/function constantTimeEqual\([\s\S]*?\n\}/)?.[0] ?? "";
+    // Strip TS annotations and exercise the actual comparator semantics:
+    // different-length inputs must not throw, equal inputs must match.
+    const src = (admin.match(/function constantTimeEqual\([\s\S]*?\n\}/)?.[0] ?? "")
+      .replace(/: string/g, "")
+      .replace(/: boolean/g, "");
     assert(src.length > 0, "constantTimeEqual is defined in lib/admin.ts");
     const fn = new Function(`${src}; return constantTimeEqual;`)();
     assert(fn("abc", "abc") === true, "constantTimeEqual matches equal strings");

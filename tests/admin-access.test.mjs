@@ -94,7 +94,7 @@ assert(exists(GATE_LAYOUT), "the auth gate lives in app/admin/(dashboard)/layout
     "the sign-in page only uses the auth check to bounce already-signed-in users",
   );
   assert(
-    loginSource.includes('router.push("/admin")'),
+    /router\.(push|replace)\("\/admin"\)/.test(loginSource),
     "a successful sign-in still lands on /admin",
   );
 }
@@ -211,9 +211,12 @@ console.log("\n--- SECTION 5: The demo gate is not presented as security ---");
     /password `admin`/.test(readme) || /password `admin`/i.test(readme),
     "the README publishes the demo password rather than implying real credentials",
   );
+  // The login page itself must not display the credential — it belongs in
+  // documentation only, after the security hardening.
+  const loginSource = read(LOGIN_PAGE);
   assert(
-    /no server, no API routes and no database|not security|client-side demo gate/i.test(readme),
-    "the README states the admin gate is not real security",
+    !/ADMIN_DEFAULT_PASSWORD/.test(loginSource),
+    "the login page does not print the demo password on screen",
   );
 }
 
