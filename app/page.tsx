@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import Workspace from "@/components/Workspace";
 import MicrSafetyGuide from "@/components/MicrSafetyGuide";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import TrustBadge from "@/components/TrustBadge";
+import { useTranslation } from "@/lib/i18n";
 import { getCatalogueSummary, getSelectableBanks } from "@/lib/catalogue";
 
 /**
@@ -16,6 +19,7 @@ import { getCatalogueSummary, getSelectableBanks } from "@/lib/catalogue";
  * /banks/[bank]/cheque/[template].
  */
 export default function HomePage() {
+  const { t } = useTranslation();
   const banks = getSelectableBanks();
   const summary = getCatalogueSummary();
 
@@ -24,11 +28,11 @@ export default function HomePage() {
       <div className="no-print" style={{ position: "fixed", top: 12, right: 12, zIndex: 100, display: "flex", gap: 10 }}>
         <ThemeToggle />
         <LanguageToggle />
-        <Link href="/banks" className="text-button" style={{ fontSize: "0.78rem", opacity: 0.6 }} aria-label="Bank directory">
-          Banks
+        <Link href="/banks" className="text-button" style={{ fontSize: "0.78rem", opacity: 0.6 }} aria-label={t("navBanks")}>
+          {t("navBanks")}
         </Link>
-        <Link href="/admin" className="text-button" style={{ fontSize: "0.78rem", opacity: 0.6 }} aria-label="Admin panel">
-          Admin
+        <Link href="/admin" className="text-button" style={{ fontSize: "0.78rem", opacity: 0.6 }} aria-label={t("navAdmin")}>
+          {t("navAdmin")}
         </Link>
       </div>
 
@@ -39,10 +43,9 @@ export default function HomePage() {
       <Workspace />
 
       <section className="no-print panel" style={{ margin: "16px", padding: 16 }}>
-        <h2 style={{ fontSize: "0.95rem", margin: "0 0 6px 0" }}>Measured cheque templates</h2>
+        <h2 style={{ fontSize: "0.95rem", margin: "0 0 6px 0" }}>{t("measuredTemplatesTitle")}</h2>
         <p style={{ margin: "0 0 10px 0", fontSize: "0.82rem", color: "var(--text-muted)" }}>
-          {summary.banksWithTemplates} of {summary.bankCount} catalogue banks have a cheque layout,{" "}
-          {summary.banksPending} are awaiting one. Only layouts measured from a real cheque sample are printable.
+          {t("catalogueSummary", summary.banksWithTemplates, summary.banksPending, summary.bankCount)}
         </p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {banks.map((bank) => (
@@ -51,7 +54,7 @@ export default function HomePage() {
             </Link>
           ))}
           <Link href="/banks" className="text-button" style={{ alignSelf: "center", fontSize: "0.82rem" }}>
-            Full catalogue →
+            {t("fullCatalogue")}
           </Link>
         </div>
       </section>

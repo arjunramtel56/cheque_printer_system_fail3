@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { LanguageToggle } from "@/components/LanguageToggle";
-import { getBankGroups, getCatalogueSummary, formatBankLabel, getTemplatesForBank } from "@/lib/catalogue";
-import { VerificationBadge } from "@/components/CatalogueBadges";
+import { getBankGroups, getCatalogueSummary, getTemplatesForBank, formatBankLabel } from "@/lib/catalogue";
+import BanksDirectoryClient from "./BanksDirectoryClient";
 
 /**
  * Bank directory: every institution in the catalogue, grouped by NRB class,
@@ -14,78 +12,9 @@ export default function BanksPage() {
   const summary = getCatalogueSummary();
 
   return (
-    <div className="card" style={{ margin: 16, maxWidth: "960px" }}>
-      <nav style={{ marginBottom: 12, fontSize: "0.82rem", display: "flex", gap: 10, alignItems: "center" }}>
-        <Link href="/" className="text-button">
-          Home
-        </Link>
-        <span style={{ color: "var(--text-muted)" }}> / </span>
-        <Link href="/banks" className="text-button">
-          Banks
-        </Link>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-          <ThemeToggle />
-          <LanguageToggle />
-        </div>
-      </nav>
-      <h1 style={{ fontSize: "1.2rem", margin: "0 0 4px 0" }}>Nepal bank catalogue</h1>
-      <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-muted)" }}>
-        {summary.bankCount} institutions · {summary.banksWithTemplates} with a measured cheque template ·{" "}
-        {summary.banksPending} awaiting a template. {summary.physicallyCalibratedCount} physically calibrated,{" "}
-        {summary.browserVerifiedCount} browser verified.
-      </p>
-      <p style={{ margin: "8px 0 16px 0", fontSize: "0.82rem", color: "var(--text-muted)" }}>
-        A template is only added after a physical cheque from that bank has been measured. Nothing here is guessed.
-      </p>
-
-      {groups.map((group) => (
-        <section key={group.nrbClass} style={{ marginBottom: 20 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-            <h2 style={{ fontSize: "0.95rem", margin: 0 }}>{group.label}</h2>
-            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontStyle: "italic" }}>{group.note}</span>
-          </div>
-          <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 4, fontSize: "0.85rem" }}>
-            {group.banks.map((bank) => {
-              const templates = getTemplatesForBank(bank.id);
-              return (
-                <li
-                  key={bank.id}
-                  style={{
-                    display: "flex",
-                    gap: 10,
-                    alignItems: "baseline",
-                    flexWrap: "wrap",
-                    fontSize: "0.85rem",
-                    padding: "6px 8px",
-                    borderRadius: "var(--radius-sm)",
-                    transition: "background-color 0.15s ease",
-                  }}
-                >
-                  <Link href={`/banks/${bank.id}`} className="text-button" style={{ fontSize: "0.9rem", fontWeight: 600 }}>
-                    {bank.name}
-                  </Link>
-                  {!bank.enabled && <span style={{ color: "var(--danger)", fontSize: "0.72rem" }}>disabled</span>}
-                  {bank.status !== "active" && (
-                    <span style={{ color: "var(--text-muted)", fontSize: "0.74rem" }}>{formatBankLabel(bank)}</span>
-                  )}
-                  {templates.length === 0 ? (
-                    <span style={{ color: "var(--text-muted)", fontSize: "0.74rem" }}>template pending</span>
-                  ) : (
-                    templates.map((template) => (
-                      <span key={template.id} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-                        <Link href={`/banks/${bank.id}/cheque/${template.id}`} className="text-button" style={{ fontSize: "0.82rem" }}>
-                          {template.label}
-                        </Link>
-                        <VerificationBadge status={template.verification?.status ?? "unverified"} />
-                      </span>
-                    ))
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
-    </div>
+    <BanksDirectoryClient
+      groups={groups}
+      summary={summary}
+    />
   );
 }
