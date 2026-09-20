@@ -101,7 +101,12 @@ export const chequeFormSchema = z.object({
   amountInWords: z
     .string()
     .min(5, "Amount in words is too short.")
-    .max(100, "Amount in words is too long."),
+    .max(100, "Amount in words is too long.")
+    .refine((s) => !/[\u0966-\u096F\u0900-\u097F]/.test(s), {
+      message:
+        "Amount in words must not contain Devanagari numerals or script characters. " +
+        "Use English letters only in the words field (per NRB CTS 2010).",
+    }),
   lang: z.enum(LOCALE_VALUES, { message: "Unsupported language." }),
   bankKey: z
     .string()
@@ -191,7 +196,12 @@ export const a4OverlaySchema = z.object({
   amountInWords: z
     .string()
     .min(5, "Amount in words is too short.")
-    .max(240, "Amount in words is too long."),
+    .max(240, "Amount in words is too long.")
+    .refine((s) => !/[\u0966-\u096F\u0900-\u097F]/.test(s), {
+      message:
+        "Amount in words must not contain Devanagari numerals or script characters. " +
+        "Use English letters only in the words field (per NRB CTS 2010).",
+    }),
   lang: z.enum(LOCALE_VALUES, { message: "Unsupported language." }),
 }).refine(
   (ref) => {
