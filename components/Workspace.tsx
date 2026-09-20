@@ -482,6 +482,12 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
     setCalibrations((prev) => resetCalibrationFor(prev, template.id, printMode));
   }
 
+   // -----------------------------------------------------------------------
+  // Explicit workflow state + print-readiness (single source of truth for the
+  // reason the print button surfaces).
+  // -----------------------------------------------------------------------
+  const { t, locale: appLocale, toggleLocale } = useTranslation();
+
   const chequeData: ChequeData = { date, payee, amount, amountWords, accountPayee, locale: appLocale };
 
   const safeZonesClear = useMemo(
@@ -508,12 +514,6 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
     const v = validateAmount(amount);
     return v.valid && v.paisa > 0;
   }, [amount]);
-
-  // -----------------------------------------------------------------------
-  // Explicit workflow state + print-readiness (single source of truth for the
-  // reason the print button surfaces).
-  // -----------------------------------------------------------------------
-  const { t, locale: appLocale, toggleLocale } = useTranslation();
 
   const printReadiness = useMemo<PrintReadiness>(() => {
     if (!template) return { ready: false, reason: t("selectBankTemplateError") };
@@ -952,7 +952,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
             {/* Print Mode + Date */}
             <div className="two-columns">
               <div className="field">
-                <label htmlFor="print-mode">Print Mode</label>
+                <label htmlFor="print-mode">{t("printModeLabel")}</label>
                 <select
                   id="print-mode"
                   value={printMode}
@@ -1031,10 +1031,10 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
             {/* Amount + Amount in Words */}
             <div className="two-columns">
               <div className="field">
-                <label htmlFor="amount-input">Amount (NPR)</label>
+                <label htmlFor="amount-input">{t("amountLabel")}</label>
                 <div className="input-prefix">
-                  <b aria-hidden="true">Rs.</b>
-                  <label htmlFor="amount-input" className="sr-only">Amount</label>
+                  <b aria-hidden="true">{t("amountPrefix")}</b>
+                  <label htmlFor="amount-input" className="sr-only">{t("amountLabel")}</label>
                   <input
                     id="amount-input"
                     type="text"
@@ -1049,22 +1049,22 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                   />
                 </div>
                 {amountError && <span className="error-state" id="amount-error" role="alert">{amountError}</span>}
-                <small>Enter whole numbers or decimals up to 2 places.</small>
+                <small>{t("amountHelp")}</small>
               </div>
               <div className="field">
-                <label htmlFor="words-input">Amount in Words</label>
+                <label htmlFor="words-input">{t("amountWordsLabel")}</label>
                 <textarea
                   id="words-input"
                   rows={3}
                   maxLength={240}
-                  placeholder={template ? "Auto-generated" : ""}
+                  placeholder={template ? t("amountWordsPlaceholder") : ""}
                   value={amountWords}
                   onChange={(e) => handleWordEdit(e.target.value)}
                   disabled={!template}
                   aria-describedby={template ? "words-help" : "field-disabled-bank"}
                   aria-disabled={!template}
                 />
-                <small id="words-help">You may edit the generated wording before printing.</small>
+                <small id="words-help">{t("wordsHelp")}</small>
               </div>
             </div>
 
@@ -1079,10 +1079,10 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                 aria-describedby={template ? undefined : "field-disabled-bank"}
                 aria-disabled={!template}
               />
-              <label htmlFor="ac-payee" style={{ margin: 0, fontWeight: 600, fontSize: "0.88rem", color: "var(--text-secondary)" }}>
-                Print <b>A/C PAYEE ONLY</b>
+                <label htmlFor="ac-payee" style={{ margin: 0, fontWeight: 600, fontSize: "0.88rem", color: "var(--text-secondary)" }}>
+                {t("acPayeeOnly")} <b>A/C PAYEE ONLY</b>
                 <span style={{ fontWeight: 400, fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                  {" "}· Adds a centred account-payee crossing
+                  {" "}·{t("acPayeeHelp")}
                 </span>
               </label>
             </div>
@@ -1091,47 +1091,47 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
             {template && paper && (
               <div className="field" style={{ marginTop: 16, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
                 <h3 style={{ margin: "0 0 10px 0", fontSize: "0.82rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                  Print Settings / Size Management
+                  {t("printSettingsTitle")}
                 </h3>
                 <div style={{ display: "grid", gap: 10, fontSize: "0.85rem" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>PRINT MODE</span>
+                    <span style={{ color: "var(--text-muted)" }}>{t("printModeDisplay")}</span>
                     <b style={{ color: isDF ? "var(--brand-blue)" : "var(--brand-teal)" }}>
-                      {isDF ? "Custom Cheque Size" : "A4 Carrier"}
+                      {isDF ? t("customChequeSize") : t("a4Carrier")}
                     </b>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>CHEQUE SIZE</span>
+                    <span style={{ color: "var(--text-muted)" }}>{t("chequeSizeDisplay")}</span>
                     <b>{template.widthMm} mm × {template.heightMm} mm</b>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>ORIENTATION</span>
-                    <b>{template.orientation === "portrait" ? "Portrait" : "Landscape"} cheque</b>
+                    <span style={{ color: "var(--text-muted)" }}>{t("orientationDisplay")}</span>
+                    <b>{template.orientation === "portrait" ? t("portrait") : t("landscape")} {t("chequeSizeLabel")}</b>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>PAPER</span>
+                    <span style={{ color: "var(--text-muted)" }}>{t("paperDisplay")}</span>
                     <b>{paper.label}</b>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>CALIBRATION</span>
+                    <span style={{ color: "var(--text-muted)" }}>{t("calibrationDisplay")}</span>
                     <b>{formatCalibration(currentCalibration)}</b>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>SCALE</span>
+                    <span style={{ color: "var(--text-muted)" }}>{t("scaleDisplay")}</span>
                     <b>100% / Actual Size</b>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>TEMPLATE STATUS</span>
+                    <span style={{ color: "var(--text-muted)" }}>{t("templateStatusDisplay")}</span>
                     <b>
                       {template.verification?.status === "physically-calibrated"
-                        ? "Physically calibrated"
+                        ? t("physicallyCalibrated")
                         : template.verification?.status === "browser-verified"
-                          ? "Browser verified — physical test pending"
-                          : "Unverified layout"}
+                          ? t("browserVerified")
+                          : t("unverifiedLayout")}
                     </b>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>MODE CALIBRATIONS (independent)</span>
+                    <span style={{ color: "var(--text-muted)" }}>{t("modeCalibrationsDisplay")}</span>
                     <b style={{ fontSize: "0.8rem" }}>
                       {calibrationRows
                         .map((row) => `${PROFILE_LABELS[row.mode].split(" · ")[0]}: ${formatCalibration(row.calibration)}`)
@@ -1149,7 +1149,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                       checked={debugMode}
                       onChange={(e) => setDebugMode(e.target.checked)}
                     />
-                    <span style={{ color: "var(--text-muted)" }}>Show debug measurement guides</span>
+                    <span style={{ color: "var(--text-muted)" }}>{t("debugToggleLabel")}</span>
                   </label>
                   <small style={{ color: "var(--text-muted)" }}>Dev/admin only</small>
                 </div>
@@ -1161,18 +1161,18 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
               <span>
                 Calibration (mm offset) ·{" "}
                 <b style={{ color: isDF ? "var(--brand-blue)" : "var(--brand-teal)" }}>
-                  {isDF ? "Direct Feed" : "A4 Carrier"}
+                  {isDF ? t("directFeed") : t("a4Carrier")}
                 </b>
               </span>
               <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
-                <CalibrationControl
-                  label="X Offset"
+                   <CalibrationControl
+                  label={t("xOffsetLabel")}
                   value={currentCalibration.x}
                   onChange={(v) => updateCalibration({ ...currentCalibration, x: clampCalibration(v) })}
                   disabled={!template}
                 />
                 <CalibrationControl
-                  label="Y Offset"
+                  label={t("yOffsetLabel")}
                   value={currentCalibration.y}
                   onChange={(v) => updateCalibration({ ...currentCalibration, y: clampCalibration(v) })}
                   disabled={!template}
@@ -1183,10 +1183,10 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                     className="text-button"
                     disabled={!template || isNeutralCalibration(currentCalibration)}
                     onClick={resetAllCalibration}
-                    title="Reset X and Y to 0 for the current template and print mode"
+                    title={t("resetCalibrationHint")}
                     style={{ fontSize: "0.8rem", padding: "4px 6px" }}
-                  >
-                    Reset All
+                   >
+                     {t("resetAllBtn")}
                   </button>
                   <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
                     {calibrationRows
@@ -1195,21 +1195,20 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                   </span>
                 </div>
               </div>
-              <small>
-                Fine adjustment in {CALIBRATION_STEP_MM} mm steps, ±{CALIBRATION_MAX_MM} mm range. Calibration is stored per cheque
-                template and per print mode, moves X and Y independently, and never changes the cheque&apos;s physical size.
+                <small>
+                {t("calibrationHelp")}{CALIBRATION_STEP_MM} {t("mmSteps")}{CALIBRATION_MAX_MM} {t("mmRange")}
               </small>
             </div>
 
             {/* Selected template summary */}
             {template && profile && (
               <div className="template-summary" aria-label="Selected template info">
-                <div><span>Bank · </span><b>{template.bankName}</b></div>
-                <div><span>Layout · </span><b>{template.label}</b></div>
-                <div><span>Size · </span><b>{template.widthMm} × {template.heightMm} mm ({template.orientation})</b></div>
-                <div><span>Mode · </span><b>{PROFILE_LABELS[printMode]}</b></div>
-                <div><span>Page · </span><b>{profile.pageWidth} × {profile.pageHeight} mm</b></div>
-                <div><span>Calibration · </span><b>{formatCalibration(currentCalibration)}</b></div>
+                <div><span>{t("bankLabel")}</span><b>{template.bankName}</b></div>
+                <div><span>{t("layoutLabel")}</span><b>{template.label}</b></div>
+                <div><span>{t("sizeLabel")}</span><b>{template.widthMm} × {template.heightMm} mm ({template.orientation})</b></div>
+                <div><span>{t("modeLabel")}</span><b>{PROFILE_LABELS[printMode]}</b></div>
+                <div><span>{t("pageLabel")}</span><b>{profile.pageWidth} × {profile.pageHeight} mm</b></div>
+                <div><span>{t("calibrationLabel")}</span><b>{formatCalibration(currentCalibration)}</b></div>
               </div>
             )}
 
@@ -1235,12 +1234,12 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                 aria-describedby={printReadiness.ready ? "print-help" : "print-reason"}
                 aria-label={
                   isPrinting
-                    ? "Printing cheque — wait for the print dialog"
+                    ? t("ariaPrintingCheque")
                     : printCompleted
-                      ? "Print completed — select a new bank or clear to start over"
+                      ? t("ariaPrintCompleted")
                       : printReadiness.ready
-                        ? "Print cheque"
-                        : `Print cheque — requires: ${printReadiness.reason ?? "all fields complete"}`
+                        ? t("ariaPrintCheque")
+                        : `${t("ariaPrintCheque")} — ${t("requiresLabel")}: ${printReadiness.reason ?? t("allFieldsComplete")}`
                 }
               >
                 {isPrinting ? "Printing…" : printCompleted ? "Print Again" : "Print Cheque"}

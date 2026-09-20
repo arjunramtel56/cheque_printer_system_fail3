@@ -4,7 +4,7 @@
   "selectBank": "Select Bank",
   "selectBankTemplate": "Select Bank Template",
   "bankNote": "Print ONLY in green zones. Avoid red areas (MICR, security patterns).",
-  "bankTemplateNote": "Banks marked "template pending" have no measured cheque layout yet.",
+  "bankTemplateNote": "Banks marked \"template pending\" have no measured cheque layout yet.",
   "pickTemplateHelp": "Pick the correct bank before entering cheque details.",
   "payeeLabel": "Payee Name",
   "payeePlaceholder": "e.g., Ram Bahadur Thapa",
