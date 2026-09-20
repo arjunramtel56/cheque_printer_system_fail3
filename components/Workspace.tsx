@@ -418,6 +418,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
   const [printCompleted, setPrintCompleted] = useState(false);
   const [pdfOverlayUrl, setPdfOverlayUrl] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [micrVerified, setMicrVerified] = useState(false);
 
   const wordOverrideRef = useRef(false);
   const printStyleRef = useRef<HTMLStyleElement | null>(null);
@@ -540,8 +541,9 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
       return { ready: false, reason: t("calibrationError") };
     }
     if (!safeZonesClear) return { ready: false, reason: t("reservedZoneError") };
+    if (!micrVerified) return { ready: false, reason: t("micrConfirmError") };
     return { ready: true, reason: null };
-  }, [template, date, payee, amount, amountWords, printMode, currentCalibration, safeZonesClear, t]);
+  }, [template, date, payee, amount, amountWords, printMode, currentCalibration, safeZonesClear, micrVerified, t]);
 
   const derivedFormState = useMemo<FormState>(() => {
     if (isPrinting) return "printing";
@@ -716,6 +718,14 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
     // STEP 5d: RESERVED ZONE CHECK — no printable field may enter the MICR band.
     if (validateSafeZoneClearance(resolvedTemplate).length > 0) {
       setPrintError(t("reservedZoneError"));
+      release();
+      return;
+    }
+
+    // STEP 5e: MICR VERIFICATION GATE — user must physically confirm the MICR
+    // line on the cheque stock is clear of any ink before printing.
+    if (!micrVerified) {
+      setPrintError(t("micrConfirmError"));
       release();
       return;
     }
@@ -1092,10 +1102,27 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                 <span style={{ fontWeight: 400, fontSize: "0.8rem", color: "var(--text-muted)" }}>
                   {" "}·{t("acPayeeHelp")}
                 </span>
-              </label>
-            </div>
+               </label>
+             </div>
 
-            {/* Print Settings / Size Management */}
+             {/* MICR Verification Gate — must be checked before print/PDF generation */}
+             <div className="field check" style={{ marginTop: 8, padding: "8px 10px", border: "1px solid color-mix(in srgb, var(--warning) 30%, transparent)", borderRadius: "var(--radius-sm)", background: "color-mix(in srgb, var(--warning) 4%, transparent)" }}>
+               <input
+                 id="micr-verify"
+                 type="checkbox"
+                 checked={micrVerified}
+                 onChange={(e) => setMicrVerified(e.target.checked)}
+                 disabled={!template}
+                 aria-describedby={template ? "micr-verify-help" : "field-disabled-bank"}
+                 aria-disabled={!template}
+               />
+               <label htmlFor="micr-verify" style={{ margin: 0, fontWeight: 600, fontSize: "0.88rem", color: "var(--warning)" }}>
+                 {locale === "ne" ? "कृपया MICR लाईन सफा पुष्टि गर्नुस्" : "MICR line (bottom 0.5\" of cheque) is clear?"}
+                 <small id="micr-verify-help" style={{ display: "block", marginTop: 2, fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 400 }}>
+                   {locale === "ne" ? "चेकको तल ०.५ इंचको MICR ब्यान्ड कुनै पनि स्याहीले छोएको छैन भन्न जाँच गर्नुहोस्।" : "Check that no ink overlaps the MICR band (bottom 0.5\")."}
+                 </small>
+               </label>
+             </div>
             {template && paper && (
               <div className="field" style={{ marginTop: 16, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
                 <h3 style={{ margin: "0 0 10px 0", fontSize: "0.82rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
