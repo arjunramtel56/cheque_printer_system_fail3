@@ -243,6 +243,145 @@ export function validateAmount(input: string): { valid: boolean; error?: string;
 // Amount-to-words consistency
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Nepali amount-in-words (localized)
+//
+// Uses the Indian numbering system (same as English) but renders in Nepali
+// script with Nepali unit words (खर्व, अर्व, करोड, लाख, हजार, सय) and currency
+// terms (रुपैयाँ / पैसा). This is a standalone rule-based converter — no external
+// library — so no financial text ever leaves the user's browser.
+// ---------------------------------------------------------------------------
+
+const NE_ONES = [
+  "", "एक", "दुई", "तीन", "चार", "पाँच", "छह", "सात", "आठ", "नौ",
+  "दस", "एखम", "बाह्र", "तेह्र", "चौदह", "पन्ध्र", "सोह्र", "सत्र", "अह्न", "उन्नाइस",
+];
+
+const NE_TENS = [
+  "", "", "बीस", "तीस", "चालीस", "पचास", "सास", "सत्तरी", "अस्सी", "उन्नब्बे",
+];
+
+const NE_GROUPS: [number, string][] = [
+  [100000000000, "खर्व"],
+  [1000000000, "अर्व"],
+  [10000000, "करोड"],
+  [100000, "लाख"],
+  [1000, "हजार"],
+  [100, "सय"],
+];
+
+function neBelowHundred(n: number): string {
+  if (n < 20) return NE_ONES[n] ?? "";
+  const tens = NE_TENS[Math.floor(n / 10)] ?? "";
+  const ones = NE_ONES[n % 10] ?? "";
+  return ones ? `${tens}-${ones}` : tens;
+}
+
+function neIntegerToWords(value: number): string {
+  value = Math.floor(Math.abs(value));
+  if (value === 0) return "शून्य";
+
+  const parts: string[] = [];
+
+  for (const [size, name] of NE_GROUPS) {
+    if (value >= size) {
+      const count = Math.floor(value / size);
+      const countWords = count < 100 ? neBelowHundred(count) : neIntegerToWords(count);
+      parts.push(`${countWords} ${name}`);
+      value %= size;
+    }
+  }
+
+  if (value > 0) {
+    parts.push(neBelowHundred(value));
+  }
+
+  return parts.join(" ");
+}
+
+/**
+ * Generate amount-in-words in Nepali (Devanagari) script.
+ *
+ * Example: 10050 paisa → "एक हजार रूपैयाँ and पचास पैसा Only"
+ *
+ * Note: The word "Only" is kept in English because Nepalese cheques
+ * traditionally print the English "Only" suffix as a banking convention,
+ * even when the rest is in Nepali.
+ */
+export function amountToWordsFromPaisaLocalized(amountPaisa: number, locale: "en" | "ne" = "en"): string {
+  if (!Number.isFinite(amountPaisa) || amountPaisa < 0) {
+    throw new Error("Amount must be a non-negative number.");
+  }
+  if (amountPaisa > MAX_AMOUNT_PAISA) {
+    throw new Error("Amount exceeds the supported range.");
+  }
+
+  const rupees = Math.floor(amountPaisa / 100);
+  const paisa = amountPaisa % 100;
+
+  if (locale === "ne") {
+    let result = `${neIntegerToWords(rupees)} रुपैयाँ`;
+    if (paisa > 0) {
+      result += ` ${neIntegerToWords(paisa)} पैसा`;
+    }
+    return `${result} Only`;
+  }
+
+  let result = `${integerToWords(rupees)} Rupees`;
+  if (paisa > 0) {
+    result += ` and ${integerToWords(paisa)} Paisa`;
+  }
+  return result + " Only";
+}
+
+/**
+ * Generate amount-in-words in the user's current language.
+ * A thin wrapper around amountToWordsFromPaisaLocalized so the Workspace
+ * and sheetLayout can pass the locale through without branching.
+ */
+export function generateAmountWordsLocalized(amount: string, locale: "en" | "ne" = "en"): string {
+  const v = validateAmount(amount);
+  if (!v.valid || v.paisa <= 0) return "";
+  try {
+    return amountToWordsFromPaisaLocalized(v.paisa, locale);
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Check that the displayed amount words match the canonical words for the
+ * given numeric amount. This is used by the print gate to prevent printing
+ * when a user-edited words field disagrees with the numeric amount.
+ *
+ * Returns { consistent, expected } where `consistent` is true if the provided
+ * words match the canonical words (case-insensitive, whitespace-normalised).
+ * `expected` is always the canonical form so the caller can surface it.
+ */
+export function checkAmountWordsConsistencyLocalized(
+  amount: string,
+  amountWords: string,
+  locale: "en" | "ne" = "en",
+): { consistent: boolean; expected: string } {
+  const expected = generateAmountWordsLocalized(amount, locale);
+  if (expected === "") return { consistent: false, expected: "" };
+
+  const normalise = (s: string): string =>
+    s.trim().replace(/\s+/g, " ").toLowerCase();
+
+  const provided = amountWords.trim();
+  if (provided === "") return { consistent: false, expected };
+
+  return {
+    consistent: normalise(provided) === normalise(expected),
+    expected,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// English amount-in-words (canonical, unchanged — backward compatible)
+// ---------------------------------------------------------------------------
+
 /**
  * Generate the canonical amount-in-words for a given paisa value.
  * Throws on invalid/zero (caller should guard paisa > 0 before calling).

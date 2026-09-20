@@ -34,6 +34,8 @@ export interface ChequeData {
   amount: string;
   amountWords: string;
   accountPayee: boolean;
+  /** Language for auto-generated amount-in-words fallback ("en" | "ne"). */
+  locale?: "en" | "ne";
 }
 
 export interface LaidOutField {
