@@ -1,3 +1,4 @@
+"use client";
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { getInitialTheme, getStoredTheme, setTheme, resolveTheme, watchSystemTheme, type Theme } from "@/lib/theme";
 
