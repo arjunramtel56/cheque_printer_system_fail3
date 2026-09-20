@@ -48,8 +48,20 @@
     scale: 1 !important;
   }
 
-  /* Hide all application UI — screen-only elements */
+  /* Hide all screen-only UI during print.
+     The .print-output-screen is the only element allowed to render.
+     Everything else (headers, nav, forms, previews, tips) is hidden. */
   .no-print {
+    display: none !important;
+  }
+
+  /* Belt-and-suspenders: hide the screen preview stage and its watermark
+     in case they are not wrapped in .no-print. */
+  .cheque-preview,
+  .cheque-watermark,
+  .preview-stage,
+  .preview-heading,
+  .preview-column {
     display: none !important;
   }
 
@@ -110,10 +122,13 @@
     padding: 0 !important;
   }
 
-  /* -------------------------------------------------------
-     A4 Carrier output — full A4 page at 1:1 mm.
-     Cheque positioned within via profile.x/y + calibration.
-     ------------------------------------------------------- */
+/* -------------------------------------------------------
+      A4 Carrier output — full A4 page at 1:1 mm.
+      Cheque positioned within via profile.x/y + calibration.
+      The @page rule (injected by JS) sets the exact A4 dimensions;
+      the container matches those dimensions and the cheque sits at
+      its calibrated position inside.
+      ------------------------------------------------------- */
   .print-a4-carrier {
     position: relative !important;
     background: #fff !important;
@@ -124,6 +139,8 @@
     page-break-inside: avoid;
     margin: 0 !important;
     padding: 0 !important;
+    /* Container IS the page box — no centering margin needed because
+       @page margin is 0 and the container matches the page size exactly. */
   }
 
   /* Field text: monospace, no wrapping, proper alignment */

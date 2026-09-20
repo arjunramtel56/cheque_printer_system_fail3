@@ -83,15 +83,21 @@ function fieldMap(specs: FieldSpec[]): Record<string, TemplateField> {
   return out;
 }
 
-/** Direct-feed page box = the cheque itself; carrier modes = the paper box with
- *  the cheque placed inside it. Values are the verified placements for the
- *  standard 190.5 × 88.9 mm stock on A4. */
+/**
+ * Direct-feed page box = the cheque itself; carrier modes = the paper box with
+ * the cheque placed inside it. Values are the verified placements for the
+ * standard 190.5 × 88.9 mm stock on A4.
+ *
+ * The cheque is centered on the A4 page in all carrier modes:
+ *   Portrait:  (210 - 190.5) / 2 = 9.75 mm from left, (297 - 88.9) / 2 = 104.05 mm from top
+ *   Landscape: (297 - 190.5) / 2 = 53.25 mm from left, (210 - 88.9) / 2 = 60.55 mm from top
+ */
 function standardProfiles(widthMm: number, heightMm: number): Record<ProfileKey, PrintProfile> {
   return {
     custom_short: { x: 0, y: 0, pageWidth: widthMm, pageHeight: heightMm },
     custom_long: { x: 0, y: 0, pageWidth: widthMm, pageHeight: heightMm },
-    a4_vertical: { x: 9.75, y: 20, pageWidth: 210, pageHeight: 297 },
-    a4_horizontal: { x: 20, y: 50.75, pageWidth: 297, pageHeight: 210 },
+    a4_vertical: { x: 9.75, y: 104.05, pageWidth: 210, pageHeight: 297 },
+    a4_horizontal: { x: 53.25, y: 60.55, pageWidth: 297, pageHeight: 210 },
   };
 }
 
