@@ -234,7 +234,8 @@ assertContains(ws, 'role="alert"', "error surfaced with role=alert (assertive an
 // Every error branch resets the lock + isPrinting
 // Every error branch releases the lock and clears isPrinting through the one
 // release() helper, so no branch can forget one of the two.
-const errorBranches = ws.match(/setPrintError\([^)]*\);\s*release\(\);\s*return;/g);
+// We match lines where setPrintError(...) is followed by release(); return;
+const errorBranches = ws.match(/setPrintError\(.+?\);\s*release\(\);\s*return;/g);
 assert(errorBranches !== null && errorBranches.length >= 8, "Every error branch (date/payee/amount/words/consistency/template/mode/cal/geometry/bounds/zones) releases lock + isPrinting via one helper");
 assertContains(ws, "const release = () => {", "release() helper exists");
 assert(

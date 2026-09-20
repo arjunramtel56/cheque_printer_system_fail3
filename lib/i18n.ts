@@ -40,7 +40,7 @@ async function loadLocale(locale: Locale): Promise<Record<string, string>> {
     const enModule = await import("../../src/lib/locales/en.json", {
       with: { type: "json" },
     });
-    const translations = (enModule.default ?? enModule) as Record<string, string>;
+    const translations = (enModule.default ?? enModule) as Record<string, unknown> as Record<string, string>;
     localeCache.en = translations;
     return translations;
   }

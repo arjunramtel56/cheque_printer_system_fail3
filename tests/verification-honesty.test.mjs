@@ -164,7 +164,11 @@ console.log("\n--- SECTION 3: Unverified layouts are flagged ---");
     "the workspace derives a warning from the template's unverified status",
   );
   assert(
-    /test-print on plain paper before printing on real cheque stock/.test(workspace),
+    /geometryWarning/.test(workspace),
+    "the workspace references a warning translation for unverified geometry",
+  );
+  assert(
+    /test-print on plain paper before printing on real cheque stock/.test(read(path.join("src", "lib", "locales", "en.json"))),
     "the warning tells the operator what to do instead of printing on a real cheque",
   );
   assert(
