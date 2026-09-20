@@ -1,4 +1,6 @@
 {
+  "secureNepalCheques": "Secure Cheque Printing for Nepal Banks",
+  "securityNoteDesc": "This tool ONLY prints variable fields (name, date, amount) onto bank-issued cheques you already own. Verify alignment before use. Not a cheque generator.",
   "appTitle": "Cheque Print Helper (Nepal)",
   "appSubtitle": "Prepare and print Nepalese bank cheques with calibrated templates and precise alignment.",
   "selectBank": "Select Bank",

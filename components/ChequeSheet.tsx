@@ -102,6 +102,9 @@ export default function ChequeSheet({
         overflow: "hidden",
         fontFamily: MONO,
         color: "#111",
+        boxShadow: isPreview
+          ? "0 4px 16px rgba(16, 24, 40, 0.10), 0 1px 3px rgba(16, 24, 40, 0.06)"
+          : undefined,
       }}
       role={isPreview ? "img" : undefined}
       aria-label={isPreview ? `Cheque preview for ${template.bankName} — ${mode}` : undefined}

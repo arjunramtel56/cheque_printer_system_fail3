@@ -298,7 +298,7 @@ assertContains(ws, "function handleModeChange", "handleModeChange exists");
 assertContains(ws, "setPrintMode(newMode);", "handleModeChange updates printMode");
 assertContains(ws, "setPrintError(\"\");", "handleModeChange clears printError");
 // The PrintReadiness recompute depends on printMode
-assertContains(ws, "[template, date, payee, amount, amountWords, printMode, currentCalibration, safeZonesClear, t]", "printReadiness recomputes when printMode changes");
+assertContains(ws, "[template, date, payee, amount, amountWords, printMode, currentCalibration, safeZonesClear, micrVerified, t]", "printReadiness recomputes when printMode changes");
 
 // Switching DF <-> A4 selects the calibration for THAT (template, mode) pair.
 assertContains(ws, "getCalibrationFor(calibrations, template.id, printMode", "Calibration lookup is per template + print mode");

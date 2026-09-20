@@ -1258,9 +1258,19 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
               calibration={currentCalibration}
               isDF={isDF}
               safeZonesClear={safeZonesClear}
-            />
+             />
 
-            <div className="form-actions" style={{ marginTop: 16, flexDirection: "column", alignItems: "stretch", gap: 8 }}>
+             {/* Print summary card — scannable snapshot of what will print */}
+             {template && (
+               <div className="template-summary" aria-label="Print summary" style={{ marginTop: 8 }}>
+                 <div><span>{t("bankLabel")}</span><b>{template.bankName}</b></div>
+                 <div><span>{t("modeLabel")}</span><b>{PROFILE_LABELS[printMode]}</b></div>
+                 <div><span>{t("scaleDisplay")}</span><b>100%</b></div>
+                 <div><span>{t("calibrationLabel")}</span><b>{formatCalibration(currentCalibration)}</b></div>
+               </div>
+             )}
+
+             <div className="form-actions" style={{ marginTop: 16, flexDirection: "column", alignItems: "stretch", gap: 8 }}>
               <button
                 type="button"
                 className="button secondary"

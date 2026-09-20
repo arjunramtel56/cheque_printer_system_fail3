@@ -28,6 +28,7 @@ import React, { CSSProperties } from "react";
 import { Document, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
 import type { A4OverlayOutput } from "@/lib/validation/chequeSchema";
 import type { A4OverlayLayout, FieldPosition, ChequePlacement } from "@/lib/printMath";
+import { A4_WIDTH_MM, A4_HEIGHT_MM, CHEQUE_WIDTH_MM, CHEQUE_HEIGHT_MM, MICR_SAFETY_TOP_MM } from "@/lib/printMath";
 
 const MM_PER_PT = 0.352778;
 const PT_PER_MM = 1 / MM_PER_PT;
@@ -77,8 +78,8 @@ export function A4OverlayPDF({ layout, data }: A4OverlayPDFProps) {
               {
                 left: mmToPt(cheque.chequeX),
                 top: mmToPt(cheque.chequeY),
-                width: mmToPt(190.5),
-                height: mmToPt(88.9),
+                width: mmToPt(CHEQUE_WIDTH_MM),
+                height: mmToPt(CHEQUE_HEIGHT_MM),
               },
             ]}
           />
@@ -117,8 +118,8 @@ export function A4OverlayPDF({ layout, data }: A4OverlayPDFProps) {
             style={[
               styles.micrLine,
               {
-                top: mmToPt(cheque.chequeY + 81.9), // MICR safety top
-                width: mmToPt(190.5),
+                top: mmToPt(cheque.chequeY + MICR_SAFETY_TOP_MM),
+                width: mmToPt(CHEQUE_WIDTH_MM),
                 left: mmToPt(cheque.chequeX),
               },
             ]}
@@ -148,9 +149,9 @@ function orientationStyle(orientation: string): CSSProperties {
   // The size array below handles the actual page sizing; the style here is
   // applied to the inner content container.
   if (orientation === "landscape") {
-    return { width: mmToPt(297), height: mmToPt(210) };
+    return { width: mmToPt(A4_HEIGHT_MM), height: mmToPt(A4_WIDTH_MM) };
   }
-  return { width: mmToPt(210), height: mmToPt(297) };
+  return { width: mmToPt(A4_WIDTH_MM), height: mmToPt(A4_HEIGHT_MM) };
 }
 
 /**
