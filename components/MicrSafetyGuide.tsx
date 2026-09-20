@@ -18,32 +18,68 @@ export default function MicrSafetyGuide() {
     : t("printOnlyThisArea");
 
   return (
-    <section className="w-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 py-10 px-4" data-micr-safety-section>
-      <div className="max-w-4xl mx-auto text-center">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+    <section
+      className="no-print"
+      style={{
+        background: "linear-gradient(135deg, color-mix(in srgb, var(--info) 4%, transparent) 0%, color-mix(in srgb, var(--info) 8%, transparent) 100%)",
+        padding: "28px 20px",
+        borderRadius: "var(--radius-md)",
+        border: "1px solid color-mix(in srgb, var(--info) 20%, transparent)",
+        margin: "20px auto",
+        maxWidth: "720px",
+      }}
+      data-micr-safety-section
+    >
+      <div style={{ maxWidth: "480px", margin: "0 auto", textAlign: "center" }}>
+        <h1 style={{ fontSize: "1.6rem", fontWeight: 700, margin: "0 0 8px 0", color: "var(--text-primary)" }}>
           {t("secureNepalCheques")}
         </h1>
 
-        <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8">
+        <p style={{ margin: "0 0 20px 0", fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: "640px", marginLeft: "auto", marginRight: "auto" }}>
           {t("disclaimer")}
         </p>
 
         {/* Visual MICR guide — shows exact red zone (bottom 0.5" / 7mm) */}
-        <div className="relative mx-auto mb-8 w-full max-w-2xl h-44 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden">
+        <div
+          style={{
+            position: "relative",
+            margin: "0 auto 16px",
+            width: "100%",
+            maxWidth: "360px",
+            height: "176px",
+            background: "#fff",
+            border: "2px solid var(--border-strong)",
+            borderRadius: "var(--radius-sm)",
+            overflow: "hidden",
+            boxShadow: "0 4px 16px rgba(16,24,40,0.08)",
+          }}
+          data-micr-guide="true"
+        >
           {/* Cheque body area */}
-          <div className="absolute inset-0 bg-gray-50 dark:bg-gray-600 flex flex-col items-center justify-center p-4">
-            <div className="w-full max-w-xs text-center mb-2">
-              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+          <div
+            style={{
+              position: "absolute",
+              inset: "0",
+              background: "repeating-linear-gradient(0deg, rgba(0,0,0,0.02) 0, rgba(0,0,0,0.02) 4px, transparent 4px, transparent 8px)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "12px",
+            }}
+          >
+            <div style={{ width: "100%", maxWidth: "240px", textAlign: "center", marginBottom: "8px" }}>
+              <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginBottom: "2px" }}>
                 {chequeSizeLabel && (
                   <>
                     {t("chequeSizeLabel")}: {chequeSizeLabel}
                   </>
                 )}
               </div>
-              <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--text-primary)" }}>
                 {t("payeeLabel")}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "2px" }}>
                 {t("amountLabel")}
               </div>
             </div>
@@ -51,28 +87,64 @@ export default function MicrSafetyGuide() {
 
           {/* MICR safety zone — red overlay at bottom */}
           <div
-            className="absolute bottom-0 left-0 right-0 bg-red-500/15 dark:bg-red-900/30 border-t border-red-500/50 dark:border-red-700 flex items-center justify-center"
-            style={{ height: "0.5in", minHeight: "7mm" }}
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: "0.5in",
+              minHeight: "7mm",
+              background: "rgba(213, 42, 42, 0.10)",
+              borderTop: "1px dashed var(--border-strong)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
-            <span className="text-xs font-bold text-red-600 dark:text-red-400">
+            <span
+              style={{
+                fontSize: "0.62rem",
+                fontWeight: 700,
+                color: "var(--danger)",
+                fontFamily: "var(--font-mono)",
+              }}
+              data-micr-label="true"
+            >
               {renderMicrLabel}
             </span>
           </div>
 
           {/* Safety label */}
-          <div className="absolute bottom-1 left-2 text-xs text-red-600 dark:text-red-400 font-medium" data-micr-label="true">
-            {locale === "ne"
-              ? "MICR ब्यान्ड — कुनै पनि स्याही नगर्नुहोस्"
-              : "MICR BAND — DO NOT PRINT"}
+          <div
+            style={{
+              position: "absolute",
+              bottom: "2px",
+              left: "6px",
+              fontSize: "0.62rem",
+              fontWeight: 700,
+              color: "var(--danger)",
+            }}
+            data-micr-label="true"
+          >
+            {locale === "ne" ? "MICR ब्यान्ड — कुनै पनि स्याही नगर्नुहोस्" : "MICR BAND — DO NOT PRINT"}
           </div>
         </div>
 
-        <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+        <p style={{ margin: "0 0 12px 0", fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
           {t("setScale100")}
         </p>
 
-        <div className="mt-6 text-xs text-gray-500 dark:text-gray-400 max-w-xl mx-auto p-3 bg-gray-100 dark:bg-gray-800 rounded">
-          <strong className="text-gray-700 dark:text-gray-300">{t("securityNoteTitle")} </strong>
+        <div
+          style={{
+            padding: "10px 14px",
+            borderRadius: "var(--radius-sm)",
+            background: "color-mix(in srgb, var(--text-secondary) 4%, transparent)",
+            fontSize: "0.78rem",
+            color: "var(--text-secondary)",
+            lineHeight: 1.6,
+          }}
+        >
+          <strong style={{ color: "var(--text-primary)" }}> {t("securityNoteTitle")} </strong>
           {t("securityNoteDesc")}
         </div>
       </div>

@@ -901,27 +901,23 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
               <span className="step">01</span>
               <h2>{t("chequeDetails")}</h2>
                    <span
-                     className="state-badge"
-                     style={{
-                       fontSize: "0.72rem",
-                       fontWeight: 600,
-                       padding: "2px 8px",
-                       borderRadius: "12px",
-                       background:
-                         derivedFormState === "ready-print" || derivedFormState === "ready-preview"
-                           ? "color-mix(in srgb, var(--success) 14%, transparent)"
-                           : derivedFormState === "printing"
-                             ? "color-mix(in srgb, var(--info) 14%, transparent)"
-                             : "color-mix(in srgb, var(--text-secondary) 10%, transparent)",
-                       color:
-                         derivedFormState === "ready-print" || derivedFormState === "ready-preview"
-                           ? "var(--success)"
-                           : derivedFormState === "printing"
-                             ? "var(--info)"
-                             : "var(--text-secondary)",
-                     }}
-                     aria-label={`Workflow state: ${derivedFormState}`}
-                   >
+                      className="state-badge"
+                      style={{
+                        background:
+                          derivedFormState === "ready-print" || derivedFormState === "ready-preview"
+                            ? "color-mix(in srgb, var(--success) 14%, transparent)"
+                            : derivedFormState === "printing"
+                              ? "color-mix(in srgb, var(--info) 14%, transparent)"
+                              : "color-mix(in srgb, var(--text-secondary) 10%, transparent)",
+                        color:
+                          derivedFormState === "ready-print" || derivedFormState === "ready-preview"
+                            ? "var(--success)"
+                            : derivedFormState === "printing"
+                              ? "var(--info)"
+                              : "var(--text-secondary)",
+                      }}
+                      aria-label={`Workflow state: ${derivedFormState}`}
+                    >
                      {derivedFormState === "empty"
                        ? t("stateSelectBank")
                        : derivedFormState === "template-selected"

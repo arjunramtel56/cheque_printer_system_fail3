@@ -17,11 +17,11 @@ export function LanguageToggle() {
     <button
       type="button"
       onClick={toggleLocale}
-      className="button small secondary"
-      style={{ fontSize: "0.78rem" }}
+      className="theme-toggle"
       aria-label={locale === "en" ? "Switch to Nepali" : "Switch to English"}
     >
-      {locale === "en" ? "नेपालीमा स्विच गर्नुहोस्" : "Switch to English"}
+      <span style={{ fontSize: "0.8rem" }}>{locale === "en" ? "ने" : "EN"}</span>
+      <span style={{ fontWeight: 500 }}>{locale === "en" ? "NE" : "नेपाली"}</span>
     </button>
   );
 }
