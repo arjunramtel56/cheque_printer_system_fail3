@@ -6,17 +6,24 @@
 // Rendered on screen only (excluded from @media print in print.css — the
 // .no-print class hides it). Uses CSS variables from globals.css so it adapts
 // to both light and dark themes automatically.
+//
+// Security: this is a display-only aid. The actual MICR guard enforcement
+// lives in lib/security/micrGuard.ts and runs during PDF generation.
 // ---------------------------------------------------------------------------
 
 import { useTranslation } from "@/lib/i18n";
+import type { BankTemplate } from "@/lib/types";
+import { MICR_BAND_MM } from "@/data/templates";
+import { PREVIEW_SCALE } from "@/components/ChequeSheet";
 
-export function PrintGuidance({ template }: { template?: { heightMm?: number } }) {
+export function PrintGuidance({ template }: { template: BankTemplate }) {
   const { t } = useTranslation();
   if (!template) return null;
 
-  const micrBandMm = 7;
-  const micrPx = Math.round(template.heightMm * 2.4 * 0.08);
-  const chequeHeightPx = Math.round((template.heightMm ?? 88.9) * 2.4);
+  const chequeHeightMm = template.heightMm;
+  const micrBandMm = MICR_BAND_MM;
+  const micrPx = Math.round(chequeHeightMm * PREVIEW_SCALE * (micrBandMm / chequeHeightMm));
+  const chequeHeightPx = Math.round(chequeHeightMm * PREVIEW_SCALE);
 
   return (
     <div className="tip-card" style={{ marginTop: 12 }}>
@@ -24,11 +31,11 @@ export function PrintGuidance({ template }: { template?: { heightMm?: number } }
       <div>
         <strong>{t("printInstructionTitle")}</strong>
         <p style={{ margin: "4px 0 6px 0", fontSize: "0.82rem" }}>
-          {t("printInstructionA4Carrier")}
+          {t("beforePrintingA4Carrier")}
         </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px", fontSize: "0.8rem", marginTop: 8 }}>
-          <span style={{ color: "var(--text-muted)" }}>MICR safety zone</span>
+          <span style={{ color: "var(--text-muted)" }}>{t("micrSafetyTitle")}</span>
           <b style={{ color: "var(--danger)" }}>Bottom {micrBandMm} mm — NEVER printed</b>
         </div>
 
@@ -53,7 +60,7 @@ export function PrintGuidance({ template }: { template?: { heightMm?: number } }
               width: "100%",
               height: `${micrPx}px`,
               background: "rgba(213,42,42,0.15)",
-              borderTop: "1px dashed var(--danger)",
+              borderTop: "1px dashed var(--border-strong)",
             }}
           >
             <span style={{
@@ -64,7 +71,7 @@ export function PrintGuidance({ template }: { template?: { heightMm?: number } }
               color: "var(--danger)",
               fontFamily: "var(--font-mono)",
             }}>
-              MICR — DO NOT PRINT
+              MICR — {t("neverPrinted")}
             </span>
           </div>
         </div>

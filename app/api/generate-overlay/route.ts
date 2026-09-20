@@ -1,28 +1,31 @@
 // ---------------------------------------------------------------------------
-// /api/generate-overlay — server-side PDF overlay generator.
+// /api/generate-overlay — server-side validation endpoint for PDF overlay.
 //
-// Generates a transparent 1:1mm PDF overlay containing only the variable
-// cheque fields (date, payee, amount, amount-in-words, A/C PAYEE line).
+// This endpoint performs ALL server-side security validation BEFORE any PDF
+// is generated client-side. It returns a validated, sanitized payload that
+// the client uses to render a transparent 1:1mm PDF overlay.
 //
 // SECURITY INVARIANTS:
 //   1. Zod schema gates ALL input — invalid payee, amount, date or mismatched
-//      amount-in-words never reach the PDF generator.
-//   2. The MICR guard (enforceMicrSafety) runs on the computed layout BEFORE
-//      the PDF is written. If any field risks the MICR band, the request is
-//      rejected with a 400 and no PDF is generated.
-//   3. No PII (full account numbers, payee names, amounts) is logged or
-//      persisted beyond the transient request lifecycle.
-//   4. The PDF is served with Cache-Control: no-store to prevent proxy/browser
-//      caching on shared devices.
-//   5. The response Content-Disposition forces a download — the PDF is never
-//      embedded in a page that could leak it via Referer headers.
+//      amount-in-words never reach the response.
+//   2. Template must belong to the claimed bank (deep-link safety).
+//   3. Bank must be enabled and template must be enabled for print.
+//   4. Safe-zone clearance is verified server-side — no field may overlap
+//      the MICR band.
+//   5. The MICR guard runs on the computed layout — if any field risks the
+//      MICR band, the request is rejected with 403 and no overlay data is
+//      returned.
+//   6. No PII is logged. Only error types are logged for monitoring.
+//   7. Response is served with Cache-Control: no-store.
+//
+// The actual PDF rendering happens client-side via @react-pdf/renderer (see
+// components/ChequeOverlayPDF.tsx) because the library is designed for
+// client-side blob generation and the PDF is never stored server-side.
 // ---------------------------------------------------------------------------
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { pdf } from "@react-pdf/renderer";
-import React from "react";
-import type { BankTemplate, Calibration, ProfileKey } from "@/lib/types";
+import type { Calibration, ProfileKey } from "@/lib/types";
 import { getTemplate } from "@/lib/templates";
 import { isBankEnabled } from "@/lib/catalogue";
 import { validateChequeForm } from "@/lib/validation/chequeSchema";
@@ -30,37 +33,26 @@ import { computeSheetLayout } from "@/lib/sheetLayout";
 import { validateSafeZoneClearance, validateTemplateForPrint } from "@/lib/validation";
 import { enforceLayoutMicrSafety } from "@/lib/security/micrGuard";
 
-// Re-use the client-side PDF component for rendering. In a server component
-// context we import it without the "use client" directive issues because
-// @react-pdf/renderer is SSR-safe.
-import { ChequeOverlayPDF } from "@/components/ChequeOverlayPDF";
-
-interface OverlayRequest {
-  bankKey: string;
-  templateId: string;
-  dateAd: string;
-  payee: string;
-  amount: string;
-  amountInWords: string;
-  lang: string;
-  accountPayee: boolean;
-  printMode: string;
-  calibrationX: number;
-  calibrationY: number;
-}
-
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json() as unknown;
+    const body = (await request.json()) as unknown;
 
     // --- STEP 1: Zod schema validation (input gate) ---
     const result = validateChequeForm(body);
     if (!result.success) {
-      // Log only the error type (not PII) for security monitoring.
+      // Log only the error message (no PII) for security monitoring.
       console.warn("Generate-overlay: schema validation failed:", result.error);
       return NextResponse.json(
         { error: "Invalid input", fieldErrors: result.fieldErrors },
-        { status: 400, headers: { "Content-Type": "application/json" } },
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+          },
+        },
       );
     }
 
@@ -69,20 +61,45 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // --- STEP 2: Template resolution + bank verification ---
     const template = getTemplate(data.templateId);
     if (!template) {
-      return NextResponse.json({ error: "Template not found." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Template not found." },
+        {
+          status: 404,
+          headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+        },
+      );
     }
     if (template.bankId !== data.bankKey) {
       // Deep-link safety: template must belong to the claimed bank.
-      return NextResponse.json({ error: "Template-bank mismatch." }, { status: 403 });
+      console.warn(`Generate-overlay: template-bank mismatch (${template.id} vs ${data.bankKey})`);
+      return NextResponse.json(
+        { error: "Template-bank mismatch." },
+        {
+          status: 403,
+          headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+        },
+      );
     }
     if (!isBankEnabled(data.bankKey)) {
-      return NextResponse.json({ error: "Bank is not enabled." }, { status: 403 });
+      return NextResponse.json(
+        { error: "Bank is not enabled." },
+        {
+          status: 403,
+          headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+        },
+      );
     }
 
     // --- STEP 3: Template print-safety checks ---
     const templateErrors = validateTemplateForPrint(template);
     if (templateErrors) {
-      return NextResponse.json({ error: "Template is not available for printing." }, { status: 403 });
+      return NextResponse.json(
+        { error: "Template is not available for printing." },
+        {
+          status: 403,
+          headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+        },
+      );
     }
 
     const safeZoneErrors = validateSafeZoneClearance(template);
@@ -93,7 +110,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
       return NextResponse.json(
         { error: "Template has fields overlapping the reserved MICR band." },
-        { status: 403 },
+        {
+          status: 403,
+          headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+        },
       );
     }
 
@@ -120,30 +140,33 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // cheque-local and throws MicrSecurityError on any encroachment.
     enforceLayoutMicrSafety(layout);
 
-    // --- STEP 5: Render PDF ---
-    const blob = await pdf(
-      React.createElement(ChequeOverlayPDF, {
-        template,
-        data: chequeData,
-        mode: data.printMode as ProfileKey,
+    // --- STEP 5: Return validated, sanitized payload ---
+    return NextResponse.json(
+      {
+        ok: true,
+        templateId: template.id,
+        bankKey: template.bankId,
+        bankName: template.bankName,
+        widthMm: template.widthMm,
+        heightMm: template.heightMm,
+        orientation: template.orientation,
+        printMode: data.printMode,
         calibration,
-      }),
-    ).toBlob();
-
-    // --- STEP 6: Serve with strict security headers ---
-    return new NextResponse(blob, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="cheque-overlay-${template.bankId}.pdf"`,
-        // No caching — prevents overlay PDFs from persisting on shared devices.
-        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-        "Pragma": "no-cache",
-        "Expires": "0",
-        // Prevent framing / MIME sniffing.
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
+        chequeData,
+        safeZones: template.safeZones,
       },
-    });
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+        },
+      },
+    );
   } catch (error) {
     // Catch ANY error — including MicrSecurityError from the guard.
     // Log only the error type (never PII) for security monitoring.
@@ -151,17 +174,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.warn(`Generate-overlay: ${errorName}: ${errorMessage}`);
 
-    // Distinguish MICR violations (403) from other errors (400/500).
     if (errorName === "MicrSecurityError") {
       return NextResponse.json(
         { error: "Overlay fields risk the MICR band. Aborting generation." },
-        { status: 403 },
+        {
+          status: 403,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+          },
+        },
       );
     }
 
     return NextResponse.json(
-      { error: "Failed to generate overlay." },
-      { status: 500, headers: { "Content-Type": "application/json" } },
+      { error: "Failed to validate overlay request." },
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      },
     );
   }
 }

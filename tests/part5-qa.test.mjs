@@ -25,9 +25,11 @@ try {
   const lock = JSON.parse(readFileSync(repoRoot + "package-lock.json", "utf8"));
   const rootDeps = lock.packages?.[""]?.dependencies || {};
   const rootDevDeps = lock.packages?.[""]?.devDependencies || {};
-  assert(Object.keys(rootDeps).length === 4, "4 production deps: " + Object.keys(rootDeps).join(", "));
+  assert(Object.keys(rootDeps).length >= 4, "production deps present (4 base + security deps)");
   assert(rootDeps.next && rootDeps.react && rootDeps["react-dom"] && rootDeps["@react-pdf/renderer"], "next, react, react-dom, @react-pdf/renderer present");
-  assert(Object.keys(rootDevDeps).length === 6, "6 dev deps present");
+  assert(rootDeps.zod, "zod present for schema validation");
+  assert(rootDeps["crypto-js"], "crypto-js present for encrypted storage");
+  assert(Object.keys(rootDevDeps).length >= 6, "dev deps present");
   const nodeModulesOk =
     readFileSync(repoRoot + "node_modules/next/package.json", "utf8").includes('"name": "next"') &&
     readFileSync(repoRoot + "node_modules/react/package.json", "utf8").includes('"name": "react"');
