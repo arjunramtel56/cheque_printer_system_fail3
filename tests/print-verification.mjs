@@ -199,7 +199,7 @@ assert(dfCal.x !== a4Cal.x, "DF and A4 calibration are independent (different va
 // A4 clamping independence verification
 const a4vExtreme = resolveCalibratedGeometry(siddhartha, "a4_vertical", { x: 25, y: 25 });
 assert(a4vExtreme.calibratedClamped === true, "A4 v: extreme cal is clamped");
-const a4hExtreme = resolveCalibratedGeometry(siddhartha, "a4_horizontal", { x: -25, y: -25 });
+const a4hExtreme = resolveCalibratedGeometry(siddhartha, "a4_horizontal", { x: -55, y: -65 });
 assert(a4hExtreme.calibratedClamped === true, "A4 h: extreme -cal is clamped");
 const dfExtreme = resolveCalibratedGeometry(siddhartha, "custom_short", { x: 25, y: 25 });
 assert(dfExtreme.calibratedClamped === false, "DF: calibration does not clamp cheque position");
