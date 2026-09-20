@@ -21,7 +21,7 @@ export function signBanks(banks: Bank[]): string {
   return CryptoJS.HmacSHA256(JSON.stringify(banks), BANK_SIGNATURE_KEY).toString();
 }
 
-export function verifyBanksSignature(banks: Bank[], sig: string): boolean {
+export function verifyBanksSignature(banks: Bank[], sig: string | undefined): boolean {
   if (!sig || typeof sig !== "string") return false;
   const expected = signBanks(banks);
   return sig === expected;
@@ -169,12 +169,16 @@ export function loadAdminBanks(): Bank[] {
   try {
     const raw = window.localStorage.getItem(BANKS_STORAGE_KEY);
     if (!raw) return [...BANK_LIST];
-    const parsed = JSON.parse(raw) as Bank[];
-    if (!Array.isArray(parsed)) return [...BANK_LIST];
-    const errors = parsed.map(validateBank).filter((e): e is NonNullable<typeof e> => e !== null);
+    const parsed = JSON.parse(raw) as { banks?: Bank[]; sig?: string };
+    if (!parsed || !Array.isArray(parsed.banks)) return [...BANK_LIST];
+    if (!verifyBanksSignature(parsed.banks, parsed.sig)) {
+      console.warn("Bank signature mismatch — possible tampering detected. Falling back to built-ins.");
+      return [...BANK_LIST];
+    }
+    const errors = parsed.banks.map(validateBank).filter((e): e is NonNullable<typeof e> => e !== null);
     if (errors.length > 0) return [...BANK_LIST];
-    runtimeBanks = parsed;
-    return parsed;
+    runtimeBanks = parsed.banks;
+    return parsed.banks;
   } catch {
     return [...BANK_LIST];
   }
@@ -188,7 +192,8 @@ export function saveAdminBanks(banks: Bank[]): void {
     const err = validateBank(bank);
     if (err) throw new Error(err.message);
   }
-  window.localStorage.setItem(BANKS_STORAGE_KEY, JSON.stringify(banks));
+  const sig = signBanks(banks);
+  window.localStorage.setItem(BANKS_STORAGE_KEY, JSON.stringify({ banks, sig }));
   runtimeBanks = [...banks];
 }
 
@@ -246,7 +251,8 @@ export function initBankCatalogue(): void {
 export function persistBanks(): void {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
-    window.localStorage.setItem(BANKS_STORAGE_KEY, JSON.stringify(runtimeBanks));
+    const sig = signBanks(runtimeBanks);
+    window.localStorage.setItem(BANKS_STORAGE_KEY, JSON.stringify({ banks: runtimeBanks, sig }));
   } catch {
     // ignore write errors
   }

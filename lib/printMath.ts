@@ -253,7 +253,6 @@ export function isOverlayFieldMicrSafe(yMm: number, heightMm: number): boolean {
 /**
  * Get the BankTemplate for a given bank key.
  */
-import { getBank } from "@/lib/catalogue";
 import { getAllActiveTemplates } from "@/lib/templates";
 import { enforceMicrSafety } from "@/lib/security/micrGuard";
 
@@ -381,24 +380,39 @@ export function calculateA4OverlayLayout(
     };
   });
 
-  // Overall MICR safety: all printable fields across all cheques must be safe.
-  const printableFields = cheques
-    .flatMap((c) => c.fields)
-    .filter((f) => f.text !== "");
+    // Overall MICR safety: all printable fields across all cheques must be safe.
+    // The fields are in page-global coordinates, and each cheque sits at clamped.y
+    // within that page. We translate to cheque-local for the guard.
+    const printableFields = cheques
+      .flatMap((c, i) =>
+        c.fields
+          .filter((f) => f.text !== "")
+          .map((f) => ({
+            yMm: f.yMm,
+            heightMm: f.heightMm,
+            chequeIndex: i,
+          })),
+      );
 
-  let fullyMicrSafe = true;
-  if (printableFields.length > 0) {
-    const micrElements = printableFields.map((f) => ({
-      yMm: f.yMm,
-      heightMm: f.heightMm,
-    }));
+    let fullyMicrSafe = true;
+    if (printableFields.length > 0) {
+      // Group elements by cheque to translate page-global Y to cheque-local Y.
+      const byCheque: Map<number, { yMm: number; heightMm: number }[]> = new Map();
+      for (const field of printableFields) {
+        const cheque = cheques[field.chequeIndex];
+        if (!byCheque.has(field.chequeIndex)) byCheque.set(field.chequeIndex, []);
+        byCheque.get(field.chequeIndex)!.push({ yMm: field.yMm, heightMm: field.heightMm });
+      }
 
-    try {
-      enforceMicrSafety(micrElements, CHEQUE_HEIGHT_MM);
-    } catch {
-      fullyMicrSafe = false;
+      try {
+        for (const [idx, elements] of byCheque) {
+          const chequeY = cheques[idx]!.chequeY;
+          enforceMicrSafety(elements, CHEQUE_HEIGHT_MM, { chequeYOffsetMm: chequeY });
+        }
+      } catch {
+        fullyMicrSafe = false;
+      }
     }
-  }
 
   return {
     pageWidth,
@@ -421,12 +435,37 @@ export function requireTemplate(bankKey: string): BankTemplate {
   return template;
 }
 
+/** Convert a millimetre value to PDF points for the A4 overlay renderer. */
+export function mmToPt(mm: number): number {
+  return mm * PT_PER_MM;
+}
+
 /**
- * Load the Nepal print profile constants (printer margins, tolerances).
- * This is a pure data lookup — no side effects.
+ * Convert the A4OverlayLayout to a plain JSON-serializable structure
+ * for passing through the API boundary.
  */
-export async function loadNepalPrintProfile(): Promise<typeof import("./nepal/printProfile.json")> {
-  return await import("./nepal/printProfile.json", {
-    with: { type: "json" },
-  }).then((m) => m.default ?? m);
+export function layoutToJson(layout: A4OverlayLayout): Record<string, unknown> {
+  return {
+    pageWidth: layout.pageWidth,
+    pageHeight: layout.pageHeight,
+    orientation: layout.orientation,
+    fullyMicrSafe: layout.fullyMicrSafe,
+    cheques: layout.cheques.map((c) => ({
+      index: c.index,
+      chequeX: c.chequeX,
+      chequeY: c.chequeY,
+      allMicrSafe: c.allMicrSafe,
+      fields: c.fields.map((f) => ({
+        key: f.key,
+        label: f.label,
+        xMm: f.xMm,
+        yMm: f.yMm,
+        widthMm: f.widthMm,
+        heightMm: f.heightMm,
+        text: f.text,
+        fontSizePt: f.fontSizePt,
+        micrSafe: f.micrSafe,
+      })),
+    })),
+  };
 }

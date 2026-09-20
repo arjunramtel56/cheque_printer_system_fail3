@@ -31,6 +31,15 @@ export const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 /** Session cookie name (first-party, HttpOnly via SameSite=Lax). */
 export const SESSION_COOKIE_NAME = "cheque_session_id";
 
+/** Returns true when the current origin is suitable for Secure cookies
+ *  (HTTPS or localhost). On plain HTTP origins the Secure flag would cause
+ *  browsers to drop the cookie, so it is omitted there. */
+function isSecureOrigin(): boolean {
+  if (typeof window === "undefined") return false;
+  const { protocol, hostname } = window.location;
+  return protocol === "https:" || hostname === "localhost" || hostname === "127.0.0.1";
+}
+
 /** Storage key prefix for per-session data. */
 const SESSION_STORAGE_PREFIX = "chequePrint_session_";
 
@@ -91,9 +100,10 @@ export function createSecureSession(): string {
 
   if (typeof window !== "undefined") {
     try {
-      // Write session ID to cookie (not localStorage — less XSS-exposed).
-      const expires = new Date(Date.now() + SESSION_TTL_MS).toUTCString();
-      document.cookie = `${SESSION_COOKIE_NAME}=${sessionId}; path=/; max-age=${Math.floor(SESSION_TTL_MS / 1000)}; SameSite=Lax; Secure`;
+       // Write session ID to cookie (not localStorage — less XSS-exposed).
+       const expires = new Date(Date.now() + SESSION_TTL_MS).toUTCString();
+       const cookieOpts = `path=/; expires=${expires}; max-age=${Math.floor(SESSION_TTL_MS / 1000)}; SameSite=Lax${isSecureOrigin() ? "; Secure" : ""}`;
+       document.cookie = `${SESSION_COOKIE_NAME}=${sessionId}; ${cookieOpts}`;
 
       // Register in the session registry for cleanup.
       const registry = loadSessionRegistry();

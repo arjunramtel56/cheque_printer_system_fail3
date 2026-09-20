@@ -23,7 +23,7 @@ export function signTemplates(templates: BankTemplate[]): string {
   return CryptoJS.HmacSHA256(JSON.stringify(templates), TEMPLATE_SIGNATURE_KEY).toString();
 }
 
-export function verifyTemplatesSignature(templates: BankTemplate[], sig: string): boolean {
+export function verifyTemplatesSignature(templates: BankTemplate[], sig: string | undefined): boolean {
   if (!sig || typeof sig !== "string") return false;
   const expected = signTemplates(templates);
   return sig === expected;

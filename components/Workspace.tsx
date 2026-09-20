@@ -470,7 +470,8 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
 
   const isDF = isDirectFeed(printMode);
   const paper = template ? resolvePaper(template, printMode) : null;
-  const profile = template?.profiles[printMode];  const currentCalibration = useMemo<Calibration>(() => {
+  const profile = template?.profiles[printMode];
+  const currentCalibration = useMemo<Calibration>(() => {
     if (!template) return { x: 0, y: 0 };
     return getCalibrationFor(calibrations, template.id, printMode, templateDefaultCalibration(template));
   }, [template, calibrations, printMode]);

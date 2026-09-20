@@ -6,6 +6,7 @@
 // the client uses to render a transparent 1:1mm PDF overlay.
 //
 // SECURITY INVARIANTS:
+//   0. Request body is capped at 64 KB (DoS prevention).
 //   1. Zod schema gates ALL input — invalid payee, amount, date or mismatched
 //      amount-in-words never reach the response.
 //   2. Template must belong to the claimed bank (deep-link safety).
@@ -35,6 +36,23 @@ import { enforceLayoutMicrSafety } from "@/lib/security/micrGuard";
 
 export async function POST(request: NextRequest) {
   try {
+    // --- STEP 0: Request body size guard (DoS prevention) ---
+    const contentLength = request.headers.get("content-length");
+    if (contentLength && Number(contentLength) > 65536) {
+      return NextResponse.json(
+        { error: "Request body too large." },
+        {
+          status: 413,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+          },
+        },
+      );
+    }
+
     const body = (await request.json()) as unknown;
 
     // --- STEP 1: Zod schema validation (input gate) ---
