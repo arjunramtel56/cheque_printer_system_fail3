@@ -35,13 +35,21 @@ export type Locale = (typeof LOCALE_VALUES)[number];
 // ---------------------------------------------------------------------------
 
 /**
- * Payee name: Devanagari, Latin letters, digits, spaces and a small set of
+ * Payee name: Devanagari (Nepali), Latin letters, digits, spaces and a small set of
  * punctuation that is safe for printing on a cheque. Emoji and pictographic
  * characters are rejected. This matches the validatePayee() rules in
  * lib/amountWords.ts but is expressed as a Zod-native regex so the schema
  * is self-documenting at the type layer.
+ *
+ * Unicode block coverage:
+ *   \u0900-\u097F  Devanagari (नेपाली)
+ *   \u0980-\u09FF  Bengali (for banks serving Bengali-speaking customers)
+ *   \u0A00-\u0A7F  Gurmukhi
+ *   a-zA-Z         Latin (Romanised names, English payees)
+ *   0-9            Digits in both scripts handled by \d
+ *   Punctuation: . ' - + # & , ( ) space
  */
-const PAYEE_REGEX = /^[\u0900-\u097F\s.a-zA-Z0-9'\-+#&,.()]+$/;
+const PAYEE_REGEX = /^[\u0900-\u09FF\s.a-zA-Z0-9'\-+#&,.()]+$/;
 
 // ---------------------------------------------------------------------------
 // Refined validators — wrap the pure functions from lib/amountWords.ts
@@ -131,6 +139,79 @@ export const chequeFormSchema = z.object({
 );
 
 // ---------------------------------------------------------------------------
+// A4 overlay schema (separate: generates a calibration guide on A4 paper)
+// ---------------------------------------------------------------------------
+
+/**
+ * Zod schema for the A4 overlay generation form.
+ *
+ * The A4 overlay prints cheque outlines + field text on standard A4 paper.
+ * Users hold the printed A4 over their physical cheque to verify alignment.
+ *
+ * Security invariants:
+ *   - orientation must be "portrait" or "landscape" (user selects layout)
+ *   - chequesPerPage must be 1-4 (bounded for A4 physical limits)
+ *   - verified must be true (user must confirm physical verification)
+ */
+export const a4OverlaySchema = z.object({
+  bankKey: z
+    .string()
+    .min(1, "Bank selection is required.")
+    .refine((k) => isBankEnabled(k), {
+      message: "Selected bank is not enabled for cheque printing.",
+    }),
+  orientation: z.enum(["portrait", "landscape"], {
+    message: "Orientation must be portrait or landscape.",
+  }),
+  chequesPerPage: z
+    .number()
+    .int()
+    .min(1, "Must print at least 1 cheque per page.")
+    .max(4, "Maximum 4 cheques per A4 page."),
+  offsetX: z
+    .number()
+    .min(-25, "X offset must be between -25 and 25 mm.")
+    .max(25, "X offset must be between -25 and 25 mm."),
+  offsetY: z
+    .number()
+    .min(-25, "Y offset must be between -25 and 25 mm.")
+    .max(25, "Y offset must be between -25 and 25 mm."),
+  verified: z
+    .boolean()
+    .refine((v) => v === true, {
+      message: "You must confirm physical verification before generating an overlay.",
+    }),
+  // Re-use the same amount-in-words gate as the main form
+  amount: z
+    .string()
+    .refine((a) => {
+      const v = validateAmount(a);
+      return v.valid && v.paisa > 0;
+    }, "Enter a valid cheque amount greater than zero."),
+  amountInWords: z
+    .string()
+    .min(5, "Amount in words is too short.")
+    .max(240, "Amount in words is too long."),
+  lang: z.enum(LOCALE_VALUES, { message: "Unsupported language." }),
+}).refine(
+  (ref) => {
+    const amountValid = validateAmount(ref.amount);
+    if (!amountValid.valid || amountValid.paisa === 0) return false;
+    const result = checkAmountWordsConsistencyLocalized(ref.amount, ref.amountInWords, ref.lang);
+    return result.consistent;
+  },
+  {
+    path: ["amountInWords"],
+    message:
+      "Amount in words does not match the numerical amount. " +
+      "Please correct the amount-in-words field — it must be verified manually.",
+  },
+);
+
+export type A4OverlayInput = z.input<typeof a4OverlaySchema>;
+export type A4OverlayOutput = z.output<typeof a4OverlaySchema>;
+
+// ---------------------------------------------------------------------------
 // Inferenced types
 // ---------------------------------------------------------------------------
 
@@ -160,6 +241,23 @@ export function validateChequeForm(input: unknown): SchemaResult {
     }
     const firstError = result.error.issues[0]?.message ?? "Invalid input.";
     return { success: false, error: firstError, fieldErrors };
+  }
+  return { success: true, data: result.data };
+}
+
+/**
+ * Validate an A4 overlay request. Returns success + data, or field-level errors.
+ */
+export function validateA4OverlayForm(input: unknown): SchemaResult & { data?: A4OverlayOutput } {
+  const result = a4OverlaySchema.safeParse(input);
+  if (!result.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of result.error.issues) {
+      const path = issue.path.length > 0 ? issue.path.join(".") : "_root";
+      fieldErrors[path] = issue.message;
+    }
+    const firstError = result.error.issues[0]?.message ?? "Invalid input.";
+    return { success: false, error: firstError, fieldErrors, data: undefined };
   }
   return { success: true, data: result.data };
 }

@@ -11,6 +11,21 @@ import type { Bank, BankTemplate, NrbClass } from "./types.ts";
 import { BANK_GROUPS, BANK_LIST } from "../data/banks.ts";
 import { getAllActiveTemplates, getAllTemplates } from "./templates.ts";
 import { validateBank, validateCatalogue } from "./validation.ts";
+import CryptoJS from "crypto-js";
+
+/** HMAC signing key for admin bank persistence. Detects client-side
+ *  tampering with persisted banks in localStorage. */
+const BANK_SIGNATURE_KEY = "cheque-bank-sig-v1";
+
+export function signBanks(banks: Bank[]): string {
+  return CryptoJS.HmacSHA256(JSON.stringify(banks), BANK_SIGNATURE_KEY).toString();
+}
+
+export function verifyBanksSignature(banks: Bank[], sig: string): boolean {
+  if (!sig || typeof sig !== "string") return false;
+  const expected = signBanks(banks);
+  return sig === expected;
+}
 
 const BANKS_STORAGE_KEY = "cheque-admin-banks";
 

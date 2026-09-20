@@ -13,6 +13,21 @@
 import type { BankTemplate } from "./types.ts";
 import { TEMPLATE_SEEDS } from "../data/templates.ts";
 import { validateBankTemplate, validateNoDuplicateIds } from "./validation.ts";
+import CryptoJS from "crypto-js";
+
+/** HMAC signing key for admin template persistence. Detects client-side
+ *  tampering with persisted templates in localStorage. */
+const TEMPLATE_SIGNATURE_KEY = "cheque-template-sig-v1";
+
+export function signTemplates(templates: BankTemplate[]): string {
+  return CryptoJS.HmacSHA256(JSON.stringify(templates), TEMPLATE_SIGNATURE_KEY).toString();
+}
+
+export function verifyTemplatesSignature(templates: BankTemplate[], sig: string): boolean {
+  if (!sig || typeof sig !== "string") return false;
+  const expected = signTemplates(templates);
+  return sig === expected;
+}
 
 function assertNoTemplateErrors(template: BankTemplate): void {
   const errs = validateBankTemplate(template);
@@ -125,10 +140,14 @@ export function initRuntimeTemplates(): void {
   try {
     const raw = window.localStorage.getItem("cheque-admin-templates");
     if (!raw) return;
-    const parsed = JSON.parse(raw) as BankTemplate[];
-    if (!Array.isArray(parsed)) return;
-    assertAllTemplatesValid(parsed);
-    runtimeTemplates = [...parsed];
+    const parsed = JSON.parse(raw) as { templates?: BankTemplate[]; sig?: string };
+    if (!parsed || !Array.isArray(parsed.templates)) return;
+    if (!verifyTemplatesSignature(parsed.templates, parsed.sig)) {
+      console.warn("Template signature mismatch — possible tampering detected. Ignoring persisted templates.");
+      return;
+    }
+    assertAllTemplatesValid(parsed.templates);
+    runtimeTemplates = [...parsed.templates];
   } catch {
     // Corrupt stored templates — ignore, keep built-ins
   }
@@ -137,7 +156,11 @@ export function initRuntimeTemplates(): void {
 export function persistRuntimeTemplates(): void {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
-    window.localStorage.setItem("cheque-admin-templates", JSON.stringify(runtimeTemplates));
+    const sig = signTemplates(runtimeTemplates);
+    window.localStorage.setItem(
+      "cheque-admin-templates",
+      JSON.stringify({ templates: runtimeTemplates, sig }),
+    );
   } catch {
     // ignore write errors
   }
@@ -149,7 +172,11 @@ export function saveAdminTemplates(templates: BankTemplate[]): void {
     throw new Error("saveAdminTemplates requires a browser environment");
   }
   assertAllTemplatesValid(templates);
-  window.localStorage.setItem("cheque-admin-templates", JSON.stringify(templates));
+  const sig = signTemplates(templates);
+  window.localStorage.setItem(
+    "cheque-admin-templates",
+    JSON.stringify({ templates, sig }),
+  );
   runtimeTemplates = [...templates];
 }
 
@@ -158,18 +185,22 @@ export function loadAdminTemplates(): BankTemplate[] {
   if (typeof window === "undefined" || !window.localStorage) {
     return BANK_TEMPLATES_BASE;
   }
-  try {
-    const raw = window.localStorage.getItem("cheque-admin-templates");
-    if (!raw) return BANK_TEMPLATES_BASE;
-    const parsed = JSON.parse(raw) as BankTemplate[];
-    if (!Array.isArray(parsed)) return BANK_TEMPLATES_BASE;
-    assertAllTemplatesValid(parsed);
-    runtimeTemplates = [...parsed];
-    return parsed;
-  } catch {
-    return BANK_TEMPLATES_BASE;
-  }
-}
+     try {
+     const raw = window.localStorage.getItem("cheque-admin-templates");
+     if (!raw) return BANK_TEMPLATES_BASE;
+     const parsed = JSON.parse(raw) as { templates?: BankTemplate[]; sig?: string };
+     if (!parsed || !Array.isArray(parsed.templates)) return BANK_TEMPLATES_BASE;
+     if (!verifyTemplatesSignature(parsed.templates, parsed.sig)) {
+       console.warn("Template signature mismatch — possible tampering detected. Falling back to built-ins.");
+       return BANK_TEMPLATES_BASE;
+     }
+     assertAllTemplatesValid(parsed.templates);
+     runtimeTemplates = [...parsed.templates];
+     return parsed.templates;
+   } catch {
+     return BANK_TEMPLATES_BASE;
+   }
+ }
 
 /** Clear all admin templates, restoring built-in defaults. */
 export function clearAdminTemplates(): void {
