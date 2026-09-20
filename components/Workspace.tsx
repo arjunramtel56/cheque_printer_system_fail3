@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n";
 import { getAllActiveTemplates, getTemplate, initRuntimeTemplates } from "@/lib/templates";
 import {
   formatBankLabel,
@@ -15,8 +16,10 @@ import type { BankTemplate, ProfileKey, Calibration } from "@/lib/types";
 import { isDirectFeed, paperIdForMode } from "@/lib/types";
 import {
   checkAmountWordsConsistency,
+  checkAmountWordsConsistencyLocalized,
   formatAmountDisplay,
   amountToWordsFromPaisa,
+  amountToWordsFromPaisaLocalized,
   isValidDate,
   validateAmount,
   validateChequeDate,
@@ -227,18 +230,19 @@ function BankSelector({
   disabled?: boolean;
 }) {
   const options = useMemo(() => getBankOptions(), []);
+  const { t } = useTranslation();
   return (
     <div className="field">
-      <label htmlFor="bank-select">Bank</label>
+      <label htmlFor="bank-select">{t("selectBank")}</label>
       <select id="bank-select" required value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
-        <option value="">— Select a Bank —</option>
+        <option value="">— {t("selectBank")} —</option>
         {options.map((option) => (
           <option key={option.value} value={option.value} disabled={!option.hasTemplate}>
             {option.label}
           </option>
         ))}
       </select>
-      <small>Banks marked “template pending” have no measured cheque layout yet.</small>
+      <small>{t("bankTemplateNote")}</small>
     </div>
   );
 }
@@ -254,18 +258,19 @@ function BankTemplateSelector({
   onChange: (id: string) => void;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="field">
-      <label htmlFor="template-select">Bank Template</label>
+      <label htmlFor="template-select">{t("selectBank")}</label>
       <select id="template-select" required value={selectedId} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
-        <option value="">— Select a Bank Template —</option>
+        <option value="">— {t("selectBankTemplate")} —</option>
         {templates.map((t) => (
           <option key={t.id} value={t.id}>
             {t.label}
           </option>
         ))}
       </select>
-      <small>Pick the correct bank before entering cheque details.</small>
+      <small>{t("pickTemplateHelp")}</small>
     </div>
   );
 }
@@ -459,7 +464,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
     setCalibrations((prev) => resetCalibrationFor(prev, template.id, printMode));
   }
 
-  const chequeData: ChequeData = { date, payee, amount, amountWords, accountPayee };
+  const chequeData: ChequeData = { date, payee, amount, amountWords, accountPayee, locale: appLocale };
 
   const safeZonesClear = useMemo(
     () => (template ? validateSafeZoneClearance(template).length === 0 : true),
@@ -470,11 +475,11 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
     const v = validateAmount(amount);
     if (!v.valid || v.paisa === 0) return "";
     try {
-      return amountToWordsFromPaisa(v.paisa);
+      return amountToWordsFromPaisaLocalized(v.paisa, appLocale);
     } catch {
       return "";
     }
-  }, [amount]);
+  }, [amount, appLocale]);
 
   const amountError = useMemo(() => {
     const v = validateAmount(amount);
@@ -490,28 +495,31 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
   // Explicit workflow state + print-readiness (single source of truth for the
   // reason the print button surfaces).
   // -----------------------------------------------------------------------
+  const { t, locale: appLocale, toggleLocale } = useTranslation();
+
   const printReadiness = useMemo<PrintReadiness>(() => {
-    if (!template) return { ready: false, reason: "Select a bank template" };
+    if (!template) return { ready: false, reason: t("selectBankTemplateError") };
     if (!date || !validateChequeDate(date).valid) {
-      const dc = date ? validateChequeDate(date) : { valid: false, error: "Enter cheque date" };
-      return { ready: false, reason: dc.error ?? "Enter cheque date" };
+      const dc = date ? validateChequeDate(date) : { valid: false, error: t("dateRequiredError") };
+      return { ready: false, reason: dc.error ?? t("dateRequiredError") };
     }
     const payeeVal = validatePayee(payee);
-    if (!payeeVal.valid) return { ready: false, reason: payeeVal.error ?? "Enter payee name" };
+    if (!payeeVal.valid) return { ready: false, reason: payeeVal.error ?? t("payeeRequiredError") };
     const amountVal = validateAmount(amount);
-    if (!amountVal.valid) return { ready: false, reason: amountVal.error ?? "Enter a valid amount" };
-    if (amountVal.paisa === 0) return { ready: false, reason: "Enter an amount greater than zero" };
-    if (amountWords.trim() === "") return { ready: false, reason: "Enter amount in words" };
-    if (!checkAmountWordsConsistency(amount, amountWords).consistent) {
-      return { ready: false, reason: "Amount and words do not match" };
+    if (!amountVal.valid) return { ready: false, reason: amountVal.error ?? t("amountRequiredError") };
+    if (amountVal.paisa === 0) return { ready: false, reason: t("amountZeroError") };
+    if (!amountWords.trim()) return { ready: false, reason: t("amountWordsRequiredError") };
+    const consistency = checkAmountWordsConsistency(amount, amountWords);
+    if (!consistency.consistent) {
+      return { ready: false, reason: t("amountWordsMismatchError") };
     }
-    if (!printMode) return { ready: false, reason: "Select print mode" };
+    if (!printMode) return { ready: false, reason: t("selectPrintModeError") };
     if (validateCalibrationPair(currentCalibration.x, currentCalibration.y) !== null) {
-      return { ready: false, reason: "Correct calibration" };
+      return { ready: false, reason: t("calibrationError") };
     }
-    if (!safeZonesClear) return { ready: false, reason: "A field overlaps a reserved zone" };
+    if (!safeZonesClear) return { ready: false, reason: t("reservedZoneError") };
     return { ready: true, reason: null };
-  }, [template, date, payee, amount, amountWords, printMode, currentCalibration, safeZonesClear]);
+  }, [template, date, payee, amount, amountWords, printMode, currentCalibration, safeZonesClear, t]);
 
   const derivedFormState = useMemo<FormState>(() => {
     if (isPrinting) return "printing";
@@ -613,42 +621,46 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
       setIsPrinting(false);
     };
 
-    // STEP 1: VALIDATE DATA
+     // STEP 1: VALIDATE DATA
     const dateCheck = validateChequeDate(date);
-    if (!dateCheck.valid) { setPrintError(dateCheck.error ?? "Invalid date."); release(); return; }
+    if (!dateCheck.valid) { setPrintError(dateCheck.error ?? t("dateInvalidError")); release(); return; }
     const payeeCheck = validatePayee(payee);
-    if (!payeeCheck.valid) { setPrintError(payeeCheck.error ?? "Payee name is required."); release(); return; }
+    if (!payeeCheck.valid) { setPrintError(payeeCheck.error ?? t("payeeRequiredError")); release(); return; }
     const amountValidation = validateAmount(amount);
-    if (!amountValidation.valid) { setPrintError(amountValidation.error ?? "Invalid amount."); release(); return; }
-    if (amountValidation.paisa === 0) { setPrintError("Amount must be greater than zero."); release(); return; }
-    if (!amountWords.trim()) { setPrintError("Amount in words is required."); release(); return; }
-    const consistency = checkAmountWordsConsistency(amount, amountWords);
+    if (!amountValidation.valid) { setPrintError(amountValidation.error ?? t("amountRequiredError")); release(); return; }
+    if (amountValidation.paisa === 0) { setPrintError(t("amountZeroError")); release(); return; }
+    if (!amountWords.trim()) { setPrintError(t("printErrorAmountRequired")); release(); return; }
+    const consistency = checkAmountWordsConsistencyLocalized(amount, amountWords, appLocale);
     if (!consistency.consistent) {
-      setPrintError("Amount in words does not match the numeric amount. Regenerate or correct it before printing.");
+      setPrintError(
+        consistency.expected
+          ? `${t("printErrorWordsMismatch")} (${t("expectedWords")}: ${consistency.expected})`
+          : t("printErrorWordsMismatch"),
+      );
       release();
       return;
     }
 
     // STEP 2: VALIDATE BANK TEMPLATE
-    if (!template) { setPrintError("No bank template selected."); release(); return; }
+    if (!template) { setPrintError(t("selectBankTemplateError")); release(); return; }
     const resolvedTemplate = template; // narrow for closure safety
     const templateErrors = validateTemplateForPrint(resolvedTemplate);
     if (templateErrors) {
-      setPrintError("The selected bank template is not available for printing. Please choose another template.");
+      setPrintError(t("printErrorTemplate"));
       release();
       return;
     }
     const owningBank = getBank(resolvedTemplate.bankId);
     if (!owningBank || !owningBank.enabled) {
-      setPrintError("This bank is disabled. Please choose another bank.");
+      setPrintError(t("printErrorBankDisabled"));
       release();
       return;
     }
 
     // STEP 3: VALIDATE PRINT MODE
-    if (!printMode) { setPrintError("Print mode not selected."); release(); return; }
+    if (!printMode) { setPrintError(t("printErrorMode")); release(); return; }
     if (!supportedModes.includes(printMode)) {
-      setPrintError("This print mode is not supported by the selected template.");
+      setPrintError(t("printErrorModeUnsupported"));
       release();
       return;
     }
@@ -660,13 +672,13 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
 
     // STEP 5: PREPARE PRINT LAYOUT
     const resolvedProfile = resolvedTemplate.profiles[printMode];
-    if (!resolvedProfile) { setPrintError("Print layout not available for selected mode."); release(); return; }
+    if (!resolvedProfile) { setPrintError(t("printErrorProfile")); release(); return; }
 
     // STEP 5b: VALIDATE GEOMETRY (single source of truth guard)
     const geom = resolvePrintGeometry(resolvedTemplate, printMode);
     const geomErrors = validatePrintGeometry(geom, resolvedTemplate, printMode);
     if (geomErrors) {
-      setPrintError("The selected template has an invalid layout. Please choose a different bank template.");
+      setPrintError(t("printErrorLayout"));
       release();
       return;
     }
@@ -674,14 +686,14 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
     // STEP 5c: CALIBRATED BOUNDS CHECK — the cheque must stay within the page.
     const calBoundsErrors = validateCalibratedBounds(resolvedTemplate, printMode);
     if (calBoundsErrors) {
-      setPrintError("Calibration would push the cheque off the page. Adjust the X/Y offset values.");
+      setPrintError(t("printErrorCalibration"));
       release();
       return;
     }
 
     // STEP 5d: RESERVED ZONE CHECK — no printable field may enter the MICR band.
     if (validateSafeZoneClearance(resolvedTemplate).length > 0) {
-      setPrintError("A field overlaps the reserved MICR band. Correct the template before printing.");
+      setPrintError(t("reservedZoneError"));
       release();
       return;
     }
@@ -849,47 +861,51 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
             autoComplete="off"
             onSubmit={(e) => { e.preventDefault(); handlePrint(); }}
           >
-            <div className="panel-heading">
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span className="step">01</span>
-                <h2>Cheque Details</h2>
-                <span
-                  className="state-badge"
-                  style={{
-                    fontSize: "0.72rem",
-                    fontWeight: 600,
-                    padding: "2px 8px",
-                    borderRadius: "12px",
-                    background:
-                      derivedFormState === "ready-print" || derivedFormState === "ready-preview"
-                        ? "color-mix(in srgb, var(--success) 14%, transparent)"
-                        : derivedFormState === "printing"
-                          ? "color-mix(in srgb, var(--info) 14%, transparent)"
-                          : "color-mix(in srgb, var(--text-secondary) 10%, transparent)",
-                    color:
-                      derivedFormState === "ready-print" || derivedFormState === "ready-preview"
-                        ? "var(--success)"
-                        : derivedFormState === "printing"
-                          ? "var(--info)"
-                          : "var(--text-secondary)",
-                  }}
-                  aria-label={`Workflow state: ${derivedFormState}`}
-                >
-                  {derivedFormState === "empty"
-                    ? "Select Bank"
-                    : derivedFormState === "template-selected"
-                      ? "Bank Selected"
-                      : derivedFormState === "data-entering"
-                        ? "Filling Details"
-                        : derivedFormState === "ready-preview"
-                          ? "Review Preview"
-                          : derivedFormState === "ready-print"
-                            ? "Ready to Print"
-                            : derivedFormState === "printing"
-                              ? "Printing…"
-                              : "Print Finished"}
-                </span>
-              </div>
+               <div className="panel-heading">
+               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                 <span className="step">01</span>
+                 <h2>{t("chequeDetails")}</h2>
+                 <span
+                   className="state-badge"
+                   style={{
+                     fontSize: "0.72rem",
+                     fontWeight: 600,
+                     padding: "2px 8px",
+                     borderRadius: "12px",
+                     background:
+                       derivedFormState === "ready-print" || derivedFormState === "ready-preview"
+                         ? "color-mix(in srgb, var(--success) 14%, transparent)"
+                         : derivedFormState === "printing"
+                           ? "color-mix(in srgb, var(--info) 14%, transparent)"
+                           : "color-mix(in srgb, var(--text-secondary) 10%, transparent)",
+                     color:
+                       derivedFormState === "ready-print" || derivedFormState === "ready-preview"
+                         ? "var(--success)"
+                         : derivedFormState === "printing"
+                           ? "var(--info)"
+                           : "var(--text-secondary)",
+                   }}
+                   aria-label={`Workflow state: ${derivedFormState}`}
+                 >
+                   {derivedFormState === "empty"
+                     ? t("stateSelectBank")
+                     : derivedFormState === "template-selected"
+                       ? t("stateBankSelected")
+                       : derivedFormState === "data-entering"
+                         ? t("stateFillingDetails")
+                         : derivedFormState === "ready-preview"
+                           ? t("stateReviewPreview")
+                           : derivedFormState === "ready-print"
+                             ? t("stateReadyToPrint")
+                             : derivedFormState === "printing"
+                               ? t("statePrinting")
+                               : t("statePrintFinished")}
+                 </span>
+               </div>
+               <button type="button" className="text-button" onClick={handleClear} aria-label={t("clearAllAria")}>
+                 {t("clearAllBtn")}
+               </button>
+             </div>
               <button type="button" className="text-button" onClick={handleClear} aria-label="Clear all cheque details and calibration">
                 Clear All
               </button>

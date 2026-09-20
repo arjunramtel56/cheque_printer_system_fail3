@@ -114,7 +114,7 @@ assertContains(handlePrintBody, "STEP 1: VALIDATE DATA", "Step 1: data validatio
 assertContains(handlePrintBody, "validateChequeDate(date)", "Validates cheque date");
 assertContains(handlePrintBody, "validatePayee(payee)", "Validates payee");
 assertContains(handlePrintBody, "validateAmount(amount)", "Validates amount");
-assertContains(handlePrintBody, "checkAmountWordsConsistency(amount, amountWords)", "Validates amount-words consistency");
+assertContains(handlePrintBody, "checkAmountWordsConsistencyLocalized(amount, amountWords, appLocale)", "Validates amount-words consistency (localized)");
 assertContains(handlePrintBody, "STEP 2: VALIDATE BANK TEMPLATE", "Step 2: template validation");
 assertContains(handlePrintBody, "STEP 3: VALIDATE PRINT MODE", "Step 3: print mode validation");
 assertContains(handlePrintBody, "STEP 4: APPLY CALIBRATION", "Step 4: calibration validation");
@@ -297,7 +297,7 @@ assertContains(ws, "function handleModeChange", "handleModeChange exists");
 assertContains(ws, "setPrintMode(newMode);", "handleModeChange updates printMode");
 assertContains(ws, "setPrintError(\"\");", "handleModeChange clears printError");
 // The PrintReadiness recompute depends on printMode
-assertContains(ws, "[template, date, payee, amount, amountWords, printMode, currentCalibration, safeZonesClear]", "printReadiness recomputes when printMode changes");
+assertContains(ws, "[template, date, payee, amount, amountWords, printMode, currentCalibration, safeZonesClear, t]", "printReadiness recomputes when printMode changes");
 
 // Switching DF <-> A4 selects the calibration for THAT (template, mode) pair.
 assertContains(ws, "getCalibrationFor(calibrations, template.id, printMode", "Calibration lookup is per template + print mode");
@@ -555,7 +555,7 @@ for (const p of commonProps) {
 for (const p of ["template={template}", "data={chequeData}", "mode={printMode}", "calibration={currentCalibration}"]) {
   assert(printOutputMatch.includes(p), "Print output is passed the same value as the preview: " + p);
 }
-assertContains(ws, "const chequeData: ChequeData = { date, payee, amount, amountWords, accountPayee };", "one cheque-data object feeds both preview and print");
+assertContains(ws, "const chequeData: ChequeData = { date, payee, amount, amountWords, accountPayee, locale: appLocale };", "one cheque-data object feeds both preview and print");
 assert(
   !ws.includes("offsetX=") && !ws.includes("offsetY="),
   "calibration is no longer passed as separate loose X/Y props (it travels with the layout)",
