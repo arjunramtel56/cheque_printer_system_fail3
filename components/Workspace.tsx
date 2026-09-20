@@ -42,6 +42,7 @@ import { resolvePaper, resolvePrintGeometry, STANDARD_CHEQUE_W_MM, STANDARD_CHEQ
 import { validateCalibratedBounds, validatePrintGeometry, validateSafeZoneClearance, validateTemplateForPrint } from "@/lib/validation";
 import { computeSheetLayout, fieldsWithinCheque, type ChequeData } from "@/lib/sheetLayout";
 import ChequeSheet, { PREVIEW_SCALE } from "@/components/ChequeSheet";
+import { generateOverlayPdf } from "@/components/ChequeOverlayPDF";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
@@ -389,6 +390,8 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
   const [printError, setPrintError] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
   const [printCompleted, setPrintCompleted] = useState(false);
+  const [pdfOverlayUrl, setPdfOverlayUrl] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const wordOverrideRef = useRef(false);
   const printStyleRef = useRef<HTMLStyleElement | null>(null);
@@ -559,6 +562,16 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
         afterPrintRef.current = null;
       }
       printLockRef.current = false;
+    };
+  }, [templateId]);
+
+  // Clean up generated PDF overlay URL when template changes
+  useEffect(() => {
+    return () => {
+      if (pdfOverlayUrl) {
+        URL.revokeObjectURL(pdfOverlayUrl);
+        setPdfOverlayUrl(null);
+      }
     };
   }, [templateId]);
 
@@ -746,10 +759,28 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
       window.removeEventListener("pagehide", onAfterPrint);
       beforePrintRef.current = null;
       afterPrintRef.current = null;
-    }
-  }
+   }
+   }
 
-  function handleClear() {
+   async function handleGeneratePdfOverlay() {
+     if (!template || isGeneratingPdf) return;
+
+     setPrintError("");
+     setIsGeneratingPdf(true);
+
+     try {
+       const result = await generateOverlayPdf(template, chequeData, printMode, currentCalibration);
+       // Revoke any previous URL to avoid leaks
+       if (pdfOverlayUrl) URL.revokeObjectURL(pdfOverlayUrl);
+       setPdfOverlayUrl(result.blobUrl);
+     } catch (err) {
+       setPrintError(err instanceof Error ? err.message : "Failed to generate PDF overlay.");
+     } finally {
+       setIsGeneratingPdf(false);
+     }
+   }
+
+   function handleClear() {
     // Preserve system configuration (print mode is a persistent UI preference);
     // only reset cheque data and transient state, with an explicit confirmation.
     const calibrationDirty = Object.keys(calibrations).length > 0;
@@ -759,7 +790,8 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
       payee !== "" ||
       amount !== "" ||
       amountWords !== "" ||
-      calibrationDirty
+      calibrationDirty ||
+      pdfOverlayUrl !== null
     ) {
       if (!window.confirm("Clear all cheque details and calibration? This cannot be undone.")) return;
     }
@@ -779,12 +811,19 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
       printStyleRef.current.remove();
       printStyleRef.current = null;
     }
-    // Deep-linked selection is restored by the URL, so only an unbound
-    // selection is cleared here.
-    if (!boundTemplateId) setTemplateId("");
-    if (!boundBankId) setSelectedBankId("");
-    setCalibrations({});
-  }
+     // Deep-linked selection is restored by the URL, so only an unbound
+     // selection is cleared here.
+     if (!boundTemplateId) setTemplateId("");
+     if (!boundBankId) setSelectedBankId("");
+     setCalibrations({});
+
+     // Clean up PDF overlay
+     if (pdfOverlayUrl) {
+       URL.revokeObjectURL(pdfOverlayUrl);
+       setPdfOverlayUrl(null);
+     }
+     setIsGeneratingPdf(false);
+   }
 
   const calibrationRows = useMemo(() => {
     if (!template) return [];
@@ -1184,6 +1223,20 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
               <p id="print-help" className="sr-only">
                 Prints the cheque at actual size. Ensure printer is set to Actual Size (100%).
               </p>
+
+              {/* PDF Overlay export — generates a transparent 1:1mm PDF overlay
+                  for printing on transparency film over existing cheque stock. */}
+              <button
+                type="button"
+                className="button secondary"
+                style={{ fontSize: "0.82rem" }}
+                disabled={!printReadiness.ready || isGeneratingPdf || isPrinting}
+                onClick={handleGeneratePdfOverlay}
+                aria-label={isGeneratingPdf ? "Generating PDF overlay..." : "Generate transparent PDF overlay for printing"}
+                title="Generate a transparent PDF overlay to print on transparency film over an existing cheque"
+              >
+                {isGeneratingPdf ? "Generating PDF…" : "PDF Overlay"}
+              </button>
             </div>
 
             {printError && (
@@ -1240,24 +1293,69 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
               </p>
             )}
 
-            <div className="tip-card">
-              <div className="tip-icon" aria-hidden="true">i</div>
-              <div>
-                <strong>Before printing a real cheque</strong>
-                <p>
-                  {isDF ? (
-                    <>
-                      For <b>Direct Feed</b>: feed a blank cheque directly into your printer. Set print dialog to <b>Actual Size (100%)</b> — do NOT fit to page. Ensure margins are set to minimum/none. Use X/Y calibration to align if needed.
-                    </>
-                  ) : (
-                    <>
-                      For <b>A4 Carrier</b>: print on plain A4 paper. Set print dialog to <b>Actual Size (100%)</b> with no margins. Cut out the cheque along the border. Use X/Y calibration to align if needed.
-                    </>
-                  )}
-                </p>
-              </div>
-            </div>
-          </section>
+             <div className="tip-card">
+               <div className="tip-icon" aria-hidden="true">i</div>
+               <div>
+                 <strong>Before printing a real cheque</strong>
+                 <p>
+                   {isDF ? (
+                     <>
+                       For <b>Direct Feed</b>: feed a blank cheque directly into your printer. Set print dialog to <b>Actual Size (100%)</b> — do NOT fit to page. Ensure margins are set to minimum/none. Use X/Y calibration to align if needed.
+                     </>
+                   ) : (
+                     <>
+                       For <b>A4 Carrier</b>: print on plain A4 paper. Set print dialog to <b>Actual Size (100%)</b> with no margins. Cut out the cheque along the border. Use X/Y calibration to align if needed.
+                     </>
+                   )}
+                 </p>
+               </div>
+             </div>
+
+             {/* PDF Overlay preview — shows when a transparent PDF has been generated */}
+             {pdfOverlayUrl && (
+               <div className="card" style={{ marginTop: 12, padding: 12 }}>
+                 <h3 style={{ margin: "0 0 8px 0", fontSize: "0.82rem", color: "var(--text-secondary)", fontWeight: 700 }}>
+                   Transparent PDF Overlay
+                 </h3>
+                 <p style={{ margin: "0 0 8px 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                   Print this overlay at 100% scale on transparency film, then place it over your physical cheque. Only the variable fields (date, payee, amount, words) are printed — the cheque background and MICR band are not covered.
+                 </p>
+                 <iframe
+                   src={pdfOverlayUrl}
+                   title="Cheque overlay PDF preview"
+                   style={{ width: "100%", height: "200px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                 />
+                 <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "flex-end" }}>
+                   <a
+                     href={pdfOverlayUrl}
+                     download="cheque-overlay.pdf"
+                     className="text-button"
+                     style={{ fontSize: "0.8rem" }}
+                     onClick={() => {
+                       // Clean up URL after download starts
+                       setTimeout(() => {
+                         if (pdfOverlayUrl) URL.revokeObjectURL(pdfOverlayUrl);
+                         setPdfOverlayUrl(null);
+                       }, 1000);
+                     }}
+                   >
+                     Download PDF
+                   </a>
+                   <button
+                     type="button"
+                     className="text-button"
+                     style={{ fontSize: "0.8rem" }}
+                     onClick={() => {
+                       if (pdfOverlayUrl) URL.revokeObjectURL(pdfOverlayUrl);
+                       setPdfOverlayUrl(null);
+                     }}
+                   >
+                     Discard
+                   </button>
+                 </div>
+               </div>
+             )}
+           </section>
         </div>
       </div>
 
