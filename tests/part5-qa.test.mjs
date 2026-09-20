@@ -164,7 +164,7 @@ assert(siddhartha !== undefined, "siddhartha template exists");
   const g = resolvePrintGeometry(siddhartha, "a4_vertical");
   assert(g.pageW === 210 && g.pageH === 297, "A4 Portrait: page=210x297");
   assert(g.rotate === undefined, "A4 Portrait: no rotation field (rotation-free model)");
-  assert(g.chequeX === 9.75 && g.chequeY === 20, "A4 Portrait: cheque at 9.75,20");
+  assert(g.chequeX === 9.75 && g.chequeY === 104.05, "A4 Portrait: cheque centered at 9.75,104.05");
   assert(g.chequeX + g.chequeW <= 210, "A4 Portrait: cheque fits width");
   assert(g.chequeY + g.chequeH <= 297, "A4 Portrait: cheque fits height");
 }
@@ -174,7 +174,7 @@ assert(siddhartha !== undefined, "siddhartha template exists");
   const g = resolvePrintGeometry(siddhartha, "a4_horizontal");
    assert(g.pageW === 297 && g.pageH === 210, "A4 Landscape: page=297x210");
    assert(g.rotate === undefined, "A4 Landscape: no rotation field (rotation-free model)");
-  assert(g.chequeX === 20 && g.chequeY === 50.75, "A4 Landscape: cheque at 20,50.75");
+  assert(g.chequeX === 53.25 && g.chequeY === 60.55, "A4 Landscape: cheque centered at 53.25,60.55");
   assert(g.chequeX + g.chequeW <= 297, "A4 Landscape: cheque fits width");
   assert(g.chequeY + g.chequeH <= 210, "A4 Landscape: cheque fits height");
 }

@@ -555,12 +555,12 @@ for (const t of getAllTemplates()) {
   // Calibration clamping range math
   const minCalX = -profile.x;                          // -9.75
   const maxCalX = 210 - profile.x - t.widthMm;          // 210 - 9.75 - 190.5 = 9.75
-  const minCalY = -profile.y;                          // -20
-  const maxCalY = 297 - profile.y - t.heightMm;        // 297 - 20 - 88.9 = 188.1
+  const minCalY = -profile.y;                          // -104.05
+  const maxCalY = 297 - profile.y - t.heightMm;        // 297 - 104.05 - 88.9 = 104.05
   assert(minCalX === -9.75, t.bankName + " a4_vertical: minCalX = -9.75");
   assert(Math.abs(maxCalX - 9.75) < 0.01, t.bankName + " a4_vertical: maxCalX = 9.75");
-  assert(minCalY === -20, t.bankName + " a4_vertical: minCalY = -20.0");
-  assert(Math.abs(maxCalY - 188.1) < 0.01, t.bankName + " a4_vertical: maxCalY = 188.1");
+  assert(Math.abs(minCalY + 104.05) < 0.01, t.bankName + " a4_vertical: minCalY = -104.05");
+  assert(Math.abs(maxCalY - 104.05) < 0.01, t.bankName + " a4_vertical: maxCalY = 104.05");
 
   // Verify extreme calibration is clamped
   const calExt = resolveCalibratedGeometry(t, "a4_vertical", { x: 25, y: 25 });
@@ -587,14 +587,14 @@ for (const t of getAllTemplates()) {
   assert(bottomEdge <= 210 + 0.05, t.bankName + " a4_horizontal: cheque bottom edge (" + bottomEdge.toFixed(2) + ") ≤ 210");
 
   // Calibration clamping range math
-  const minCalX = -profile.x;                          // -20
-  const maxCalX = 297 - profile.x - t.widthMm;         // 297 - 20 - 190.5 = 86.5
-  const minCalY = -profile.y;                          // -50.75
-  const maxCalY = 210 - profile.y - t.heightMm;        // 210 - 50.75 - 88.9 = 70.35
-  assert(minCalX === -20, t.bankName + " a4_horizontal: minCalX = -20");
-  assert(Math.abs(maxCalX - 86.5) < 0.01, t.bankName + " a4_horizontal: maxCalX = 86.5");
-  assert(minCalY === -50.75, t.bankName + " a4_horizontal: minCalY = -50.75");
-  assert(Math.abs(maxCalY - 70.35) < 0.01, t.bankName + " a4_horizontal: maxCalY = 70.35");
+  const minCalX = -profile.x;                          // -53.25
+  const maxCalX = 297 - profile.x - t.widthMm;         // 297 - 53.25 - 190.5 = 53.25
+  const minCalY = -profile.y;                          // -60.55
+  const maxCalY = 210 - profile.y - t.heightMm;        // 210 - 60.55 - 88.9 = 60.55
+  assert(Math.abs(minCalX + 53.25) < 0.01, t.bankName + " a4_horizontal: minCalX = -53.25");
+  assert(Math.abs(maxCalX - 53.25) < 0.01, t.bankName + " a4_horizontal: maxCalX = 53.25");
+  assert(Math.abs(minCalY + 60.55) < 0.01, t.bankName + " a4_horizontal: minCalY = -60.55");
+  assert(Math.abs(maxCalY - 60.55) < 0.01, t.bankName + " a4_horizontal: maxCalY = 60.55");
 
   // Verify extreme calibration is clamped
   const calExt = resolveCalibratedGeometry(t, "a4_horizontal", { x: 25, y: 25 });

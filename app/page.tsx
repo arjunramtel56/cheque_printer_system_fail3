@@ -3,6 +3,7 @@ import Workspace from "@/components/Workspace";
 import MicrSafetyGuide from "@/components/MicrSafetyGuide";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import TrustBadge from "@/components/TrustBadge";
 import { getCatalogueSummary, getSelectableBanks } from "@/lib/catalogue";
 
 /**
@@ -30,6 +31,8 @@ export default function HomePage() {
           Admin
         </Link>
       </div>
+
+      <TrustBadge />
 
       <MicrSafetyGuide />
 

@@ -235,4 +235,19 @@ button, input, select, textarea { font-family: inherit; font-size: 1rem; }
   .two-columns { gap: 10px; }
 }
 
+/* Sticky print bar: on small screens, keep the print action pinned to the
+   bottom of the viewport so users never lose the primary button after
+   reviewing the live preview. Elevated surface with a subtle shadow. */
+@media (max-width: 768px) {
+  .sticky-print-bar {
+    position: sticky;
+    top: auto;
+    bottom: 0;
+    z-index: 10;
+    background: var(--surface);
+    padding: 12px 0 8px;
+    box-shadow: 0 -2px 8px rgba(16, 24, 40, 0.08);
+  }
+}
+
 /* Print rules live in ./print.css (imported in layout.tsx). */

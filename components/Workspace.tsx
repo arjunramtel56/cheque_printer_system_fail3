@@ -1287,49 +1287,54 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                </div>
              )}
 
-             <div className="form-actions" style={{ marginTop: 16, flexDirection: "column", alignItems: "stretch", gap: 8 }}>
-              <button
-                type="button"
-                className="button secondary"
-                disabled={!printReadiness.ready || isPrinting}
-                onClick={handlePrint}
-                aria-disabled={!printReadiness.ready || isPrinting}
-                aria-describedby={printReadiness.ready ? "print-help" : "print-reason"}
-                aria-label={
-                  isPrinting
-                    ? t("ariaPrintingCheque")
-                    : printCompleted
-                      ? t("ariaPrintCompleted")
-                      : printReadiness.ready
-                        ? t("ariaPrintCheque")
-                        : `${t("ariaPrintCheque")} — ${t("requiresLabel")}: ${printReadiness.reason ?? t("allFieldsComplete")}`
-                }
-              >
-                {isPrinting ? t("printingLabel") : printCompleted ? t("printAgain") : t("printChequeBtn")}
-              </button>
-              {!printReadiness.ready && !isPrinting && (
-                <p id="print-reason" className="error-state" role="status" aria-live="polite">
-                  {printReadiness.reason}
-                </p>
-              )}
-              <p id="print-help" className="sr-only">
-                {t("printHelp")}
-              </p>
+              {/* Sticky print bar: pinned to the bottom of the form on mobile so the
+                   primary print action is always reachable without scrolling back up
+                   after reviewing the live preview. */}
+              <div className="sticky-print-bar" style={{ marginTop: 16 }}>
+               <div className="form-actions" style={{ flexDirection: "column", alignItems: "stretch", gap: 8 }}>
+               <button
+                 type="button"
+                 className="button secondary"
+                 disabled={!printReadiness.ready || isPrinting}
+                 onClick={handlePrint}
+                 aria-disabled={!printReadiness.ready || isPrinting}
+                 aria-describedby={printReadiness.ready ? "print-help" : "print-reason"}
+                 aria-label={
+                   isPrinting
+                     ? t("ariaPrintingCheque")
+                   : printCompleted
+                       ? t("ariaPrintCompleted")
+                       : printReadiness.ready
+                         ? t("ariaPrintCheque")
+                         : `${t("ariaPrintCheque")} — ${t("requiresLabel")}: ${printReadiness.reason ?? t("allFieldsComplete")}`
+                 }
+               >
+                 {isPrinting ? t("printingLabel") : printCompleted ? t("printAgain") : t("printChequeBtn")}
+               </button>
+               {!printReadiness.ready && !isPrinting && (
+                 <p id="print-reason" className="error-state" role="status" aria-live="polite">
+                   {printReadiness.reason}
+                 </p>
+               )}
+               <p id="print-help" className="sr-only">
+                 {t("printHelp")}
+               </p>
 
-              {/* PDF Overlay export — generates a transparent 1:1mm PDF overlay
-                  for printing on transparency film over existing cheque stock. */}
-              <button
-                type="button"
-                className="button secondary"
-                style={{ fontSize: "0.82rem" }}
-                disabled={!printReadiness.ready || isGeneratingPdf || isPrinting}
-                onClick={handleGeneratePdfOverlay}
-                aria-label={isGeneratingPdf ? t("generatingPdfOverlay") : t("generatePdfOverlay")}
-                title={t("generatePdfOverlay")}
-              >
-                {isGeneratingPdf ? t("generatingPdf") : t("generateBtn")}
-              </button>
-            </div>
+               {/* PDF Overlay export — generates a transparent 1:1mm PDF overlay
+                   for printing on transparency film over existing cheque stock. */}
+               <button
+                 type="button"
+                 className="button secondary"
+                 style={{ fontSize: "0.82rem" }}
+                 disabled={!printReadiness.ready || isGeneratingPdf || isPrinting}
+                 onClick={handleGeneratePdfOverlay}
+                 aria-label={isGeneratingPdf ? t("generatingPdfOverlay") : t("generatePdfOverlay")}
+                 title={t("generatePdfOverlay")}
+               >
+                 {isGeneratingPdf ? t("generatingPdf") : t("generateBtn")}
+               </button>
+               </div>
+              </div>
 
             {printError && (
               <p className="error-state" style={{ marginTop: 8 }} role="alert" aria-live="assertive">{printError}</p>

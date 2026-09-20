@@ -231,5 +231,10 @@
   "adminPayeeWarning": "खतरा! payeeY ले MICR लाई बेसम्म पुर्याउँछ",
   "adminPayeeWarningNe": "ખતरા! payeeY ले MICR लाई बेसम्म पुर्याउँछ",
   "adminSaveSafely": "बचत गर्नुहोस् / Save Safely",
-  "adminSaveSafelyNe": "बचत गर्नुहोस्"
+  "adminSaveSafelyNe": "बचत गर्नुहोस्",
+  "sslSecured": "SSL सुरक्षित",
+  "dataStaysLocal": "डाटा ब्राउज़रभित्रै ढुवाइन्छ — कहिले पनि सर्भरमा पठाइँछैन",
+  "dataStaysLocalNe": "डाटा ब्राउज़रभित्रै ढुवाइन्छ — कहिले पनि सर्भरमा पठाइँछैन",
+  "onlyPrintsFields": "यस टुलले मात्र चेकमा ढाल्नुपर्ने फाँटहरू नै छाप्छ",
+  "onlyPrintsFieldsNe": "यस टुलले मात्र चेकमा ढाल्नुपर्ने फाँटहरू नै छाप्छ"
 }

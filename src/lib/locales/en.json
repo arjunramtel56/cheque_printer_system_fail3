@@ -230,5 +230,10 @@
   "adminPayeeWarning": "DANGER: payeeY risks MICR encroachment",
   "adminPayeeWarningNe": "खतरा! payeeY ले MICR लाई बेसम्म पुर्याउँछ",
   "adminSaveSafely": "Save Safely",
-  "adminSaveSafelyNe": "बचत गर्नुहोस् / Save Safely"
+  "adminSaveSafelyNe": "बचत गर्नुहोस् / Save Safely",
+  "sslSecured": "SSL Secured",
+  "dataStaysLocal": "Data stays in your browser — never sent to a server",
+  "dataStaysLocalNe": "डाटा ब्राउज़रभित्रै ढुवाइन्छ — कहिले पनि सर्भरमा पठाइँछैन",
+  "onlyPrintsFields": "This tool only prints variable fields onto cheque stock",
+  "onlyPrintsFieldsNe": "यस टुलले मात्र चेकमा ढाल्नुपर्ने फाँटहरू नै छाप्छ"
 }
