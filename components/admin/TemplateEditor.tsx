@@ -36,14 +36,15 @@ function NumberField({
   width?: number;
 }) {
   return (
-    <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)" }}>
+    <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)", minWidth: 120 }}>
       {label}
       <input
         type="number"
         step={step}
         value={Number.isFinite(value) ? value : 0}
         onChange={(e) => onChange(Number(e.target.value))}
-        style={{ width, fontSize: "0.8rem", padding: "4px 6px" }}
+        className="field-input"
+        style={{ width, fontSize: "0.8rem" }}
       />
     </label>
   );
@@ -67,7 +68,8 @@ function TextField({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        style={{ width, fontSize: "0.8rem", padding: "4px 6px" }}
+        className="field-input"
+        style={{ width, fontSize: "0.8rem" }}
       />
     </label>
   );
@@ -236,10 +238,10 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
       )}
 
       <div className="card" style={{ display: "grid", gap: 10 }}>
-        <h3 style={{ margin: 0, fontSize: "0.9rem" }}>Identity</h3>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <h3 style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-secondary)" }}>Identity</h3>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
           <TextField label="Template id" value={draft.id} onChange={(v) => patch((n) => { n.id = v.toLowerCase().replace(/[^a-z0-9_-]/g, "_"); })} />
-          <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)" }}>
+          <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)", minWidth: 220 }}>
             Bank
             <select
               value={draft.bankId}
@@ -250,7 +252,8 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
                   if (bank) n.bankName = bank.name;
                 });
               }}
-              style={{ fontSize: "0.8rem", padding: "4px 6px", minWidth: 220 }}
+              className="field-select"
+              style={{ fontSize: "0.8rem", minWidth: 220 }}
             >
               {banks.map((b) => (
                 <option key={b.id} value={b.id}>
@@ -265,11 +268,16 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
       </div>
 
       <div className="card" style={{ display: "grid", gap: 10 }}>
-        <h3 style={{ margin: 0, fontSize: "0.9rem" }}>Physical size &amp; orientation</h3>
+        <h3 style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-secondary)" }}>Physical Size &amp; Orientation</h3>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
-          <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)" }}>
-            Cheque size (registry)
-            <select value={draft.sizeId} onChange={(e) => applySize(e.target.value)} style={{ fontSize: "0.8rem", padding: "4px 6px", minWidth: 260 }}>
+          <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)", minWidth: 260 }}>
+            Cheque Size (Registry)
+            <select
+              value={draft.sizeId}
+              onChange={(e) => applySize(e.target.value)}
+              className="field-select"
+              style={{ fontSize: "0.8rem", minWidth: 260 }}
+            >
               {sizes.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label} — {s.widthMm} × {s.heightMm} mm
@@ -297,12 +305,13 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
               n.profiles.custom_long.pageHeight = v;
             })}
           />
-          <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)" }}>
+          <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)", minWidth: 140 }}>
             Orientation
             <select
               value={draft.orientation}
               onChange={(e) => patch((n) => { n.orientation = e.target.value as BankTemplate["orientation"]; })}
-              style={{ fontSize: "0.8rem", padding: "4px 6px" }}
+              className="field-select"
+              style={{ fontSize: "0.8rem" }}
             >
               <option value="landscape">landscape</option>
               <option value="portrait">portrait</option>
@@ -320,7 +329,7 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
       </div>
 
       <div className="card" style={{ display: "grid", gap: 10 }}>
-        <h3 style={{ margin: 0, fontSize: "0.9rem" }}>Carrier placement &amp; print modes</h3>
+        <h3 style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-secondary)" }}>Carrier Placement &amp; Print Modes</h3>
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
           {MODES.map((m) => (
             <label key={m} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "0.78rem" }}>
@@ -348,15 +357,27 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
 
       <div className="card" style={{ display: "grid", gap: 10 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 style={{ margin: 0, fontSize: "0.9rem" }}>
+          <h3 style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-secondary)" }}>
             Fields ({Object.keys(draft.fields).length}) — every field carries its own label and kind
           </h3>
-          <button type="button" className="button small secondary" onClick={addField}>+ Add field</button>
+          <button type="button" className="button small secondary" onClick={addField}>
+            + Add Field
+          </button>
         </div>
         {Object.values(draft.fields)
           .sort((a, b) => a.y - b.y || a.x - b.x)
           .map((field) => (
-            <div key={field.key} style={{ border: "1px solid var(--border)", borderRadius: 6, padding: 8, display: "grid", gap: 8 }}>
+            <div
+              key={field.key}
+              style={{
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-sm)",
+                padding: 12,
+                display: "grid",
+                gap: 8,
+                transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+              }}
+            >
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
                 <TextField label="Key" value={field.key} width={110} onChange={(v) => {
                   const key = v;
@@ -367,31 +388,40 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
                   });
                 }} />
                 <TextField label="Label" value={field.label} width={200} onChange={(v) => updateField(field.key, { label: v })} />
-                <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)", minWidth: 120 }}>
                   Kind
                   <select
                     value={field.kind}
                     onChange={(e) => updateField(field.key, { kind: e.target.value as FieldKind })}
-                    style={{ fontSize: "0.8rem", padding: "4px 6px" }}
+                    className="field-select"
+                    style={{ fontSize: "0.8rem" }}
                   >
                     {FIELD_KINDS.map((k) => (
-                      <option key={k} value={k}>{k}</option>
+                      <option key={k} value={k}>
+                        {k}
+                      </option>
                     ))}
                   </select>
                 </label>
-                <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)", minWidth: 120 }}>
                   Align
                   <select
                     value={field.align ?? "left"}
                     onChange={(e) => updateField(field.key, { align: e.target.value as "left" | "center" | "right" })}
-                    style={{ fontSize: "0.8rem", padding: "4px 6px" }}
+                    className="field-select"
+                    style={{ fontSize: "0.8rem" }}
                   >
                     <option value="left">left</option>
                     <option value="center">center</option>
                     <option value="right">right</option>
                   </select>
                 </label>
-                <button type="button" className="text-button" style={{ fontSize: "0.75rem", color: "var(--danger)" }} onClick={() => removeField(field.key)}>
+                <button
+                  type="button"
+                  className="text-button"
+                  style={{ fontSize: "0.75rem", color: "var(--danger)" }}
+                  onClick={() => removeField(field.key)}
+                >
                   Remove
                 </button>
               </div>
@@ -409,7 +439,7 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
       </div>
 
       <div className="card" style={{ display: "grid", gap: 10 }}>
-        <h3 style={{ margin: 0, fontSize: "0.9rem" }}>Reserved (never printed) zones</h3>
+        <h3 style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-secondary)" }}>Reserved Zones (Never Printed)</h3>
         {(draft.safeZones ?? []).map((zone) => (
           <div key={zone.id} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
             <TextField label="Zone id" value={zone.id} width={100} onChange={(v) => updateSafeZone(zone.id, { id: v })} />
@@ -426,18 +456,19 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
       </div>
 
       <div className="card" style={{ display: "grid", gap: 10 }}>
-        <h3 style={{ margin: 0, fontSize: "0.9rem" }}>Verification</h3>
+        <h3 style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-secondary)" }}>Verification</h3>
         <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)" }}>
           Browser-verified means the preview renders correctly. Physically-calibrated means real cheque stock was measured —
           only set it after an actual sheet test.
         </p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
-          <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)" }}>
+          <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)", minWidth: 140 }}>
             Status
             <select
               value={draft.verification?.status ?? "unverified"}
               onChange={(e) => patch((n) => { n.verification = { ...n.verification, status: e.target.value as VerificationStatus }; })}
-              style={{ fontSize: "0.8rem", padding: "4px 6px" }}
+              className="field-select"
+              style={{ fontSize: "0.8rem" }}
             >
               {VERIFICATION.map((v) => (
                 <option key={v} value={v}>{v}</option>
@@ -461,21 +492,30 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
 
       <div className="card" style={{ display: "grid", gap: 10 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-          <h3 style={{ margin: 0, fontSize: "0.9rem" }}>Preview &amp; test print</h3>
+          <h3 style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-secondary)" }}>Preview &amp; Test Print</h3>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "0.78rem" }}>
+            <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
               <input type="checkbox" checked={showGuides} onChange={(e) => setShowGuides(e.target.checked)} />
               guides
             </label>
-            <select value={mode} onChange={(e) => setMode(e.target.value as ProfileKey)} style={{ fontSize: "0.8rem", padding: "4px 6px" }}>
+            <select
+              value={mode}
+              onChange={(e) => setMode(e.target.value as ProfileKey)}
+              className="field-select"
+              style={{ fontSize: "0.8rem" }}
+            >
               {MODES.map((m) => (
-                <option key={m} value={m}>{m}</option>
+                <option key={m} value={m}>
+                  {m}
+                </option>
               ))}
             </select>
-            <button type="button" className="button small secondary" onClick={testPrint}>Test print</button>
+            <button type="button" className="button small secondary" onClick={testPrint}>
+              Test Print
+            </button>
           </div>
         </div>
-        <div style={{ overflow: "auto", background: "var(--surface-2, #f6f6f6)", padding: 8 }}>
+        <div style={{ overflow: "auto", background: "var(--surface-secondary)", padding: 12, borderRadius: "var(--radius-sm)" }}>
           <ChequeSheet
             template={draft}
             data={SAMPLE_DATA}
@@ -485,7 +525,7 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
             debugMode={showGuides}
           />
         </div>
-        <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)" }}>
+        <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)", fontFamily: "monospace" }}>
           Paper {paper.label} · @page {geom.pageW} × {geom.pageH} mm · cheque at X {geom.chequeX} / Y {geom.chequeY} mm
         </p>
         <TemplateMeta template={draft} />
@@ -493,9 +533,11 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
 
       <div style={{ display: "flex", gap: 8 }}>
         <button type="button" className="button" disabled={errors.length > 0} onClick={() => onSave(draft)}>
-          Save template
+          Save Template
         </button>
-        <button type="button" className="button secondary" onClick={onCancel}>Cancel</button>
+        <button type="button" className="button secondary" onClick={onCancel}>
+          Cancel
+        </button>
       </div>
     </div>
   );

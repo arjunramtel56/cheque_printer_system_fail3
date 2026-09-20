@@ -29,6 +29,7 @@ export function VerificationBadge({ status }: { status: VerificationStatus }) {
   return (
     <span
       title={meta.title}
+      className="verification-badge"
       style={{
         fontSize: "0.72rem",
         fontWeight: 700,
@@ -50,8 +51,17 @@ export function TemplateMeta({ template }: { template: BankTemplate }) {
   const a4 = getPaperSize("a4-portrait");
   const supported = template.print?.supportedModes ?? [];
   return (
-    <ul style={{ margin: "6px 0 0 0", padding: 0, listStyle: "none", fontSize: "0.8rem", color: "var(--text-muted)", display: "grid", gap: 2 }}>
-      <li>
+    <ul
+      style={{
+        margin: "6px 0 0 0",
+        padding: 0,
+        listStyle: "none",
+        fontSize: "0.8rem",
+        color: "var(--text-muted)",
+        display: "grid",
+        gap: 2,
+      }}
+    ><li>
         Cheque {template.widthMm} × {template.heightMm} mm · {template.orientation} · size registry {template.sizeId}
       </li>
       <li>

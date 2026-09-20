@@ -68,11 +68,13 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
 
   return (
     <div className="no-print">
-      <div className="panel" style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <div className="card" style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 20px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Link href="/admin" style={{ fontWeight: 800, color: "var(--brand-blue)", textDecoration: "none" }}>Admin</Link>
+          <Link href="/admin" style={{ fontWeight: 800, color: "var(--brand-blue)", textDecoration: "none", fontSize: "1.1rem" }}>
+            Admin Panel
+          </Link>
           <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>|</span>
-          <h1 style={{ fontSize: "1.12rem", margin: 0 }}>{sectionTitle(pathname)}</h1>
+          <h1 style={{ fontSize: "1.12rem", margin: 0, color: "var(--text-primary)" }}>{sectionTitle(pathname)}</h1>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <ThemeToggle />
@@ -81,7 +83,6 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
             type="button"
             className="button secondary small"
             onClick={() => {
-              // Signing out clears local auth state and returns to the sign-in route
               adminLogout();
               setAuthed(false);
               router.replace(LOGIN_ROUTE);
@@ -92,7 +93,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
           </button>
         </div>
       </div>
-      <nav style={{ marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <nav style={{ marginBottom: 16, display: "flex", gap: 6, flexWrap: "wrap" }}>
         <Link href="/admin" className="text-button">Dashboard</Link>
         <Link href="/admin/banks" className="text-button">Banks</Link>
         <Link href="/admin/templates" className="text-button">Cheque Templates</Link>

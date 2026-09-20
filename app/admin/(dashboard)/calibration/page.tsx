@@ -54,13 +54,13 @@ export default function AdminCalibrationPage() {
   }
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
+    <div style={{ display: "grid", gap: 20, maxWidth: "1000px" }}>
       <div>
-        <h2 style={{ margin: "0 0 4px 0", fontSize: "1.12rem" }}>Calibration</h2>
-        <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text-muted)" }}>
+        <h2 style={{ margin: "0 0 4px 0", fontSize: "1.12rem", color: "var(--text-primary)" }}>Calibration</h2>
+        <p style={{ margin: 0, fontSize: "0.83rem", color: "var(--text-muted)" }}>
           Defaults ship with each template and are applied when a user has no override. Adjust in {CALIBRATION_STEP_MM} mm steps
           within ±{CALIBRATION_MAX_MM} mm. X moves the output horizontally only, Y vertically only, and neither changes the
-          cheque&apos;s physical dimensions.
+          cheque's physical dimensions.
         </p>
       </div>
 
@@ -68,7 +68,7 @@ export default function AdminCalibrationPage() {
 
       <div style={{ display: "flex", gap: 8 }}>
         <button type="button" className="button small secondary" onClick={resetUserOverrides}>
-          Reset user overrides ({Object.keys(overrides).length})
+          Reset User Overrides ({Object.keys(overrides).length})
         </button>
       </div>
 
@@ -80,10 +80,10 @@ export default function AdminCalibrationPage() {
         return (
           <div key={template.id} className="card" style={{ display: "grid", gap: 10 }}>
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <b style={{ fontSize: "0.9rem" }}>{template.bankName}</b>
-              <span style={{ fontFamily: "monospace", fontSize: "0.78rem", color: "var(--text-muted)" }}>{template.id}</span>
+              <b style={{ fontSize: "0.95rem", color: "var(--text-primary)" }}>{template.bankName}</b>
+              <span style={{ fontFamily: "monospace", fontSize: "0.76rem", color: "var(--text-muted)" }}>{template.id}</span>
               <VerificationBadge status={template.verification?.status ?? "unverified"} />
-              <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+              <span style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
                 {template.widthMm} × {template.heightMm} mm · {template.orientation}
               </span>
             </div>
@@ -94,32 +94,44 @@ export default function AdminCalibrationPage() {
                 const key = `${template.id}:${mode}`;
                 const override = overrides[key];
                 return (
-                  <div key={mode} style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", borderTop: "1px solid var(--border)", paddingTop: 8 }}>
-                    <b style={{ fontSize: "0.8rem", minWidth: 120 }}>{mode}</b>
-                    <label style={{ display: "grid", gap: 2, fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                  <div
+                    key={mode}
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      alignItems: "flex-end",
+                      borderTop: "1px solid var(--border)",
+                      paddingTop: 8,
+                    }}
+                  >
+                    <b style={{ fontSize: "0.8rem", minWidth: 130, color: "var(--text-secondary)" }}>{mode}</b>
+                    <label style={{ display: "grid", gap: 2, fontSize: "0.72rem", color: "var(--text-muted)", minWidth: 120 }}>
                       Default X (mm)
                       <input
                         type="number"
                         step={CALIBRATION_STEP_MM}
                         value={template.print.calibration.defaultX}
                         onChange={(e) => setDefault(template, mode, "x", Number(e.target.value))}
+                        className="field-input"
                         style={{ width: 90, fontSize: "0.8rem" }}
                       />
                     </label>
-                    <label style={{ display: "grid", gap: 2, fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                    <label style={{ display: "grid", gap: 2, fontSize: "0.72rem", color: "var(--text-muted)", minWidth: 120 }}>
                       Default Y (mm)
                       <input
                         type="number"
                         step={CALIBRATION_STEP_MM}
                         value={template.print.calibration.defaultY}
                         onChange={(e) => setDefault(template, mode, "y", Number(e.target.value))}
+                        className="field-input"
                         style={{ width: 90, fontSize: "0.8rem" }}
                       />
                     </label>
-                    <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                    <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontFamily: "monospace" }}>
                       @page {geom.pageW} × {geom.pageH} mm · cheque at X {geom.chequeX} / Y {geom.chequeY} mm
                       <br />
-                      safe range X {limits[mode].minX.toFixed(1)} … {limits[mode].maxX.toFixed(1)} mm · Y {limits[mode].minY.toFixed(1)} …{" "}
+                      safe range X {limits[mode].minX.toFixed(1)} ... {limits[mode].maxX.toFixed(1)} mm · Y {limits[mode].minY.toFixed(1)} ...{" "}
                       {limits[mode].maxY.toFixed(1)} mm
                       <br />
                       user override: {override ? `X ${override.x} mm · Y ${override.y} mm` : "none"}

@@ -190,6 +190,24 @@ button, input, select, textarea { font-family: inherit; font-size: 1rem; }
   background: var(--surface-secondary);
   cursor: not-allowed;
 }
+.field-input, .field-select {
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.field-input::placeholder,
+.field-select {
+  color: var(--text-muted);
+}
+.field-input:focus, .field-select:focus {
+  outline: none;
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-blue) 28%, transparent);
+}
 .field small { display: block; margin-top: 5px; color: var(--text-muted); font-size: 0.8rem; }
 .field.check { display: flex; align-items: center; gap: 10px; }
 .field.check input { width: auto; }
@@ -210,6 +228,7 @@ button, input, select, textarea { font-family: inherit; font-size: 1rem; }
 /* ---------- Steps ---------- */
 .step { display: inline-flex; width: 24px; height: 24px; border-radius: 6px; background: color-mix(in srgb, var(--brand-blue) 12%, transparent); color: var(--brand-blue); font-weight: 800; font-size: 0.78rem; align-items: center; justify-content: center; flex: none; }
 
+/* ---------- State badges ---------- */
 .state-badge {
   font-size: 0.66rem;
   padding: 1px 8px;
@@ -218,8 +237,16 @@ button, input, select, textarea { font-family: inherit; font-size: 1rem; }
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-/* ---------- Compose grid ---------- */
-.compose-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+/* ---------- Verification badge ---------- */
+.verification-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: opacity 0.15s ease;
+}
+.verification-badge:hover { opacity: 0.85; }
+
+/* ---------- Tip card ---------- */
 
 /* ---------- Preview stage ---------- */
 .preview-column { display: grid; gap: 14px; }

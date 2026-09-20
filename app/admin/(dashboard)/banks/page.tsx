@@ -131,10 +131,10 @@ export default function AdminBanksPage() {
   }
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
+    <div style={{ display: "grid", gap: 20, maxWidth: "1000px" }}>
       <div>
-        <h2 style={{ margin: "0 0 4px 0", fontSize: "1.12rem" }}>Bank catalogue</h2>
-        <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text-muted)" }}>
+        <h2 style={{ margin: "0 0 4px 0", fontSize: "1.12rem", color: "var(--text-primary)" }}>Bank Catalogue</h2>
+        <p style={{ margin: "0 0 4px 0", fontSize: "0.82rem", color: "var(--text-muted)" }}>
           {summary.bankCount} banks · {summary.banksWithTemplates} with a measured cheque template · {summary.banksPending}{" "}
           awaiting a template. Catalogue revision {CATALOGUE_REVISION}.
         </p>
@@ -145,68 +145,139 @@ export default function AdminBanksPage() {
       {error && <p className="error-state" role="alert" style={{ margin: 0 }}>{error}</p>}
 
       <div className="card" style={{ display: "grid", gap: 10 }}>
-        <h3 style={{ margin: 0, fontSize: "0.9rem" }}>Add a bank</h3>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <input placeholder="id (slug)" value={draft.id} onChange={(e) => setDraft({ ...draft, id: e.target.value })} style={{ fontSize: "0.82rem" }} />
-          <input placeholder="Bank name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} style={{ fontSize: "0.82rem", minWidth: 240 }} />
-          <select value={draft.nrbClass} onChange={(e) => setDraft({ ...draft, nrbClass: e.target.value as NrbClass })} style={{ fontSize: "0.82rem" }}>
-            {CLASSES.map((c) => (
-              <option key={c} value={c}>Class {c}</option>
-            ))}
-          </select>
-          <input placeholder="code (optional)" value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} style={{ fontSize: "0.82rem" }} />
-          <button type="button" className="button small" onClick={handleAdd}>Add bank</button>
-          <button type="button" className="button small secondary" onClick={handleExport}>Export JSON</button>
-          <button type="button" className="button small secondary" onClick={handleReset}>Reset to built-in</button>
+        <h3 style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-secondary)" }}>Add a Bank</h3>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <input
+            placeholder="id (slug)"
+            value={draft.id}
+            onChange={(e) => setDraft({ ...draft, id: e.target.value })}
+            className="field-input"
+            style={{ fontSize: "0.82rem", minWidth: 120 }}
+          />
+          <input
+            placeholder="Bank name"
+            value={draft.name}
+            onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+            className="field-input"
+            style={{ fontSize: "0.82rem", minWidth: 240 }}
+          />
+          <label style={{ display: "grid", gap: 2, fontSize: "0.75rem", color: "var(--text-muted)", minWidth: 120 }}>
+            Class
+            <select
+              value={draft.nrbClass}
+              onChange={(e) => setDraft({ ...draft, nrbClass: e.target.value as NrbClass })}
+              className="field-select"
+              style={{ fontSize: "0.82rem" }}
+            >
+              {CLASSES.map((c) => (
+                <option key={c} value={c}>
+                  Class {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <input
+            placeholder="code (optional)"
+            value={draft.code}
+            onChange={(e) => setDraft({ ...draft, code: e.target.value })}
+            className="field-input"
+            style={{ fontSize: "0.82rem", minWidth: 120 }}
+          />
+          <button type="button" className="button small" onClick={handleAdd}>
+            Add Bank
+          </button>
+          <button type="button" className="button small secondary" onClick={handleExport}>
+            Export JSON
+          </button>
+          <button type="button" className="button small secondary" onClick={handleReset}>
+            Reset to Built-in
+          </button>
         </div>
         <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)" }}>
-          A bank with no template is listed for users as “template pending”. Templates can only be added once a physical
+          A bank with no template is listed for users as "template pending". Templates can only be added once a physical
           cheque has been measured.
         </p>
       </div>
 
       {groups.map((group) => (
         <div key={group.nrbClass} className="card">
-          <h3 style={{ margin: "0 0 2px 0", fontSize: "0.9rem" }}>{group.label}</h3>
-          <p style={{ margin: "0 0 8px 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>{group.note}</p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+            <h3 style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-primary)" }}>{group.label}</h3>
+            <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontStyle: "italic" }}>{group.note}</span>
+          </div>
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.83rem" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                  <th style={{ textAlign: "left", padding: 6, color: "var(--text-secondary)" }}>Name</th>
-                  <th style={{ textAlign: "left", padding: 6, color: "var(--text-secondary)" }}>Status</th>
-                  <th style={{ textAlign: "left", padding: 6, color: "var(--text-secondary)" }}>Templates</th>
-                  <th style={{ textAlign: "left", padding: 6, color: "var(--text-secondary)" }}>Verified</th>
-                  <th style={{ textAlign: "right", padding: 6, color: "var(--text-secondary)" }}>Actions</th>
+                <tr style={{ borderBottom: "2px solid var(--border)" }}>
+                  <th style={{ textAlign: "left", padding: 8, color: "var(--text-secondary)", fontSize: "0.76rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                    Name
+                  </th>
+                  <th style={{ textAlign: "left", padding: 8, color: "var(--text-secondary)", fontSize: "0.76rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                    Status
+                  </th>
+                  <th style={{ textAlign: "left", padding: 8, color: "var(--text-secondary)", fontSize: "0.76rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                    Templates
+                  </th>
+                  <th style={{ textAlign: "left", padding: 8, color: "var(--text-secondary)", fontSize: "0.76rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                    Verified
+                  </th>
+                  <th style={{ textAlign: "right", padding: 8, color: "var(--text-secondary)", fontSize: "0.76rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {group.banks.map((bank) => (
-                  <tr key={bank.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                  <tr
+                    key={bank.id}
+                    style={{
+                      borderBottom: "1px solid var(--border)",
+                      transition: "background-color 0.15s ease",
+                    }}
+                  >
                     <td style={{ padding: 6 }}>
-                      <Link href={`/banks/${bank.id}`} className="text-button">{bank.name}</Link>
-                      <div style={{ color: "var(--text-muted)", fontSize: "0.74rem" }}>
+                      <Link href={`/banks/${bank.id}`} className="text-button" style={{ fontSize: "0.85rem" }}>
+                        {bank.name}
+                      </Link>
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.72rem", fontFamily: "monospace" }}>
                         {bank.id}
                         {bank.code ? ` · ${bank.code}` : ""}
                       </div>
                     </td>
-                    <td style={{ padding: 6 }}>
+                    <td style={{ padding: 6, fontSize: "0.8rem" }}>
                       {bank.status}
                       {!bank.enabled && <span style={{ color: "var(--danger)" }}> · disabled</span>}
                       {bank.status === "merged" && (
-                        <div style={{ color: "var(--text-muted)", fontSize: "0.74rem" }}>{formatBankLabel(bank)}</div>
+                        <div style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>{formatBankLabel(bank)}</div>
                       )}
                     </td>
-                    <td style={{ padding: 6 }}>{bank.templateIds.length === 0 ? "—" : bank.templateIds.join(", ")}</td>
-                    <td style={{ padding: 6 }}>{bank.verifiedAt ?? "not checked"}</td>
+                    <td style={{ padding: 6, fontSize: "0.78rem" }}>
+                      {bank.templateIds.length === 0 ? "—" : bank.templateIds.join(", ")}
+                    </td>
+                    <td style={{ padding: 6, fontSize: "0.78rem" }}>{bank.verifiedAt ?? "not checked"}</td>
                     <td style={{ padding: 6, textAlign: "right", whiteSpace: "nowrap" }}>
-                      <button type="button" className="text-button" style={{ fontSize: "0.78rem" }} onClick={() => handleToggle(bank)}>
+                      <button
+                        type="button"
+                        className="text-button"
+                        style={{ fontSize: "0.78rem" }}
+                        onClick={() => handleToggle(bank)}
+                      >
                         {bank.enabled ? "Disable" : "Enable"}
                       </button>
-                      <button type="button" className="text-button" style={{ fontSize: "0.78rem" }} onClick={() => handleVerify(bank)}>
+                      <button
+                        type="button"
+                        className="text-button"
+                        style={{ fontSize: "0.78rem" }}
+                        onClick={() => handleVerify(bank)}
+                      >
                         Mark checked
                       </button>
-                      <button type="button" className="text-button" style={{ fontSize: "0.78rem", color: "var(--danger)" }} onClick={() => handleRemove(bank)}>
+                      <button
+                        type="button"
+                        className="text-button"
+                        style={{ fontSize: "0.78rem", color: "var(--danger)" }}
+                        onClick={() => handleRemove(bank)}
+                      >
                         Remove
                       </button>
                     </td>
@@ -219,7 +290,7 @@ export default function AdminBanksPage() {
       ))}
 
       <div className="card" style={{ display: "grid", gap: 8 }}>
-        <h3 style={{ margin: 0, fontSize: "0.9rem" }}>Import banks</h3>
+        <h3 style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-secondary)" }}>Import Banks</h3>
         <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)" }}>
           Paste an exported bank list (or the official NRB list in the same shape) to extend the catalogue without code
           changes. Every entry is validated before anything is stored.
@@ -229,10 +300,12 @@ export default function AdminBanksPage() {
           value={importText}
           onChange={(e) => setImportText(e.target.value)}
           placeholder='{"version":1,"banks":[{"id":"...","name":"...","nrbClass":"A","status":"active","enabled":true,"templateIds":[]}]}'
-          style={{ fontFamily: "monospace", fontSize: "0.78rem" }}
+          style={{ fontFamily: "monospace", fontSize: "0.78rem", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", padding: "8px", background: "var(--surface)", color: "var(--text-primary)" }}
         />
         <div>
-          <button type="button" className="button small secondary" onClick={handleImport}>Import</button>
+          <button type="button" className="button small secondary" onClick={handleImport}>
+            Import
+          </button>
         </div>
       </div>
     </div>
