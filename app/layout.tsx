@@ -14,7 +14,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="color-scheme" content="light dark" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var k="cheque-theme",p="system";try{var r=localStorage.getItem(k);if(r==="light"||r==="dark"||r==="system")p=r;}catch(e){}var d=p;if(p==="system"){d=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.dataset.theme=d;document.documentElement.setAttribute("data-theme-preference",p);}catch(e){}})();`,
+            __html: `
+              (function(){
+                try {
+                  var k='chequePrintTheme', p='system';
+                  var r=localStorage.getItem(k);
+                  if (r==='light'||r==='dark'||r==='system') p=r;
+                  var d=p;
+                  if (p==='system') {
+                    d=window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  }
+                  document.documentElement.setAttribute('data-theme', d);
+                  document.documentElement.setAttribute('data-theme-preference', p);
+                } catch(e) {}
+              })();
+            `,
           }}
         />
       </head>

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { getBanks, getCatalogueSummary, initBankCatalogue } from "@/lib/catalogue";
 import { loadAdminTemplates, initRuntimeTemplates } from "@/lib/templates";
 import { initChequeSizes } from "@/lib/sizes";
@@ -11,6 +13,7 @@ import type { BankTemplate } from "@/lib/types";
 export default function AdminDashboard() {
   const [templates, setTemplates] = useState<BankTemplate[]>([]);
   const [banks, setBanks] = useState(() => getBanks());
+  const { t } = useTranslation();
 
   useEffect(() => {
     initChequeSizes();

@@ -19,9 +19,9 @@
 // ---------------------------------------------------------------------------
 
 import { z } from "zod";
-import { validateAmount, validateChequeDate, checkAmountWordsConsistencyLocalized } from "../../lib/amountWords.ts";
-import { isBankEnabled } from "../../lib/catalogue.ts";
-import { getAllActiveTemplates } from "../../lib/templates.ts";
+import { validateAmount, validateChequeDate, checkAmountWordsConsistencyLocalized } from "@/lib/amountWords";
+import { isBankEnabled } from "@/lib/catalogue";
+import { getAllActiveTemplates } from "@/lib/templates";
 
 // ---------------------------------------------------------------------------
 // Locale enum
@@ -47,18 +47,24 @@ const PAYEE_REGEX = /^[\u0900-\u097F\s.a-zA-Z0-9'\-+#&,.()]+$/;
 // Refined validators — wrap the pure functions from lib/amountWords.ts
 // ---------------------------------------------------------------------------
 
+interface AmountWordsRef {
+  amount: string;
+  amountInWords: string;
+  lang: Locale;
+}
+
 /**
  * A Zod refinement that rejects amounts whose string form parses to paisa
  * that differs from the provided amount-in-words. This is the core
  * amount-in-words gate: the user MUST manually verify, and the gate will
  * not pass unless they match.
  */
-function amountWordsMatch(ref: { amount: string; amountInWords: string; locale: Locale }) {
+function amountWordsMatch(ref: AmountWordsRef): boolean {
   const amountValid = validateAmount(ref.amount);
   if (!amountValid.valid || amountValid.paisa === 0) {
     return false;
   }
-  const result = checkAmountWordsConsistencyLocalized(ref.amount, ref.amountInWords, ref.locale);
+  const result = checkAmountWordsConsistencyLocalized(ref.amount, ref.amountInWords, ref.lang);
   return result.consistent;
 }
 
@@ -88,13 +94,12 @@ export const chequeFormSchema = z.object({
     .string()
     .min(5, "Amount in words is too short.")
     .max(100, "Amount in words is too long."),
-  lang: z.enum(LOCALE_VALUES, { errorMap: () => ({ message: "Unsupported language." }) }),
+  lang: z.enum(LOCALE_VALUES, { message: "Unsupported language." }),
   bankKey: z
     .string()
     .min(1, "Bank selection is required.")
     .refine((k) => {
-      const bank = isBankEnabled(k);
-      return bank;
+      return isBankEnabled(k);
     }, { message: "Selected bank is not enabled for cheque printing." }),
   templateId: z
     .string()
@@ -105,7 +110,7 @@ export const chequeFormSchema = z.object({
     }, { message: "Selected template is not available." }),
   accountPayee: z.boolean().default(true),
   printMode: z.enum(["custom_short", "custom_long", "a4_vertical", "a4_horizontal"], {
-    errorMap: () => ({ message: "Invalid print mode." }),
+    message: "Invalid print mode.",
   }),
   calibrationX: z
     .number()

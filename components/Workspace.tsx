@@ -46,6 +46,9 @@ import { validateCalibratedBounds, validatePrintGeometry, validateSafeZoneCleara
 import { computeSheetLayout, fieldsWithinCheque, type ChequeData } from "@/lib/sheetLayout";
 import ChequeSheet, { PREVIEW_SCALE } from "@/components/ChequeSheet";
 import { generateOverlayPdf } from "@/components/ChequeOverlayPDF";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { PrintGuidance } from "@/components/PrintGuidance";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
@@ -919,11 +922,15 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                                  ? t("statePrinting")
                                  : t("statePrintFinished")}
                    </span>
-                 </div>
-                 <button type="button" className="text-button" onClick={handleClear} aria-label={t("clearAllAria")}>
-                   {t("clearAllBtn")}
-                 </button>
-               </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <ThemeToggle />
+                    <LanguageToggle />
+                    <button type="button" className="text-button" onClick={handleClear} aria-label={t("clearAllAria")}>
+                      {t("clearAllBtn")}
+                    </button>
+                  </div>
+                </div>
 
             {boundBankId ? (
               <div className="field">
@@ -1335,6 +1342,8 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                   </p>
                 </div>
               </div>
+
+              {template && <PrintGuidance template={template} />}
 
              {/* PDF Overlay preview — shows when a transparent PDF has been generated */}
              {pdfOverlayUrl && (

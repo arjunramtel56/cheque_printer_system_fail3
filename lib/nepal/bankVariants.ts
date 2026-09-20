@@ -25,8 +25,9 @@
 // as a baseline.
 // ---------------------------------------------------------------------------
 
-import type { BankTemplate } from "../../lib/types.ts";
-import { MICR_BAND_MM } from "../../data/templates.ts";
+import type { BankTemplate } from "@/lib/types";
+import { MICR_BAND_MM } from "@/data/templates";
+import { getAllActiveTemplates } from "@/lib/templates";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -47,7 +48,7 @@ export const MICR_BAND_TOP_MM = CHEQUE_HEIGHT_MM - MICR_BAND_MM; // 81.9 mm
 /**
  * Safety margin added below the MICR top to account for printer scaling
  * ("Fit to page" can shift content by ~2 mm). Any field whose bottom edge
- * is above this line is guaranteed clear of the MICR characters.
+ * is above this line is guaranteed clear of the bank's pre-printed MICR characters.
  */
 export const MICR_SAFETY_TOP_MM = MICR_BAND_TOP_MM - 2; // 79.9 mm
 
@@ -111,7 +112,7 @@ function computeMin(nominalY: number): number {
 }
 
 // ---------------------------------------------------------------------------
-// Bank variants — derived from the seeded templates in lib/templates.ts
+// Bank variants — derived from the seeded templates in data/templates.ts
 // ---------------------------------------------------------------------------
 
 /**
@@ -124,7 +125,6 @@ export function buildFieldTolerances(template: BankTemplate): BankFieldTolerance
 
   for (const [key, field] of Object.entries(template.fields)) {
     // Skip non-printable fields (signatures, structural placeholders).
-    // The only non-printable kind is "signature" (see types.ts).
     if (field.kind === "signature") continue;
 
     const fieldHeightMm = field.height ?? 0;
@@ -160,8 +160,6 @@ export function buildFieldTolerances(template: BankTemplate): BankFieldTolerance
 export const bankVariants: Record<string, BankFieldTolerances> = {};
 
 // Populate the registry from all active templates at load.
-import { getAllActiveTemplates } from "../../lib/templates.ts";
-
 for (const template of getAllActiveTemplates()) {
   bankVariants[template.bankId] = buildFieldTolerances(template);
 }

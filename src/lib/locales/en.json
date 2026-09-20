@@ -172,5 +172,19 @@
   "banksLinkEn": "Banks",
   "adminLinkEn": "Admin",
   "navHomeEn": "Home",
-  "expectedWords": "Expected:"
+  "expectedWords": "Expected:",
+  "themeToggleLight": "Switch to light mode",
+  "themeToggleDark": "Switch to dark mode",
+  "themeToggleSystem": "Switch to system theme",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSystem": "System",
+  "printInstruction": "Remember: Print this overlay at 100% scale (NOT 'Fit to Page') on your bank-issued cheque.",
+  "printInstructionTitle": "Before printing on a real cheque:",
+  "printInstructionDirectFeed": "For Direct Feed: feed a blank cheque directly into your printer. Set print dialog to Actual Size (100%) — do NOT fit to page. Ensure margins are set to minimum/none. Use X/Y calibration to align if needed.",
+  "printInstructionA4Carrier": "For A4 Carrier: print on plain A4 paper. Set print dialog to Actual Size (100%) with no margins. Cut out the cheque along the border. Use X/Y calibration to align if needed.",
+  "micrSafetyTitle": "MICR Safety Zone",
+  "micrSafetyNote": "The MICR band (bottom 0.5 inch) must never be printed over. Any ink on this zone can corrupt cheque processing.",
+  "securityNoteTitle": "Security Note",
+  "fontHelp": "Uses Inter + Noto Sans Devanagari for Devanagari/English bilingual support."
 }

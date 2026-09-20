@@ -12,8 +12,8 @@
 // overlay generator (post-layout check) so there is no path that bypasses it.
 // ---------------------------------------------------------------------------
 
-import type { SafeZone } from "../../lib/types.ts";
-import { MICR_BAND_MM } from "../../data/templates.ts";
+import type { SafeZone } from "@/lib/types";
+import { MICR_BAND_MM } from "@/data/templates";
 
 // ===========================================================================
 // Unit constants (Nepal / NRB standard cheque geometry)
@@ -222,7 +222,7 @@ export class MicrSecurityError extends Error {
 // Convenience: derive MICR-safe elements from a layout for checking
 // ===========================================================================
 
-import type { LaidOutField, SheetLayout } from "../../lib/sheetLayout.ts";
+import type { LaidOutField, SheetLayout } from "@/lib/sheetLayout";
 
 /**
  * Extract every printable field from a SheetLayout as a list of mm-based
@@ -230,7 +230,7 @@ import type { LaidOutField, SheetLayout } from "../../lib/sheetLayout.ts";
  */
 export function layoutToMicrElements(layout: SheetLayout): MicrElementMm[] {
   return layout.fields
-    .filter((f) => f.printable && f.text !== "")
+    .filter((f: LaidOutField) => f.printable && f.text !== "")
     .map((f: LaidOutField) => ({
       yMm: f.yMm,
       heightMm: f.heightMm,

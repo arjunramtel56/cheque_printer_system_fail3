@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { adminLogin, isAdminAuthenticated } from "@/lib/admin";
 
 // ---------------------------------------------------------------------------
@@ -24,6 +25,7 @@ export default function AdminLoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [retryAfter, setRetryAfter] = useState(0);
   const router = useRouter();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (isAdminAuthenticated()) {
@@ -63,10 +65,14 @@ export default function AdminLoginPage() {
 
   return (
     <div className="panel" style={{ maxWidth: 420, margin: "48px auto" }}>
-      <h2 style={{ fontSize: "1.25rem", marginBottom: 16 }}>Administrator Login</h2>
+      <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 8 }}>
+        <ThemeToggle />
+        <LanguageToggle />
+      </div>
+      <h2 style={{ fontSize: "1.25rem", marginBottom: 16 }}>{t("adminLoginTitle")}</h2>
       <form onSubmit={handleSubmit}>
         <div className="field">
-          <label htmlFor="admin-password">Password</label>
+          <label htmlFor="admin-password">{t("adminPasswordLabel")}</label>
           <input
             id="admin-password"
             type="password"
@@ -78,19 +84,18 @@ export default function AdminLoginPage() {
             style={{ fontFamily: "monospace" }}
           />
           <small style={{ marginTop: 4, display: "block", color: "var(--text-muted)" }}>
-            Demo credential documented in the project README. This gate is a
-            client-side demo and is not a production security boundary.
+            {t("adminPasswordHelp")}
           </small>
         </div>
         {locked && (
           <p className="error-state" role="alert">
-            Too many failed attempts. Retry available in {retryAfter}s.
+            {t("adminLocked")}{retryAfter}{t("adminRetrySuffix")}
           </p>
         )}
         {error && !locked && <p className="error-state" role="alert">{error}</p>}
         <div className="form-actions">
           <button type="submit" className="button" disabled={locked || submitting}>
-            {submitting ? "Signing In…" : "Sign In"}
+            {submitting ? t("adminSigningIn") : t("adminSignIn")}
           </button>
         </div>
       </form>

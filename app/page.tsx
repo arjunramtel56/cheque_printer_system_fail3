@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Workspace from "@/components/Workspace";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { getCatalogueSummary, getSelectableBanks } from "@/lib/catalogue";
 
 /**
@@ -19,6 +20,7 @@ export default function HomePage() {
   return (
     <>
       <div className="no-print" style={{ position: "fixed", top: 12, right: 12, zIndex: 100, display: "flex", gap: 10 }}>
+        <ThemeToggle />
         <LanguageToggle />
         <Link href="/banks" className="text-button" style={{ fontSize: "0.78rem", opacity: 0.6 }} aria-label="Bank directory">
           Banks

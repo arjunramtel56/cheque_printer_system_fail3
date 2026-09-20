@@ -27,6 +27,10 @@ import {
 } from "./amountWords.ts";
 import { fitFontSize, splitWordsAcrossFields } from "./textFit.ts";
 import { normalizeCalibration } from "./calibration.ts";
+// MICR guard: fail-safe boundary enforcement for the MICR band.
+// Imported as a side-effect to verify the layout function is available;
+// the actual call lives inside computeSheetLayout below.
+import { enforceMicrSafety, MicrSecurityError } from "@/lib/security/micrGuard";
 
 export interface ChequeData {
   date: string;
@@ -195,6 +199,17 @@ export function computeSheetLayout(
         printable: isPrintableKind(field.kind),
       } satisfies LaidOutField;
     });
+
+  // MICR SAFETY GUARD: verify that no printable field with actual text content
+  // extends into the MICR band. This is the runtime enforcement that backs the
+  // template-level safe zone validation — it catches any field whose Y-position
+  // (after calibration) would place its bottom edge at or below the MICR safety
+  // line. If a violation is found, enforceMicrSafety throws a MicrSecurityError
+  // and the layout is never returned to the renderer.
+  const micrElements = fields
+    .filter((f) => f.printable && f.text !== "")
+    .map((f) => ({ yMm: f.yMm, heightMm: f.heightMm }));
+  enforceMicrSafety(micrElements, template.heightMm);
 
   return {
     mode,
