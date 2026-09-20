@@ -206,10 +206,42 @@ export function computeSheetLayout(
   // (after calibration) would place its bottom edge at or below the MICR safety
   // line. If a violation is found, enforceMicrSafety throws a MicrSecurityError
   // and the layout is never returned to the renderer.
-  const micrElements = fields
-    .filter((f) => f.printable && f.text !== "")
-    .map((f) => ({ yMm: f.yMm, heightMm: f.heightMm }));
-  enforceMicrSafety(micrElements, template.heightMm);
+  //
+  // We check using the FINAL layout (with cheque position and calibration applied)
+  // because calibration can shift fields downward in carrier mode.
+  const finalLayout = {
+    chequeY: df ? 0 : geom.finalChequeY,
+    fields: Object.values(template.fields)
+      .sort((a, b) => a.y - b.y || a.x - b.x)
+      .map((field) => {
+        let text = "";
+        switch (field.kind) {
+          case "label": text = field.text ?? ""; break;
+          case "ac-payee": text = data.accountPayee ? field.text ?? "// A/C PAYEE ONLY //" : ""; break;
+          case "date-grid": text = dateDigits; break;
+          case "payee": text = payeeText; break;
+          case "words": text = wordLineFor.get(field.key) ?? ""; break;
+          case "amount": text = amountText; break;
+          case "signature": text = field.text ?? field.label; break;
+        }
+        return {
+          key: field.key,
+          kind: field.kind,
+          printable: isPrintableKind(field.kind),
+          xMm: chequeX + contentOffsetX + field.x,
+          yMm: chequeY + contentOffsetY + field.y,
+          heightMm: field.height ?? Math.max((field.fontSize ?? 10) * 0.352778 * 1.4, 2),
+          text,
+        };
+      }),
+  };
+  enforceMicrSafety(
+    finalLayout.fields
+      .filter((f) => f.printable && f.text !== "")
+      .map((f) => ({ yMm: f.yMm, heightMm: f.heightMm })),
+    template.heightMm,
+    { chequeYOffsetMm: finalLayout.chequeY },
+  );
 
   return {
     mode,

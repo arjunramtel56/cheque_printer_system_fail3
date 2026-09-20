@@ -10,19 +10,10 @@
 // silently) if any printable element's Y-position risks touching the MICR zone.
 // It is called from BOTH the sheet layout (pre-render check) and the PDF
 // overlay generator (post-layout check) so there is no path that bypasses it.
-//
-// Coordinate model:
-//   - In the sheet layout, fields have ABSOLUTE page coordinates (yMm = mm from
-//     the top of the @page box).
-//   - In carrier (A4) mode, the cheque is placed at an offset (chequeX, chequeY)
-//     from the page origin, so a field's CHEQUE-LOCAL Y = yMm - chequeY.
-//   - In direct-feed mode, chequeY = 0, so page and cheque coordinates coincide.
-//   - The MICR band is always defined relative to the CHEQUE origin (bottom N
-//     mm of the cheque stock), so we must work in cheque-local space.
 // ---------------------------------------------------------------------------
 
-import type { SafeZone } from "@/lib/types";
-import { MICR_BAND_MM } from "@/data/templates";
+import type { SafeZone } from "../../lib/types.ts";
+import { MICR_BAND_MM } from "../../data/templates.ts";
 
 // ===========================================================================
 // Unit constants (Nepal / NRB standard cheque geometry)
@@ -50,6 +41,29 @@ export const MICR_ZONE_INCHES = {
 export const MICR_SAFETY_MARGIN_INCHES = 0.1;
 
 // ===========================================================================
+// Core guard: elements are described as { y, height } in either millimetres
+// or inches. Both forms are accepted so the guard can be used in the mm-based
+// layout pipeline (sheetLayout) and the inches-based PDF pipeline.
+// ===========================================================================
+
+export interface MicrElementMm {
+  yMm: number;
+  heightMm: number;
+}
+
+export interface MicrElementInches {
+  yInches: number;
+  heightInches: number;
+}
+
+export interface MicrViolation {
+  index: number;
+  yMm: number;
+  heightMm: number;
+  elementLabel: string;
+}
+
+// ===========================================================================
 // Conversion: millimetres <-> inches (no floating point drift)
 // ===========================================================================
 
@@ -66,7 +80,7 @@ export function inchesToMm(inches: number): number {
 }
 
 // ===========================================================================
-// Boundary calculations (all in CHEQUE-LOCAL mm coordinates)
+// Boundary calculations
 // ===========================================================================
 
 /**
@@ -92,44 +106,10 @@ export function micrBandTopMm(chequeHeightMm: number): number {
 /**
  * Check whether a single element rectangle is safe from the MICR zone.
  * Returns true when the element's bottom edge is ABOVE the MICR safety line.
- *
- * @param el          Element in CHEQUE-LOCAL coordinates (yMm = mm from cheque top).
- * @param chequeHeightMm  Physical height of the cheque stock.
  */
 export function isElementMicrSafeMm(el: MicrElementMm, chequeHeightMm: number): boolean {
   const top = micrTopMm(chequeHeightMm);
   return el.yMm + el.heightMm <= top;
-}
-
-// ===========================================================================
-// Core types
-// ===========================================================================
-
-export interface MicrElementMm {
-  yMm: number;
-  heightMm: number;
-}
-
-export interface MicrElementInches {
-  yInches: number;
-  heightInches: number;
-}
-
-export interface MicrViolation {
-  index: number;
-  chequeLocalY: number;
-  heightMm: number;
-  pageGlobalY: number;
-  elementLabel: string;
-}
-
-/**
- * Options for enforceMicrSafety: describes the cheque's position on the page
- * so the guard can translate global (page) Y coordinates to cheque-local Y.
- */
-export interface EnforceOptions {
-  /** Y offset of the cheque's top edge from the page top (mm). */
-  chequeYOffsetMm?: number;
 }
 
 // ===========================================================================
@@ -142,43 +122,31 @@ export interface EnforceOptions {
  * `MicrSecurityError` and HALTS the print/PDF operation. There is no silent
  * fallback.
  *
- * Elements can be specified in either PAGE-global coordinates (with chequeYOffsetMm)
- * or CHEQUE-local coordinates (omit chequeYOffsetMm or set it to 0). The guard
- * always works in cheque-local space internally.
- *
- * @param elements        Printed fields with their mm coordinates.
- * @param chequeHeightMm  Physical height of the cheque stock.
- * @param options         Coordinate translation options.
+ * @param elements  Printed fields with their mm coordinates.
+ * @param chequeHeightMm  Physical height of the cheque stock (default: standard 88.9).
  * @throws {MicrSecurityError} when an element encroaches the MICR zone.
  */
 export function enforceMicrSafety(
   elements: MicrElementMm[],
   chequeHeightMm: number = 88.9,
-  options: EnforceOptions = {},
 ): void {
-  const chequeYOffset = options.chequeYOffsetMm ?? 0;
   const violations: MicrViolation[] = [];
   const top = micrTopMm(chequeHeightMm);
 
   for (let i = 0; i < elements.length; i++) {
     const el = elements[i];
-    // Translate page-global Y to cheque-local Y.
-    const chequeLocalY = el.yMm - chequeYOffset;
-    if (!isElementMicrSafeMm({ yMm: chequeLocalY, heightMm: el.heightMm }, chequeHeightMm)) {
+    if (!isElementMicrSafeMm(el, chequeHeightMm)) {
       violations.push({
         index: i,
-        chequeLocalY,
+        yMm: el.yMm,
         heightMm: el.heightMm,
-        pageGlobalY: el.yMm,
         elementLabel: `element[${i}]`,
       });
     }
   }
 
   if (violations.length > 0) {
-    const detail = violations
-      .map((v) => `element[${v.index}] cheque-local bottom=${(v.chequeLocalY + v.heightMm).toFixed(1)}mm exceeds MICR top=${top.toFixed(1)}mm`)
-      .join("; ");
+    const detail = violations.map((v) => `element[${v.index}] bottom=${(v.yMm + v.heightMm).toFixed(1)}mm exceeds MICR top=${top.toFixed(1)}mm`).join("; ");
     throw new MicrSecurityError(
       `SECURITY VIOLATION: ${violations.length} element(s) encroach the MICR band (top at ${top.toFixed(1)}mm). ${detail}`,
       violations,
@@ -254,31 +222,17 @@ export class MicrSecurityError extends Error {
 // Convenience: derive MICR-safe elements from a layout for checking
 // ===========================================================================
 
-import type { LaidOutField, SheetLayout } from "@/lib/sheetLayout";
+import type { LaidOutField, SheetLayout } from "../../lib/sheetLayout.ts";
 
 /**
  * Extract every printable field from a SheetLayout as a list of mm-based
- * elements in PAGE coordinates, ready for enforceMicrSafety with the
- * layout's chequeX/chequeY as the offset.
+ * elements, ready for enforceMicrSafety().
  */
 export function layoutToMicrElements(layout: SheetLayout): MicrElementMm[] {
   return layout.fields
-    .filter((f: LaidOutField) => f.printable && f.text !== "")
+    .filter((f) => f.printable && f.text !== "")
     .map((f: LaidOutField) => ({
       yMm: f.yMm,
       heightMm: f.heightMm,
     }));
-}
-
-/**
- * Run the MICR guard against a completed SheetLayout. Translates page-global
- * field coordinates to cheque-local coordinates using the layout's chequeY
- * offset, then enforces the boundary.
- *
- * @throws {MicrSecurityError} if any printable field's bottom edge reaches
- *         the MICR safety line in cheque-local space.
- */
-export function enforceLayoutMicrSafety(layout: SheetLayout): void {
-  const elements = layoutToMicrElements(layout);
-  enforceMicrSafety(elements, layout.chequeH, { chequeYOffsetMm: layout.chequeY });
 }

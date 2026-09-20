@@ -28,7 +28,7 @@ import { isBankEnabled } from "@/lib/catalogue";
 import { validateChequeForm } from "@/lib/validation/chequeSchema";
 import { computeSheetLayout } from "@/lib/sheetLayout";
 import { validateSafeZoneClearance, validateTemplateForPrint } from "@/lib/validation";
-import { enforceMicrSafety, layoutToMicrElements } from "@/lib/security/micrGuard";
+import { enforceLayoutMicrSafety } from "@/lib/security/micrGuard";
 
 // Re-use the client-side PDF component for rendering. In a server component
 // context we import it without the "use client" directive issues because
@@ -116,9 +116,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // CRITICAL: The MICR guard runs inside computeSheetLayout, but we re-check
     // here at the API boundary as a final belt-and-braces guarantee. If the
     // layout's printable fields cross the MICR line, the generator must NOT
-    // produce a PDF.
-    const micrElements = layoutToMicrElements(layout);
-    enforceMicrSafety(micrElements, template.heightMm);
+    // proceed. enforceLayoutMicrSafety translates page-global coordinates to
+    // cheque-local and throws MicrSecurityError on any encroachment.
+    enforceLayoutMicrSafety(layout);
 
     // --- STEP 5: Render PDF ---
     const blob = await pdf(
