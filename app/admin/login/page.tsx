@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "@/lib/i18n";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { adminLogin, isAdminAuthenticated } from "@/lib/admin";
 
 // ---------------------------------------------------------------------------

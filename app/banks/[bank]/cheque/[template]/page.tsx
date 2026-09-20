@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Workspace from "@/components/Workspace";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { formatBankLabel, getBank, getBanks, getTemplatesForBank } from "@/lib/catalogue";
 import { getTemplateForBank } from "@/lib/templates";
 import { VerificationBadge, TemplateMeta } from "@/components/CatalogueBadges";
@@ -43,6 +44,9 @@ export default async function BankChequePage({
           <Link href="/banks" className="text-button">Banks</Link>
           <span style={{ color: "var(--text-muted)" }}>/</span>
           <Link href={`/banks/${bank.id}`} className="text-button">{bank.name}</Link>
+          <div style={{ marginLeft: "auto" }}>
+            <LanguageToggle />
+          </div>
         </nav>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
           <h1 style={{ fontSize: "1.1rem", margin: 0 }}>{bank.name}</h1>

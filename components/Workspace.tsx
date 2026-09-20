@@ -224,12 +224,12 @@ function CalibrationControl({ label, value, onChange, disabled }: CalibrationCon
         type="button"
         className="text-button"
         disabled={disabled || value === 0}
-        onClick={reset}
-        title={`Reset ${label} to 0`}
-        style={{ fontSize: "0.8rem", padding: "4px 6px" }}
-      >
-        Reset
-      </button>
+         onClick={reset}
+         title={`Reset ${label} to 0`}
+         style={{ fontSize: "0.8rem", padding: "4px 6px" }}
+       >
+         Reset
+       </button>
     </div>
   );
 }
@@ -804,7 +804,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
        if (pdfOverlayUrl) URL.revokeObjectURL(pdfOverlayUrl);
        setPdfOverlayUrl(result.blobUrl);
      } catch (err) {
-       setPrintError(err instanceof Error ? err.message : "Failed to generate PDF overlay.");
+        setPrintError(err instanceof Error ? err.message : t("printErrorGeneral"));
      } finally {
        setIsGeneratingPdf(false);
      }
@@ -823,7 +823,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
       calibrationDirty ||
       pdfOverlayUrl !== null
     ) {
-      if (!window.confirm("Clear all cheque details and calibration? This cannot be undone.")) return;
+      if (!window.confirm(t("clearConfirm"))) return;
     }
 
     setDate("");
@@ -873,16 +873,16 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
       <div className="no-print">
         <div className="compose-grid">
           {/* ---------- LEFT: Form ---------- */}
-               <form
-               className="panel cheque-form"
-               id="cheque-form"
-               autoComplete="off"
-               onSubmit={(e) => { e.preventDefault(); handlePrint(); }}
-             >
-               <div className="panel-heading">
-                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                   <span className="step">01</span>
-                   <h2>{t("chequeDetails")}</h2>
+          <form
+            className="panel cheque-form"
+            id="cheque-form"
+            autoComplete="off"
+            onSubmit={(e) => { e.preventDefault(); handlePrint(); }}
+          >
+          <div className="panel-heading">
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span className="step">01</span>
+              <h2>{t("chequeDetails")}</h2>
                    <span
                      className="state-badge"
                      style={{
@@ -1151,7 +1151,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                     />
                     <span style={{ color: "var(--text-muted)" }}>{t("debugToggleLabel")}</span>
                   </label>
-                  <small style={{ color: "var(--text-muted)" }}>Dev/admin only</small>
+                  <small style={{ color: "var(--text-muted)" }}>{t("devAdminOnly")}</small>
                 </div>
               </div>
             )}
@@ -1202,7 +1202,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
 
             {/* Selected template summary */}
             {template && profile && (
-              <div className="template-summary" aria-label="Selected template info">
+              <div className="template-summary" aria-label={t("templateInfoAria")}>
                 <div><span>{t("bankLabel")}</span><b>{template.bankName}</b></div>
                 <div><span>{t("layoutLabel")}</span><b>{template.label}</b></div>
                 <div><span>{t("sizeLabel")}</span><b>{template.widthMm} × {template.heightMm} mm ({template.orientation})</b></div>
@@ -1242,7 +1242,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                         : `${t("ariaPrintCheque")} — ${t("requiresLabel")}: ${printReadiness.reason ?? t("allFieldsComplete")}`
                 }
               >
-                {isPrinting ? "Printing…" : printCompleted ? "Print Again" : "Print Cheque"}
+                {isPrinting ? t("printingLabel") : printCompleted ? t("printAgain") : t("printChequeBtn")}
               </button>
               {!printReadiness.ready && !isPrinting && (
                 <p id="print-reason" className="error-state" role="status" aria-live="polite">
@@ -1250,7 +1250,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                 </p>
               )}
               <p id="print-help" className="sr-only">
-                Prints the cheque at actual size. Ensure printer is set to Actual Size (100%).
+                {t("printHelp")}
               </p>
 
               {/* PDF Overlay export — generates a transparent 1:1mm PDF overlay
@@ -1261,10 +1261,10 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                 style={{ fontSize: "0.82rem" }}
                 disabled={!printReadiness.ready || isGeneratingPdf || isPrinting}
                 onClick={handleGeneratePdfOverlay}
-                aria-label={isGeneratingPdf ? "Generating PDF overlay..." : "Generate transparent PDF overlay for printing"}
-                title="Generate a transparent PDF overlay to print on transparency film over an existing cheque"
+                aria-label={isGeneratingPdf ? t("generatingPdfOverlay") : t("generatePdfOverlay")}
+                title={t("generatePdfOverlay")}
               >
-                {isGeneratingPdf ? "Generating PDF…" : "PDF Overlay"}
+                {isGeneratingPdf ? t("generatingPdf") : t("generateBtn")}
               </button>
             </div>
 
@@ -1273,7 +1273,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
             )}
             {isPrinting && (
               <p className="info-state" style={{ marginTop: 8 }} aria-live="polite">
-                Opening print dialog. Please confirm <b>Actual Size (100%)</b> in your printer settings.
+                {t("printDialogHint")} <b>Actual Size (100%)</b> {t("printDialogHint2")}
               </p>
             )}
           </form>
@@ -1283,10 +1283,10 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
             <div className="preview-heading">
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span className="step">02</span>
-                <h2>Live Print Preview</h2>
+                <h2>{t("previewTitle")}</h2>
               </div>
               <span style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>
-                {template?.bankName || "No bank selected"}
+                {template?.bankName || t("noBankSelected")}
               </span>
             </div>
 
@@ -1307,9 +1307,9 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                   role="img"
                   aria-label="No bank template selected — preview unavailable"
                 >
-                  <div className="cheque-watermark" aria-hidden="true">NO TEMPLATE SELECTED</div>
+                  <div className="cheque-watermark" aria-hidden="true">{t("noTemplateWatermark")}</div>
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>Select a bank template to begin</span>
+                    <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{t("noTemplatePreview")}</span>
                   </div>
                 </div>
               )}
@@ -1317,70 +1317,66 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
 
             {template && (
               <p style={{ margin: "8px 0 0 0", fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                Preview box: {Math.round(template.widthMm * SCALE)} × {Math.round(template.heightMm * SCALE)} px at 1 mm = {SCALE} px.
-                Reserved MICR band: bottom {Math.max(0, Math.round(template.heightMm * SCALE * 0.08))} px — never printed.
+                {t("previewBoxLabel")} {Math.round(template.widthMm * SCALE)} × {Math.round(template.heightMm * SCALE)} px {t("previewScaleLabel")}{SCALE} px.
+                {t("reservedMicrLabel")} {Math.max(0, Math.round(template.heightMm * SCALE * 0.08))} px — {t("neverPrinted")}.
               </p>
             )}
 
-             <div className="tip-card">
-               <div className="tip-icon" aria-hidden="true">i</div>
-               <div>
-                 <strong>Before printing a real cheque</strong>
-                 <p>
-                   {isDF ? (
-                     <>
-                       For <b>Direct Feed</b>: feed a blank cheque directly into your printer. Set print dialog to <b>Actual Size (100%)</b> — do NOT fit to page. Ensure margins are set to minimum/none. Use X/Y calibration to align if needed.
-                     </>
-                   ) : (
-                     <>
-                       For <b>A4 Carrier</b>: print on plain A4 paper. Set print dialog to <b>Actual Size (100%)</b> with no margins. Cut out the cheque along the border. Use X/Y calibration to align if needed.
-                     </>
-                   )}
-                 </p>
-               </div>
-             </div>
+              <div className="tip-card">
+                <div className="tip-icon" aria-hidden="true">i</div>
+                <div>
+                  <strong>{t("beforePrintingTitle")}</strong>
+                  <p>
+                    {isDF ? (
+                      <>{t("beforePrintingDirectFeed")}</>
+                    ) : (
+                      <>{t("beforePrintingA4Carrier")}</>
+                    )}
+                  </p>
+                </div>
+              </div>
 
              {/* PDF Overlay preview — shows when a transparent PDF has been generated */}
              {pdfOverlayUrl && (
                <div className="card" style={{ marginTop: 12, padding: 12 }}>
-                 <h3 style={{ margin: "0 0 8px 0", fontSize: "0.82rem", color: "var(--text-secondary)", fontWeight: 700 }}>
-                   Transparent PDF Overlay
-                 </h3>
-                 <p style={{ margin: "0 0 8px 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                   Print this overlay at 100% scale on transparency film, then place it over your physical cheque. Only the variable fields (date, payee, amount, words) are printed — the cheque background and MICR band are not covered.
-                 </p>
-                 <iframe
+                  <h3 style={{ margin: "0 0 8px 0", fontSize: "0.82rem", color: "var(--text-secondary)", fontWeight: 700 }}>
+                    {t("pdfOverlayTitle")}
+                  </h3>
+               <p style={{ margin: "0 0 8px 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                 {t("pdfOverlayHelp")}
+               </p>
+               <iframe
                    src={pdfOverlayUrl}
                    title="Cheque overlay PDF preview"
                    style={{ width: "100%", height: "200px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
                  />
                  <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "flex-end" }}>
-                   <a
-                     href={pdfOverlayUrl}
-                     download="cheque-overlay.pdf"
-                     className="text-button"
-                     style={{ fontSize: "0.8rem" }}
-                     onClick={() => {
-                       // Clean up URL after download starts
-                       setTimeout(() => {
-                         if (pdfOverlayUrl) URL.revokeObjectURL(pdfOverlayUrl);
-                         setPdfOverlayUrl(null);
-                       }, 1000);
-                     }}
-                   >
-                     Download PDF
-                   </a>
-                   <button
-                     type="button"
-                     className="text-button"
-                     style={{ fontSize: "0.8rem" }}
-                     onClick={() => {
-                       if (pdfOverlayUrl) URL.revokeObjectURL(pdfOverlayUrl);
-                       setPdfOverlayUrl(null);
-                     }}
-                   >
-                     Discard
-                   </button>
+                      <a
+                        href={pdfOverlayUrl}
+                        download="cheque-overlay.pdf"
+                        className="text-button"
+                        style={{ fontSize: "0.8rem" }}
+                        onClick={() => {
+                          // Clean up URL after download starts
+                          setTimeout(() => {
+                            if (pdfOverlayUrl) URL.revokeObjectURL(pdfOverlayUrl);
+                            setPdfOverlayUrl(null);
+                          }, 1000);
+                        }}
+                      >
+                        {t("downloadPdf")}
+                    </a>
+                    <button
+                      type="button"
+                      className="text-button"
+                      style={{ fontSize: "0.8rem" }}
+                      onClick={() => {
+                        if (pdfOverlayUrl) URL.revokeObjectURL(pdfOverlayUrl);
+                        setPdfOverlayUrl(null);
+                      }}
+                    >
+                      {t("discardBtn")}
+                    </button>
                  </div>
                </div>
              )}

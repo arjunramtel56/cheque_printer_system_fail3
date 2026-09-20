@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { formatBankLabel, getBank, getBanks, getTemplatesForBank } from "@/lib/catalogue";
 import { TemplateMeta, VerificationBadge } from "@/components/CatalogueBadges";
 
@@ -24,10 +25,13 @@ export default async function BankPage({ params }: { params: Promise<{ bank: str
 
   return (
     <div className="panel" style={{ margin: 16 }}>
-      <nav style={{ display: "flex", gap: 10, fontSize: "0.82rem", marginBottom: 8 }}>
+      <nav style={{ display: "flex", gap: 10, fontSize: "0.82rem", marginBottom: 8, alignItems: "center" }}>
         <Link href="/" className="text-button">Home</Link>
         <span style={{ color: "var(--text-muted)" }}>/</span>
         <Link href="/banks" className="text-button">Banks</Link>
+        <div style={{ marginLeft: "auto" }}>
+          <LanguageToggle />
+        </div>
       </nav>
 
       <h1 style={{ fontSize: "1.2rem", margin: "0 0 2px 0" }}>{bank.name}</h1>

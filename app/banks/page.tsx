@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { getBankGroups, getCatalogueSummary, formatBankLabel, getTemplatesForBank } from "@/lib/catalogue";
 import { VerificationBadge } from "@/components/CatalogueBadges";
 
@@ -13,8 +14,13 @@ export default function BanksPage() {
 
   return (
     <div className="panel" style={{ margin: 16 }}>
-      <nav style={{ marginBottom: 8, fontSize: "0.82rem" }}>
+      <nav style={{ marginBottom: 8, fontSize: "0.82rem", display: "flex", gap: 10, alignItems: "center" }}>
         <Link href="/" className="text-button">Home</Link>
+        <span style={{ color: "var(--text-muted)" }}>/</span>
+        <Link href="/banks" className="text-button">Banks</Link>
+        <div style={{ marginLeft: "auto" }}>
+          <LanguageToggle />
+        </div>
       </nav>
       <h1 style={{ fontSize: "1.2rem", margin: "0 0 4px 0" }}>Nepal bank catalogue</h1>
       <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-muted)" }}>
