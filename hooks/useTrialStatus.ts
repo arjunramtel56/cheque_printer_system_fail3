@@ -30,9 +30,11 @@ export function useTrialStatus() {
           return;
         }
 
+        const startTime = new Date();
+        const endTime = new Date(startTime.getTime() + TRIAL_DURATION_DAYS * 86400000);
         const data: TrialData = {
-          startedAt: new Date().toISOString(),
-          endsAt: new Date(now + TRIAL_DURATION_DAYS * 86400000).toISOString(),
+          startedAt: startTime.toISOString(),
+          endsAt: endTime.toISOString(),
           isActive: true,
         };
         await localforage.setItem("trialStatus", data);

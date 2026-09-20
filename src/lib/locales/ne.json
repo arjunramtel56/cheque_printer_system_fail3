@@ -187,5 +187,19 @@
   "micrSafetyTitle": "MICR सुरक्षा क्षेत्र",
   "micrSafetyNote": "MICR ब्यान्ड (तलको ०.५ इंच) मा कुनै पनि छाप्नुहोस्। यस क्षेत्रमा कुनै पनि स्याहीले चेक प्रशोधनलाई नोक्सान गर्न सक्छ।",
   "securityNoteTitle": "सुरक्षा नोट",
-  "fontHelp": "देउवेगणित फन्ट (Inter + Noto Sans Devanagari) प्रयोग गरेर देउवेगणित/अंग्रेजी द्विभाषिक समर्थन।"
+  "fontHelp": "देउवेगणित फन्ट (Inter + Noto Sans Devanagari) प्रयोग गरेर देउवेगणित/अंग्रेजी द्विभाषिक समर्थन।",
+  "trialActiveTitle": "ट्रायल सक्रिय",
+  "trialExpiredTitle": "ट्रायल समाप्त",
+  "trialExpiredDesc": "तपाईंको ट्रायल अवधि समाप्त भएको छ। कृपया चेक प्रिन्टरको प्रयोग जारी राख्न अपग्रेड गर्नुहोस्।",
+  "trialEndsToday": "तपाईंको ट्रायल आजै सकिन्छ!",
+  "trialEndsTomorrow": "तपाईंको ट्रायल कल सकिन्छ।",
+  "trialDaysLeft": "तपाईंको ट्रायल {0} दिनमा सकिन्छ।",
+  "trialStartedOn": "सुरु भएको मिति: {0}",
+  "trialFeaturesTitle": "ट्रायल विशेषताहरू",
+  "trialFeaturePrint": "दिनपटक ५० चेक प्रिन्ट गर्न सकिने",
+  "trialFeatureSave": "चेक टेम्प्लेट बचत र लोड गर्ने",
+  "trialFeatureMultiBank": "नेपालका सबै बैंक टेम्प्लेटको पहुँच",
+  "trialFeatureUnlimited": "अपग्रेडपछि पूरा पहुँच ({0} दिन बाँकी)",
+  "upgradeNow": "अहिले अपग्रेड गर्नुहोस्",
+  "startPrinting": "प्रिन्ट गर्नुहोस्"
 }

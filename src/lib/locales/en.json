@@ -186,5 +186,19 @@
   "micrSafetyTitle": "MICR Safety Zone",
   "micrSafetyNote": "The MICR band (bottom 0.5 inch) must never be printed over. Any ink on this zone can corrupt cheque processing.",
   "securityNoteTitle": "Security Note",
-  "fontHelp": "Uses Inter + Noto Sans Devanagari for Devanagari/English bilingual support."
+  "fontHelp": "Uses Inter + Noto Sans Devanagari for Devanagari/English bilingual support.",
+  "trialActiveTitle": "Trial Active",
+  "trialExpiredTitle": "Trial Expired",
+  "trialExpiredDesc": "Your trial period has ended. Please upgrade to continue using the cheque printer.",
+  "trialEndsToday": "Your trial ends today!",
+  "trialEndsTomorrow": "Your trial ends tomorrow.",
+  "trialDaysLeft": "Your trial ends in {0} days.",
+  "trialStartedOn": "Started on: {0}",
+  "trialFeaturesTitle": "Trial Features",
+  "trialFeaturePrint": "Print up to 50 cheques per day",
+  "trialFeatureSave": "Save and load cheque templates",
+  "trialFeatureMultiBank": "Access to all Nepalese bank templates",
+  "trialFeatureUnlimited": "Full access after upgrade ({0} days left)",
+  "upgradeNow": "Upgrade Now",
+  "startPrinting": "Start Printing"
 }

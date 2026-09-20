@@ -5,7 +5,6 @@ import { useTranslation } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import Link from "next/link";
-import { Lock } from "lucide-react";
 
 export default function TrialPage() {
   const { daysLeft, isLoading, isActive, startedAt } = useTrialStatus();
@@ -21,7 +20,7 @@ export default function TrialPage() {
 
   if (!isActive) {
     return (
-      <div className="panel" style={{ maxWidth: 600, margin: "48px auto" }}>
+      <div className="panel" style={{ maxWidth: 420, margin: "48px auto" }}>
         <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 8 }}>
           <ThemeToggle />
           <LanguageToggle />
@@ -39,12 +38,14 @@ export default function TrialPage() {
 
   const isExpiringSoon = daysLeft <= 3;
   const alertClass = isExpiringSoon ? "error-state" : "warning-state";
-  const alertMessage =
-    daysLeft === 0
-      ? t("trialEndsToday")
-      : daysLeft === 1
-        ? t("trialEndsTomorrow")
-        : t("trialDaysLeft", { days: daysLeft });
+  let alertMessage: string;
+  if (daysLeft === 0) {
+    alertMessage = t("trialEndsToday");
+  } else if (daysLeft === 1) {
+    alertMessage = t("trialEndsTomorrow");
+  } else {
+    alertMessage = t("trialDaysLeft", daysLeft);
+  }
 
   return (
     <div className="panel" style={{ maxWidth: 600, margin: "24px auto" }}>
@@ -61,7 +62,7 @@ export default function TrialPage() {
 
       {startedAt && (
         <p style={{ marginBottom: 16, fontSize: "0.82rem", color: "var(--text-muted)" }}>
-          {t("trialStartedOn", { date: new Date(startedAt).toLocaleDateString() })}
+          {t("trialStartedOn", new Date(startedAt).toLocaleDateString())}
         </p>
       )}
 
@@ -74,7 +75,7 @@ export default function TrialPage() {
             <li>{t("trialFeaturePrint")}</li>
             <li>{t("trialFeatureSave")}</li>
             <li>{t("trialFeatureMultiBank")}</li>
-            <li style={{ opacity: 0.5 }}>{t("trialFeatureUnlimited", { days: daysLeft })}</li>
+            <li style={{ opacity: 0.5 }}>{t("trialFeatureUnlimited", daysLeft)}</li>
           </ul>
         </div>
 
