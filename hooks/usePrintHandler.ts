@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef } from "react";
 
 export function usePrintHandler() {
   const printRef = useRef<HTMLDivElement>(null);
@@ -6,58 +6,45 @@ export function usePrintHandler() {
   const handlePrint = () => {
     if (!printRef.current) return;
 
-    // Optimize for print: hide interactive elements
-    const originalStyles = {
-      userSelect: document.body.style.userSelect,
-      pointerEvents: document.body.style.pointerEvents,
-      overflow: document.body.style.overflow,
-    };
-    document.body.style.userSelect = 'none';
-    document.body.style.pointerEvents = 'none';
-    document.body.style.overflow = 'hidden';
-
-    window.print();
-
-    // Restore styles
-    document.body.style.userSelect = originalStyles.userSelect;
-    document.body.style.pointerEvents = originalStyles.pointerEvents;
-    document.body.style.overflow = originalStyles.overflow;
-  };
-
-  const handlePreview = () => {
-    if (!printRef.current) return;
-    
-    // Open print preview in new window with same content
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
     const content = printRef.current.innerHTML;
-    const fullHTML = `
+    const styles = Array.from(document.styleSheets)
+      .map((sheet) => {
+        try {
+          return Array.from(sheet.cssRules || [])
+            .map((rule) => rule.cssText)
+            .join("\n");
+        } catch {
+          return "";
+        }
+      })
+      .join("\n");
+
+    printWindow.document.write(`
       <!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <title>Print Preview - Cheque</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-            body { 
-              margin: 0; 
-              padding: 20px;
-              font-family: "Inter", sans-serif;
-            }
-            ${document.querySelector('style')?.textContent || ''}
-          </style>
-        </head>
-        <body>
-          ${content}
-        </body>
+      <html lang="ne">
+      <head>
+        <title>Print</title>
+        <style>${styles}</style>
+        <style>
+          body { margin: 0; padding: 0; }
+          .no-print { display: none !important; }
+          @media print {
+            body { -webkit-print-color-adjust: exact; }
+          }
+        </style>
+      </head>
+      <body>${content}</body>
       </html>
-    `;
-    
-    printWindow.document.write(fullHTML);
+    `);
+
     printWindow.document.close();
     printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
-  return { printRef, handlePrint, handlePreview };
+  return { printRef, handlePrint };
 }
-

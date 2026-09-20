@@ -248,7 +248,12 @@ export function validateChequeForm(input: unknown): SchemaResult {
 /**
  * Validate an A4 overlay request. Returns success + data, or field-level errors.
  */
-export function validateA4OverlayForm(input: unknown): SchemaResult & { data?: A4OverlayOutput } {
+export function validateA4OverlayForm(input: unknown): {
+  success: boolean;
+  data?: A4OverlayOutput;
+  error?: string;
+  fieldErrors?: Record<string, string>;
+} {
   const result = a4OverlaySchema.safeParse(input);
   if (!result.success) {
     const fieldErrors: Record<string, string> = {};
@@ -257,7 +262,7 @@ export function validateA4OverlayForm(input: unknown): SchemaResult & { data?: A
       fieldErrors[path] = issue.message;
     }
     const firstError = result.error.issues[0]?.message ?? "Invalid input.";
-    return { success: false, error: firstError, fieldErrors, data: undefined };
+    return { success: false, error: firstError, fieldErrors };
   }
   return { success: true, data: result.data };
 }

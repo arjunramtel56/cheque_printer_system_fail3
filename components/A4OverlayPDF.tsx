@@ -24,7 +24,7 @@
 
 "use client";
 
-import React from "react";
+import React, { CSSProperties } from "react";
 import { Document, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
 import type { A4OverlayOutput } from "@/lib/validation/chequeSchema";
 import type { A4OverlayLayout, FieldPosition, ChequePlacement } from "@/lib/printMath";
@@ -142,8 +142,11 @@ function mmToPt(mm: number): number {
   return mm * PT_PER_MM;
 }
 
-/** Orientation-specific page sizing. */
-function orientationStyle(orientation: string): React.CSSProperties {
+/** Orientation-specific page sizing — returns react-pdf style values (px-based). */
+function orientationStyle(orientation: string): CSSProperties {
+  // react-pdf Page size uses points; we set width/height in pt via inline style.
+  // The size array below handles the actual page sizing; the style here is
+  // applied to the inner content container.
   if (orientation === "landscape") {
     return { width: mmToPt(297), height: mmToPt(210) };
   }

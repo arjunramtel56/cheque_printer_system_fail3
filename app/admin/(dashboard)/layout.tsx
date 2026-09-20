@@ -4,23 +4,22 @@
 // Gate + chrome for the protected admin area.
 //
 // This layout lives in the (dashboard) route group, so it applies to
-// /admin, /admin/banks, /admin/templates(/*) and /admin/calibration — but NOT
+// /admin, /admin/banks, /admin/templates(/*) and /admin/calibration - but NOT
 // to /admin/login. That separation is the point: when the gate lived at
 // app/admin/layout.tsx it also wrapped the login page, returned null while
 // unauthenticated, and made the whole admin panel unreachable (the sign-in
 // form could never render). See tests/admin-access.test.mjs.
 //
 // Authentication is a client-side demo gate (see lib/admin.ts). It is not
-// security — the README says so plainly, and server-side authorization is
+// security - the README says so plainly, and server-side authorization is
 // scheduled for the hardening phase.
 // ---------------------------------------------------------------------------
 
-import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { isAdminAuthenticated, adminLogout } from "@/lib/admin";
+import { usePathname } from "next/navigation";
+import { useAuthGate } from "@/hooks/useAdminAuth";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import Link from "next/link";
-
-const LOGIN_ROUTE = "/admin/login";
 
 const SECTION_TITLES: { href: string; title: string }[] = [
   { href: "/admin/banks", title: "Banks" },
@@ -38,25 +37,14 @@ function sectionTitle(pathname: string): string {
 }
 
 export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
-  const [authed, setAuthed] = useState(false);
-  const [checked, setChecked] = useState(false);
-  const router = useRouter();
+  const { authed, loading, logout } = useAuthGate();
   const pathname = usePathname();
 
-  useEffect(() => {
-    const ok = isAdminAuthenticated();
-    setAuthed(ok);
-    setChecked(true);
-    if (!ok) router.replace(LOGIN_ROUTE);
-  }, [router]);
-
-  // Never render an empty screen: the checking and unauthenticated states are
-  // both visible, so a broken gate can never look like a blank page again.
-  if (!checked || !authed) {
+  if (loading) {
     return (
       <div className="panel" style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <span style={{ color: "var(--text-muted)" }}>
-          {checked ? "Signed out — redirecting to sign-in…" : "Loading admin…"}
+          {authed ? "Signed out - redirecting to sign-in..." : "Loading admin..."}
         </span>
       </div>
     );
@@ -70,18 +58,18 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
           <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>|</span>
           <h1 style={{ fontSize: "1.12rem", margin: 0 }}>{sectionTitle(pathname)}</h1>
         </div>
-        <button
-          type="button"
-          className="button secondary small"
-          onClick={() => {
-            adminLogout();
-            setAuthed(false);
-            router.replace(LOGIN_ROUTE);
-          }}
-          style={{ fontSize: "0.85rem" }}
-        >
-          Sign Out
-        </button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <ThemeToggle />
+          <LanguageToggle />
+          <button
+            type="button"
+            className="button secondary small"
+            onClick={logout}
+            style={{ fontSize: "0.85rem" }}
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
       <nav style={{ marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Link href="/admin" className="text-button">Dashboard</Link>

@@ -44,6 +44,10 @@ export const CHEQUE_HEIGHT_MM = 88.9;
 /** MICR band height from NRB CTS 2010 (bottom 7mm of cheque). */
 export const MICR_BAND_HEIGHT_MM = MICR_BAND_MM; // 7
 
+/** Conversion: 1 point = 0.352778 mm (PDF/pt conversion). */
+export const PT_PER_MM = 72 / 25.4;
+export const MM_PER_PT = 25.4 / 72;
+
 /**
  * Safety margin below the MICR top to account for printer scaling.
  * "Fit to Page" can shift content down by ~2mm.
