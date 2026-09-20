@@ -556,7 +556,7 @@ for (const p of commonProps) {
 for (const p of ["template={template}", "data={chequeData}", "mode={printMode}", "calibration={currentCalibration}"]) {
   assert(printOutputMatch.includes(p), "Print output is passed the same value as the preview: " + p);
 }
-assertContains(ws, "const chequeData: ChequeData = { date, payee, amount, amountWords, accountPayee, locale: appLocale };", "one cheque-data object feeds both preview and print");
+assertContains(ws, "const chequeData: ChequeData = { date, payee, reference, amount, amountWords, accountPayee, locale: appLocale };", "one cheque-data object feeds both preview and print");
 assert(
   !ws.includes("offsetX=") && !ws.includes("offsetY="),
   "calibration is no longer passed as separate loose X/Y props (it travels with the layout)",

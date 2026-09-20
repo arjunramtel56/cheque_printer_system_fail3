@@ -407,6 +407,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
   const [templateId, setTemplateId] = useState(boundTemplateId ?? "");
   const [date, setDate] = useState("");
   const [payee, setPayee] = useState("");
+  const [reference, setReference] = useState("");
   const [amount, setAmount] = useState("");
   const [amountWords, setAmountWords] = useState("");
   const [accountPayee, setAccountPayee] = useState(true);
@@ -493,7 +494,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
   // -----------------------------------------------------------------------
   const { t, locale: appLocale, toggleLocale } = useTranslation();
 
-  const chequeData: ChequeData = { date, payee, amount, amountWords, accountPayee, locale: appLocale };
+  const chequeData: ChequeData = { date, payee, reference, amount, amountWords, accountPayee, locale: appLocale };
 
   const safeZonesClear = useMemo(
     () => (template ? validateSafeZoneClearance(template).length === 0 : true),
@@ -840,9 +841,10 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
       if (!window.confirm(t("clearConfirm"))) return;
     }
 
-     setDate("");
-     setPayee("");
-     setAmount("");
+      setDate("");
+      setPayee("");
+      setReference("");
+      setAmount("");
      setAmountWords("");
      setAccountPayee(true);
      setMicrVerified(false);
@@ -1049,6 +1051,21 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
 
             {/* Amount + Amount in Words */}
             <div className="two-columns">
+              <div className="field">
+                <label htmlFor="reference-input">{t("referenceLabel")}</label>
+                <input
+                  id="reference-input"
+                  type="text"
+                  maxLength={60}
+                  placeholder={template ? t("referencePlaceholder") : ""}
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value.slice(0, 60))}
+                  disabled={!template}
+                  aria-describedby={template ? "reference-help" : "field-disabled-bank"}
+                  aria-disabled={!template}
+                />
+                <small id="reference-help">{t("referenceHelpText")}</small>
+              </div>
               <div className="field">
                 <label htmlFor="amount-input">{t("amountLabel")}</label>
                 <div className="input-prefix">

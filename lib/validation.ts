@@ -40,7 +40,7 @@ function isFiniteNumber(v: unknown): v is number {
 }
 
 const SLUG = /^[a-z0-9][a-z0-9_-]*$/;
-const FIELD_KINDS: FieldKind[] = ["date-grid", "payee", "words", "amount", "ac-payee", "label", "signature"];
+const FIELD_KINDS: FieldKind[] = ["date-grid", "payee", "words", "amount", "ac-payee", "label", "signature", "reference"];
 const NRB_CLASSES: NrbClass[] = ["A", "B", "C", "D"];
 const ORIENTATIONS: Orientation[] = ["portrait", "landscape"];
 const ALL_MODES: ProfileKey[] = ["custom_short", "custom_long", "a4_vertical", "a4_horizontal"];

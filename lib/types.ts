@@ -35,7 +35,8 @@ export type FieldKind =
   | "amount"
   | "ac-payee"
   | "label"
-  | "signature";
+  | "signature"
+  | "reference";
 
 export interface Calibration {
   x: number;

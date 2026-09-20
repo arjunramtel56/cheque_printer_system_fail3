@@ -38,6 +38,8 @@ export interface ChequeData {
   amount: string;
   amountWords: string;
   accountPayee: boolean;
+  /** Optional reference number, drawn from a template field of kind "reference". */
+  reference?: string;
   /** Language for auto-generated amount-in-words fallback ("en" | "ne"). */
   locale?: "en" | "ne";
 }
@@ -165,6 +167,9 @@ export function computeSheetLayout(
         case "payee":
           text = payeeText;
           break;
+        case "reference":
+          text = data.reference ?? "";
+          break;
         case "words":
           text = wordLineFor.get(field.key) ?? "";
           break;
@@ -216,14 +221,15 @@ export function computeSheetLayout(
       .map((field) => {
         let text = "";
         switch (field.kind) {
-          case "label": text = field.text ?? ""; break;
-          case "ac-payee": text = data.accountPayee ? field.text ?? "// A/C PAYEE ONLY //" : ""; break;
-          case "date-grid": text = dateDigits; break;
-          case "payee": text = payeeText; break;
-          case "words": text = wordLineFor.get(field.key) ?? ""; break;
-          case "amount": text = amountText; break;
-          case "signature": text = field.text ?? field.label; break;
-        }
+           case "label": text = field.text ?? ""; break;
+           case "ac-payee": text = data.accountPayee ? field.text ?? "// A/C PAYEE ONLY //" : ""; break;
+           case "date-grid": text = dateDigits; break;
+           case "payee": text = payeeText; break;
+           case "reference": text = data.reference ?? ""; break;
+           case "words": text = wordLineFor.get(field.key) ?? ""; break;
+           case "amount": text = amountText; break;
+           case "signature": text = field.text ?? field.label; break;
+         }
         return {
           key: field.key,
           kind: field.kind,

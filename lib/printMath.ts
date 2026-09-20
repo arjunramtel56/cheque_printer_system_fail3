@@ -292,6 +292,8 @@ export function calculateA4OverlayLayout(
     amount: string;
     amountWords: string;
     accountPayee: boolean;
+    /** Optional reference number. */
+    reference?: string;
   },
 ): A4OverlayLayout {
   const isLandscape = config.orientation === "landscape";
@@ -340,6 +342,9 @@ export function calculateA4OverlayLayout(
       switch (field.kind) {
         case "payee":
           text = data.payee;
+          break;
+        case "reference":
+          text = data.reference ?? "";
           break;
         case "amount":
           text = `Rs. ${data.amount}`;
