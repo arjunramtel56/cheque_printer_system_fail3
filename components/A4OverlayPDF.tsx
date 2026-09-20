@@ -144,7 +144,7 @@ function mmToPt(mm: number): number {
 }
 
 /** Orientation-specific page sizing — returns react-pdf style values (px-based). */
-function orientationStyle(orientation: string): CSSProperties {
+function orientationStyle(orientation: string): { width: number; height: number } {
   // react-pdf Page size uses points; we set width/height in pt via inline style.
   // The size array below handles the actual page sizing; the style here is
   // applied to the inner content container.
