@@ -1,3 +1,4 @@
+"use client";
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { LOCALES, type Locale } from "@/lib/i18n";
 
