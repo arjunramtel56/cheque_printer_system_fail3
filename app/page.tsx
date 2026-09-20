@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Workspace from "@/components/Workspace";
+import MicrSafetyGuide from "@/components/MicrSafetyGuide";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { getCatalogueSummary, getSelectableBanks } from "@/lib/catalogue";
@@ -29,6 +30,8 @@ export default function HomePage() {
           Admin
         </Link>
       </div>
+
+      <MicrSafetyGuide />
 
       <Workspace />
 

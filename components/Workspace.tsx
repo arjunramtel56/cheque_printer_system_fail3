@@ -840,12 +840,13 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
       if (!window.confirm(t("clearConfirm"))) return;
     }
 
-    setDate("");
-    setPayee("");
-    setAmount("");
-    setAmountWords("");
-    setAccountPayee(true);
-    setPrintCompleted(false);
+     setDate("");
+     setPayee("");
+     setAmount("");
+     setAmountWords("");
+     setAccountPayee(true);
+     setMicrVerified(false);
+     setPrintCompleted(false);
     setPrintError("");
     setIsPrinting(false);
     wordOverrideRef.current = false;
@@ -1117,9 +1118,9 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                  aria-disabled={!template}
                />
                <label htmlFor="micr-verify" style={{ margin: 0, fontWeight: 600, fontSize: "0.88rem", color: "var(--warning)" }}>
-                 {locale === "ne" ? "कृपया MICR लाईन सफा पुष्टि गर्नुस्" : "MICR line (bottom 0.5\" of cheque) is clear?"}
+                 {appLocale === "ne" ? "कृपया MICR लाईन सफा पुष्टि गर्नुस्" : "MICR line (bottom 0.5\" of cheque) is clear?"}
                  <small id="micr-verify-help" style={{ display: "block", marginTop: 2, fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 400 }}>
-                   {locale === "ne" ? "चेकको तल ०.५ इंचको MICR ब्यान्ड कुनै पनि स्याहीले छोएको छैन भन्न जाँच गर्नुहोस्।" : "Check that no ink overlaps the MICR band (bottom 0.5\")."}
+                   {appLocale === "ne" ? "चेकको तल ०.५ इंचको MICR ब्यान्ड कुनै पनि स्याहीले छोएको छैन भन्न जाँच गर्नुहोस्।" : "Check that no ink overlaps the MICR band (bottom 0.5\")."}
                  </small>
                </label>
              </div>
