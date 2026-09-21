@@ -28,6 +28,10 @@ const SECTION_TITLES: { href: string; title: string }[] = [
   { href: "/admin/banks", title: "Banks" },
   { href: "/admin/templates", title: "Cheque Templates" },
   { href: "/admin/calibration", title: "Calibration" },
+  { href: "/admin/users", title: "Users" },
+  { href: "/admin/plans", title: "Plans" },
+  { href: "/admin/content", title: "Content" },
+  { href: "/admin/reports", title: "Reports" },
   { href: "/admin", title: "Dashboard" },
 ];
 
@@ -95,12 +99,14 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
       </div>
       <nav style={{ marginBottom: 16, display: "flex", gap: 6, flexWrap: "wrap" }}>
         <Link href="/admin" className="text-button">Dashboard</Link>
-        <Link href="/admin/banks" className="text-button">Banks</Link>
-        <Link href="/admin/templates" className="text-button">Cheque Templates</Link>
-        <Link href="/admin/calibration" className="text-button">Calibration</Link>
         <Link href="/admin/users" className="text-button">Users</Link>
+        <Link href="/admin/banks" className="text-button">Banks</Link>
+        <Link href="/admin/templates" className="text-button">Templates</Link>
+        <Link href="/admin/calibration" className="text-button">Calibration</Link>
+        <Link href="/admin/plans" className="text-button">Plans</Link>
+        <Link href="/admin/content" className="text-button">Content</Link>
+        <Link href="/admin/reports" className="text-button">Reports</Link>
         <Link href="/admin/settings" className="text-button">Settings</Link>
-        <Link href="/banks" className="text-button">Public catalogue</Link>
       </nav>
       {children}
     </div>
