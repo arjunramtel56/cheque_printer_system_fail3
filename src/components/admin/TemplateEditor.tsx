@@ -7,8 +7,8 @@ import { getChequeSizes } from "@/lib/sizes";
 import { resolvePaper, resolvePrintGeometry } from "@/lib/printGeometry";
 import { validateBankTemplate } from "@/lib/validation";
 import { micrSafeZone } from "../../data/templates";
-import ChequeSheet from "@/components/ChequeSheet";
-import { TemplateMeta } from "@/components/CatalogueBadges";
+import ChequeSheet from "@/components/cheque/ChequeSheet";
+import { TemplateMeta } from "@/components/dashboard/CatalogueBadges";
 
 const FIELD_KINDS: FieldKind[] = ["label", "ac-payee", "date-grid", "payee", "words", "amount", "signature"];
 const MODES: ProfileKey[] = ["custom_short", "custom_long", "a4_vertical", "a4_horizontal"];
@@ -542,3 +542,4 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
     </div>
   );
 }
+

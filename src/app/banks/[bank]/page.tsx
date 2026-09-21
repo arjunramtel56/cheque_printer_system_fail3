@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatBankLabel, getBank, getBanks, getTemplatesForBank } from "@/lib/catalogue";
-import { TemplateMeta, VerificationBadge } from "@/components/CatalogueBadges";
+import { TemplateMeta, VerificationBadge } from "@/components/dashboard/CatalogueBadges";
 import BankDetailClient from "./BankDetailClient";
 
 /**

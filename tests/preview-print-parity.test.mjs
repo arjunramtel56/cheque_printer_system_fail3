@@ -22,9 +22,9 @@ import { formatAmountDisplay, formatDateDigits, validateAmount } from "../src/li
 import { validateSafeZoneClearance } from "../src/lib/validation.ts";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url)) + "/";
-const chequeSheetSource = readFileSync(repoRoot + "src/components/ChequeSheet.tsx", "utf8");
+const chequeSheetSource = readFileSync(repoRoot + "src/components/cheque/ChequeSheet.tsx", "utf8");
 const sheetLayoutSource = readFileSync(repoRoot + "src/lib/sheetLayout.ts", "utf8");
-const workspaceSource = readFileSync(repoRoot + "src/components/Workspace.tsx", "utf8");
+const workspaceSource = readFileSync(repoRoot + "src/components/dashboard/Workspace.tsx", "utf8");
 
 let passed = 0;
 let failed = 0;
@@ -250,5 +250,6 @@ if (failed > 0) {
 } else {
   console.log("\nAll preview/print parity tests PASSED.");
 }
+
 
 

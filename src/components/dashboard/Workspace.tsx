@@ -44,11 +44,11 @@ import {
 import { resolvePaper, resolvePrintGeometry, STANDARD_CHEQUE_W_MM, STANDARD_CHEQUE_H_MM } from "@/lib/printGeometry";
 import { validateCalibratedBounds, validatePrintGeometry, validateSafeZoneClearance, validateTemplateForPrint } from "@/lib/validation";
 import { computeSheetLayout, fieldsWithinCheque, type ChequeData } from "@/lib/sheetLayout";
-import ChequeSheet, { PREVIEW_SCALE } from "@/components/ChequeSheet";
-import { generateOverlayPdf } from "@/components/ChequeOverlayPDF";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { LanguageToggle } from "@/components/LanguageToggle";
-import { PrintGuidance } from "@/components/PrintGuidance";
+import ChequeSheet, { PREVIEW_SCALE } from "@/components/cheque/ChequeSheet";
+import { generateOverlayPdf } from "@/components/cheque/ChequeOverlayPDF";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
+import { PrintGuidance } from "@/components/cheque/PrintGuidance";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
@@ -1496,3 +1496,4 @@ function PrintOutput({
 export function layoutFits(template: BankTemplate, data: ChequeData, mode: ProfileKey, calibration: Calibration): boolean {
   return fieldsWithinCheque(computeSheetLayout(template, data, mode, calibration));
 }
+

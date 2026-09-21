@@ -317,7 +317,7 @@ console.log("\n=== PRINT CSS QA ===");
 const printCss = readFileSync(repoRoot + "src/app/print.css", "utf8");
 const layoutTsx = readFileSync(repoRoot + "src/app/layout.tsx", "utf8");
 const globalsCss = readFileSync(repoRoot + "src/app/globals.css", "utf8");
-const workspaceTsx = readFileSync(repoRoot + "src/components/Workspace.tsx", "utf8");
+const workspaceTsx = readFileSync(repoRoot + "src/components/dashboard/Workspace.tsx", "utf8");
 
 console.log("\n  @page:");
 assert(printCss.includes("@page"), "has @page rule");
@@ -367,7 +367,7 @@ assert(fileExists(repoRoot + "src/app/auth/login/page.tsx"), "Auth login route (
 assert(fileExists(repoRoot + "src/app/auth/register/page.tsx"), "Auth register route (app/auth/register/page.tsx) intact");
 assert(fileExists(repoRoot + "src/lib/auth.ts"), "Client-side auth store (lib/auth.ts) intact");
 assert(fileExists(repoRoot + "src/app/layout.tsx"), "Root layout (app/layout.tsx) intact");
-assert(fileExists(repoRoot + "src/components/Workspace.tsx"), "Workspace component intact");
+assert(fileExists(repoRoot + "src/components/dashboard/Workspace.tsx"), "Workspace component intact");
 assert(fileExists(repoRoot + "src/app/globals.css"), "globals.css intact");
 assert(fileExists(repoRoot + "src/app/print.css"), "print.css intact");
 assert(fileExists(repoRoot + "src/lib/templates.ts"), "templates.ts intact");
@@ -396,5 +396,6 @@ console.log("Passed: " + pass);
 console.log("Failed: " + fail);
 if (fail > 0) process.exit(1);
 else console.log("ALL PART 5 QA CHECKS PASSED");
+
 
 

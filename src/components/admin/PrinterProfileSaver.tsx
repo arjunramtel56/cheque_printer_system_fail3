@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { savePrinterProfile, loadPrinterProfile } from "@/lib/printerProfile";
 import { PRINTER_OFFSET_MIN_MM, PRINTER_OFFSET_MAX_MM } from "@/lib/printerProfile";
-import { useLanguage } from "@/components/LanguageProvider";
+import { useLanguage } from "@/components/layout/LanguageProvider";
 import type { ProfileKey } from "@/lib/types";
 
 export interface PrinterProfileSaverProps {
@@ -121,3 +121,4 @@ export default function PrinterProfileSaver({ bankKey, printMode }: PrinterProfi
     </div>
   );
 }
+

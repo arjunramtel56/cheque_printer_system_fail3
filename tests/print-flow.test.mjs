@@ -611,7 +611,7 @@ for (const t of getAllTemplates()) {
 // ---------------------------------------------------------------------------
 console.log("\n=== TEST GROUP 13: PRINT CSS HARDENING ===");
 
-const workspaceTsx = readFileSync(repoRoot + "src/components/Workspace.tsx", "utf8");
+const workspaceTsx = readFileSync(repoRoot + "src/components/dashboard/Workspace.tsx", "utf8");
 
 assert(printCss.includes("scale: 1"), "print.css forces scale:1 on print containers");
 assert(printCss.includes("image-rendering"), "print.css includes image-rendering anti-scaling rules");
@@ -639,7 +639,7 @@ assert(geom1.calibratedClamped === geom2.calibratedClamped, "resolveCalibratedGe
 // Preview and print are now the SAME component rendered at two scales. The
 // calibration/geometry resolution lives in one pure module that both paths use.
 const sheetLayoutTs = readFileSync(repoRoot + "src/lib/sheetLayout.ts", "utf8");
-const chequeSheetTsx = readFileSync(repoRoot + "src/components/ChequeSheet.tsx", "utf8");
+const chequeSheetTsx = readFileSync(repoRoot + "src/components/cheque/ChequeSheet.tsx", "utf8");
 
 assert(sheetLayoutTs.includes("resolveCalibratedGeometry"), "sheetLayout resolves calibrated geometry (single source)");
 assert(sheetLayoutTs.includes("computeSheetLayout"), "sheetLayout exposes computeSheetLayout for both paths");
@@ -670,5 +670,6 @@ if (failed > 0) {
 } else {
   console.log("\nAll print-flow tests PASSED.");
 }
+
 
 

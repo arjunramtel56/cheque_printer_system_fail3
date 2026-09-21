@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { LanguageToggle } from "@/components/LanguageToggle";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
 import { useTranslation } from "@/lib/i18n";
-import { VerificationBadge, TemplateMeta } from "@/components/CatalogueBadges";
+import { VerificationBadge, TemplateMeta } from "@/components/dashboard/CatalogueBadges";
 import { getTemplatesForBank, formatBankLabel } from "@/lib/catalogue";
 import type { BankGroup, CatalogueSummary } from "@/lib/catalogue";
 import type { Bank } from "@/lib/types";
@@ -102,3 +102,4 @@ export default function BanksDirectoryClient({
     </div>
   );
 }
+

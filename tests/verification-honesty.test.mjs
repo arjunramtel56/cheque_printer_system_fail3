@@ -53,7 +53,7 @@ console.log("=== VERIFICATION HONESTY TESTS ===\n");
 console.log("--- SECTION 1: Debug guides can never reach paper ---");
 
 {
-  const sheet = read(path.join("components", "ChequeSheet.tsx"));
+  const sheet = read(path.join("src", "components", "cheque", "ChequeSheet.tsx"));
   assert(
     /Screen-only measurement guides \(never printed\)/.test(sheet),
     "ChequeSheet declares the measurement guides as screen-only",
@@ -87,7 +87,7 @@ console.log("--- SECTION 1: Debug guides can never reach paper ---");
   );
 
   // The printed sheet is rendered without debugMode at all.
-  const workspace = read(path.join("components", "Workspace.tsx"));
+  const workspace = read(path.join("src", "components", "dashboard", "Workspace.tsx"));
   const printRender = workspace.match(/variant="print"[^>]*\/>/);
   assert(!!printRender, "the print sheet is rendered with variant=\"print\"");
   assert(
@@ -158,9 +158,9 @@ console.log("\n--- SECTION 2: Physical claims need a record sheet ---");
 console.log("\n--- SECTION 3: Unverified layouts are flagged ---");
 
 {
-  const workspace = read(path.join("components", "Workspace.tsx"));
-  assert(
-    /status === "unverified"/.test(workspace),
+   const workspace = read(path.join("src", "components", "dashboard", "Workspace.tsx"));
+   assert(
+     /status === "unverified"/.test(workspace),
     "the workspace derives a warning from the template's unverified status",
   );
   assert(
@@ -231,7 +231,7 @@ console.log("\n--- SECTION 4: Physical sizes come from the registry ---");
   );
 
   assert(
-    SNIPPET_START.test(read(path.join("components", "ChequeSheet.tsx"))),
+     SNIPPET_START.test(read(path.join("src", "components", "cheque", "ChequeSheet.tsx"))),
     "the shared renderer is still a single component both paths use",
   );
 }
@@ -245,5 +245,6 @@ if (failed > 0) {
 } else {
   console.log("\nAll verification honesty tests PASSED.");
 }
+
 
 

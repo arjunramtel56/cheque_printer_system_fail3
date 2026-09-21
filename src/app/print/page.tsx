@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import Workspace from "@/components/Workspace";
-import MicrSafetyGuide from "@/components/MicrSafetyGuide";
-import { LanguageToggle } from "@/components/LanguageToggle";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import TrustBadge from "@/components/TrustBadge";
+import Workspace from "@/components/dashboard/Workspace";
+import MicrSafetyGuide from "@/components/cheque/MicrSafetyGuide";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import TrustBadge from "@/components/ui/TrustBadge";
 import { useTranslation } from "@/lib/i18n";
 import { getCatalogueSummary, getSelectableBanks } from "@/lib/catalogue";
 import { isAuthenticated } from "@/lib/auth";
@@ -82,3 +82,4 @@ export default function PrintWorkflowPage() {
     </>
   );
 }
+

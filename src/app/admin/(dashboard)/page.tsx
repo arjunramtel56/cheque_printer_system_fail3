@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n";
-import { LanguageToggle } from "@/components/LanguageToggle";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
 import { getBanks, getCatalogueSummary, initBankCatalogue } from "@/lib/catalogue";
 import { loadAdminTemplates, initRuntimeTemplates } from "@/lib/templates";
 import { initChequeSizes } from "@/lib/sizes";
-import { VerificationBadge } from "@/components/CatalogueBadges";
+import { VerificationBadge } from "@/components/dashboard/CatalogueBadges";
 import type { BankTemplate } from "@/lib/types";
 
 export default function AdminDashboard() {
@@ -110,3 +110,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
-import { LanguageToggle } from "@/components/LanguageToggle";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { adminLogin, isAdminAuthenticated } from "@/lib/admin";
 
 // ---------------------------------------------------------------------------
@@ -102,3 +102,4 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+

@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LanguageToggle } from "@/components/LanguageToggle";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { register, isAuthenticated } from "@/lib/auth";
 
 export default function RegisterPage() {
@@ -112,3 +112,4 @@ export default function RegisterPage() {
     </div>
   );
 }
+

@@ -62,14 +62,14 @@ function assert(cond, msg) {
 function assertContains(code, needle, msg) { assert(code.includes(needle), msg); }
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url)) + "/";
-const ws = readFileSync(repoRoot + "src/components/Workspace.tsx", "utf8");
+const ws = readFileSync(repoRoot + "src/components/dashboard/Workspace.tsx", "utf8");
 const printCss = readFileSync(repoRoot + "src/app/print.css", "utf8");
 const globalsCss = readFileSync(repoRoot + "src/app/globals.css", "utf8");
 const layoutTsx = readFileSync(repoRoot + "src/app/layout.tsx", "utf8");
 const pageTsx = readFileSync(repoRoot + "src/app/print/page.tsx", "utf8");
 const workspaceTsx = ws;
 const sheetLayoutTs = readFileSync(repoRoot + "src/lib/sheetLayout.ts", "utf8");
-const chequeSheetSource = readFileSync(repoRoot + "src/components/ChequeSheet.tsx", "utf8");
+const chequeSheetSource = readFileSync(repoRoot + "src/components/cheque/ChequeSheet.tsx", "utf8");
 const textFitTs = readFileSync(repoRoot + "src/lib/textFit.ts", "utf8");
 const calibrationTs = readFileSync(repoRoot + "src/lib/calibration.ts", "utf8");
 
@@ -710,5 +710,6 @@ function fileExists(p) {
 function dirExists(p) {
   try { statSync(p); return true; } catch { return false; }
 }
+
 
 

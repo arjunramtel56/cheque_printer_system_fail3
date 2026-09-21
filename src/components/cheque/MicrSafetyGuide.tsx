@@ -1,6 +1,6 @@
 "use client";
 
-import { useLanguage } from "@/components/LanguageProvider";
+import { useLanguage } from "@/components/layout/LanguageProvider";
 import { getChequeSize } from "@/lib/sizes";
 import { STANDARD_SIZE_ID } from "@/data/templates";
 
@@ -151,3 +151,4 @@ export default function MicrSafetyGuide() {
     </section>
   );
 }
+

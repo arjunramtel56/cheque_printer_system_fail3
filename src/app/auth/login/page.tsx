@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LanguageToggle } from "@/components/LanguageToggle";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { login, isAuthenticated } from "@/lib/auth";
 
 export default function LoginPage() {
@@ -112,3 +112,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

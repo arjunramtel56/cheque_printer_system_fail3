@@ -6,7 +6,7 @@ import { initRuntimeTemplates, loadAdminTemplates, upsertTemplate } from "@/lib/
 import { initChequeSizes } from "@/lib/sizes";
 import { CALIBRATION_MAX_MM, CALIBRATION_MIN_MM, CALIBRATION_STEP_MM, clearCalibrations, loadCalibrations } from "@/lib/calibration";
 import { calibrationLimits, resolvePrintGeometry } from "@/lib/printGeometry";
-import { VerificationBadge } from "@/components/CatalogueBadges";
+import { VerificationBadge } from "@/components/dashboard/CatalogueBadges";
 
 const MODES: ProfileKey[] = ["custom_short", "custom_long", "a4_vertical", "a4_horizontal"];
 
@@ -146,3 +146,4 @@ export default function AdminCalibrationPage() {
     </div>
   );
 }
+

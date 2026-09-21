@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { LanguageToggle } from "@/components/LanguageToggle";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
 import { useTranslation } from "@/lib/i18n";
 import { formatBankLabel } from "@/lib/catalogue";
-import { VerificationBadge, TemplateMeta } from "@/components/CatalogueBadges";
+import { VerificationBadge, TemplateMeta } from "@/components/dashboard/CatalogueBadges";
 import type { Bank, BankTemplate } from "@/lib/types";
 
 const CLASS_LABEL: Record<Bank["nrbClass"], string> = {

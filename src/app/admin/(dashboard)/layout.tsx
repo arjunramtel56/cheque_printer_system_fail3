@@ -18,8 +18,8 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { isAdminAuthenticated, adminLogout } from "@/lib/admin";
-import { LanguageToggle } from "@/components/LanguageToggle";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import Link from "next/link";
 
 const LOGIN_ROUTE = "/admin/login";
@@ -104,3 +104,4 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
     </div>
   );
 }
+

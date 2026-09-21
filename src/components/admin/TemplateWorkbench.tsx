@@ -15,7 +15,7 @@ import {
   upsertTemplate,
 } from "@/lib/templates";
 import { initChequeSizes } from "@/lib/sizes";
-import { VerificationBadge } from "@/components/CatalogueBadges";
+import { VerificationBadge } from "@/components/dashboard/CatalogueBadges";
 
 /**
  * Template workbench.
@@ -248,3 +248,4 @@ export default function TemplateWorkbench() {
     </div>
   );
 }
+

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useLanguage } from "@/components/LanguageProvider";
+import { useLanguage } from "@/components/layout/LanguageProvider";
 import { bankVariants } from "@/lib/nepal/bankVariants";
 import type { BankFieldTolerances } from "@/lib/nepal/bankVariants";
 import type { BankTemplate } from "@/lib/types";
@@ -156,3 +156,4 @@ export default function AdminBankForm({ bankKey: initialBankKey, onSave }: Admin
     </div>
   );
 }
+

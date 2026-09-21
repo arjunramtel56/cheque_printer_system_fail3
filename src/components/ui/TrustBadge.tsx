@@ -1,6 +1,6 @@
 "use client";
 
-import { useLanguage } from "@/components/LanguageProvider";
+import { useLanguage } from "@/components/layout/LanguageProvider";
 
 export default function TrustBadge() {
   const { locale } = useLanguage();
@@ -31,3 +31,4 @@ export default function TrustBadge() {
     </div>
   );
 }
+

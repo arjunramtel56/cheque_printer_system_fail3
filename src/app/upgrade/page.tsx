@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n";
-import { LanguageToggle } from "@/components/LanguageToggle";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export default function UpgradePage() {
   const { t } = useTranslation();
@@ -73,3 +73,4 @@ export default function UpgradePage() {
     </div>
   );
 }
+

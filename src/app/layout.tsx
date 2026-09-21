@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./print.css";
-import { LanguageProvider } from "@/components/LanguageProvider";
-import { ThemeProvider } from "@/components/ThemeProvider";
+import { LanguageProvider } from "@/components/layout/LanguageProvider";
+import { ThemeProvider } from "@/components/layout/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "Reactify Cheque Printer System",
@@ -44,3 +44,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </LanguageProvider>
   );
 }
+
