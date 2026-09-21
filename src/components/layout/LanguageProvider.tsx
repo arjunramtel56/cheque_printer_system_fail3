@@ -17,7 +17,7 @@ async function loadLocale(locale: Locale): Promise<Record<string, string>> {
     return translations;
   } catch {
     if (locale !== "en" && localeCache.en) return localeCache.en;
-    const enModule = await import("@/src/lib/locales/en.json", {
+    const enModule = await import("@/lib/locales/en.json", {
       with: { type: "json" },
     });
     const translations = (enModule.default ?? enModule) as Record<string, unknown> as Record<string, string>;
