@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -15,45 +16,49 @@ import Sidebar from "@/components/dashboard/sidebar";
 import Topbar from "@/components/dashboard/topbar";
 import StatCard from "@/components/dashboard/stat-card";
 import { useUserRole } from "@/hooks/useUserRole";
-
-const recentCheques = [
-  {
-    id: "CHQ-1001",
-    payee: "ABC Suppliers Pvt. Ltd.",
-    amount: "NPR 125,000",
-    date: "2026-09-21",
-    status: "Printed",
-  },
-  {
-    id: "CHQ-1002",
-    payee: "Ram Bahadur",
-    amount: "NPR 45,500",
-    date: "2026-09-20",
-    status: "Draft",
-  },
-  {
-    id: "CHQ-1003",
-    payee: "Modern Traders",
-    amount: "NPR 82,000",
-    date: "2026-09-19",
-    status: "Printed",
-  },
-];
+import { supabase } from "@/lib/supabase";
+import type { ChequeRecord } from "@/lib/types";
 
 function statusStyle(status: string) {
-  if (status === "Printed") {
+  if (status === "printed") {
     return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
   }
 
-  if (status === "Draft") {
+  if (status === "draft") {
     return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
   }
 
   return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
 }
 
+function formatAmount(amount: number) {
+  return `NPR ${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export default function DashboardPage() {
   const { role } = useUserRole();
+  const [stats, setStats] = useState({ total: 0, printed: 0, draft: 0, cancelled: 0 });
+  const [recentCheques, setRecentCheques] = useState<ChequeRecord[]>([]);
+
+  useEffect(() => {
+    async function fetchData() {
+      const { data: cheques } = await supabase
+        .from("cheques")
+        .select("*")
+        .order("created_at", { ascending: false }) as { data: ChequeRecord[] | null };
+
+      if (cheques) {
+        setRecentCheques(cheques.slice(0, 5));
+        setStats({
+          total: cheques.length,
+          printed: cheques.filter((c) => c.status === "printed").length,
+          draft: cheques.filter((c) => c.status === "draft").length,
+          cancelled: cheques.filter((c) => c.status === "cancelled").length,
+        });
+      }
+    }
+    fetchData();
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -88,15 +93,15 @@ export default function DashboardPage() {
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               title="Total Cheques"
-              value="248"
-              description="+12% from last month"
+              value={String(stats.total)}
+              description="All cheque records"
               icon={FileText}
               color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300"
             />
 
             <StatCard
               title="Printed Cheques"
-              value="186"
+              value={String(stats.printed)}
               description="Successfully printed"
               icon={Printer}
               color="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-300"
@@ -104,7 +109,7 @@ export default function DashboardPage() {
 
             <StatCard
               title="Draft Cheques"
-              value="62"
+              value={String(stats.draft)}
               description="Waiting for printing"
               icon={Clock3}
               color="bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-300"
@@ -112,7 +117,7 @@ export default function DashboardPage() {
 
             <StatCard
               title="Cancelled"
-              value="8"
+              value={String(stats.cancelled)}
               description="Cancelled cheque records"
               icon={XCircle}
               color="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300"
@@ -144,7 +149,7 @@ export default function DashboardPage() {
                 <table className="w-full min-w-[650px] text-left">
                   <thead>
                     <tr className="border-b border-slate-200 text-xs uppercase text-slate-400 dark:border-slate-700">
-                      <th className="pb-3 font-semibold">Cheque ID</th>
+                      <th className="pb-3 font-semibold">Cheque No.</th>
                       <th className="pb-3 font-semibold">Payee</th>
                       <th className="pb-3 font-semibold">Amount</th>
                       <th className="pb-3 font-semibold">Date</th>
@@ -153,38 +158,46 @@ export default function DashboardPage() {
                   </thead>
 
                   <tbody>
-                    {recentCheques.map((cheque) => (
-                      <tr
-                        key={cheque.id}
-                        className="border-b border-slate-100 last:border-0 dark:border-slate-800"
-                      >
-                        <td className="py-4 text-sm font-semibold text-blue-600 dark:text-blue-400">
-                          {cheque.id}
-                        </td>
-
-                        <td className="py-4 text-sm text-slate-700 dark:text-slate-300">
-                          {cheque.payee}
-                        </td>
-
-                        <td className="py-4 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                          {cheque.amount}
-                        </td>
-
-                        <td className="py-4 text-sm text-slate-500 dark:text-slate-400">
-                          {cheque.date}
-                        </td>
-
-                        <td className="py-4">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle(
-                              cheque.status,
-                            )}`}
-                          >
-                            {cheque.status}
-                          </span>
+                    {recentCheques.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                          No cheques yet. Create your first cheque.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      recentCheques.map((cheque) => (
+                        <tr
+                          key={cheque.id}
+                          className="border-b border-slate-100 last:border-0 dark:border-slate-800"
+                        >
+                          <td className="py-4 text-sm font-mono text-blue-600 dark:text-blue-400">
+                            {cheque.cheque_number}
+                          </td>
+
+                          <td className="py-4 text-sm text-slate-700 dark:text-slate-300">
+                            {cheque.payee_name}
+                          </td>
+
+                          <td className="py-4 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {formatAmount(cheque.amount)}
+                          </td>
+
+                          <td className="py-4 text-sm text-slate-500 dark:text-slate-400">
+                            {cheque.cheque_date}
+                          </td>
+
+                          <td className="py-4">
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle(
+                                cheque.status,
+                              )}`}
+                            >
+                              {cheque.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

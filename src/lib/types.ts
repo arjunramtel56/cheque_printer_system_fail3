@@ -23,6 +23,28 @@ export type NrbClass = "A" | "B" | "C" | "D";
 
 export type BankStatus = "active" | "merged" | "defunct" | "inactive";
 
+/** Lifecycle status of a cheque record. */
+export type ChequeStatus = "draft" | "printed" | "cancelled";
+
+/** A persisted cheque record stored in Supabase. */
+export interface ChequeRecord {
+  id: string;
+  user_id: string;
+  cheque_number: string;
+  bank_name: string;
+  branch_name: string;
+  account_name: string;
+  account_number: string | null;
+  payee_name: string;
+  amount: number;
+  amount_words: string;
+  cheque_date: string;
+  remarks: string | null;
+  status: ChequeStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 /** How far a template has been validated. Only physically-calibrated implies
  *  a real sheet of cheque stock has been measured. */
 export type VerificationStatus = "unverified" | "browser-verified" | "physically-calibrated";
