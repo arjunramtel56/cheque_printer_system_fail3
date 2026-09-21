@@ -14,6 +14,7 @@ import {
 import Sidebar from "@/components/dashboard/sidebar";
 import Topbar from "@/components/dashboard/topbar";
 import StatCard from "@/components/dashboard/stat-card";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const recentCheques = [
   {
@@ -52,6 +53,8 @@ function statusStyle(status: string) {
 }
 
 export default function DashboardPage() {
+  const { role } = useUserRole();
+
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
       <Sidebar />

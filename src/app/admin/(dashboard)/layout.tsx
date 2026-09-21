@@ -98,6 +98,8 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         <Link href="/admin/banks" className="text-button">Banks</Link>
         <Link href="/admin/templates" className="text-button">Cheque Templates</Link>
         <Link href="/admin/calibration" className="text-button">Calibration</Link>
+        <Link href="/admin/users" className="text-button">Users</Link>
+        <Link href="/admin/settings" className="text-button">Settings</Link>
         <Link href="/banks" className="text-button">Public catalogue</Link>
       </nav>
       {children}
