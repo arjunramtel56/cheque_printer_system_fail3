@@ -1,8 +1,9 @@
-import type { Metadata } from 'next';
+import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'Reactify Cheque Printer System',
-  description: 'Prepare and print Nepalese bank cheques with calibrated templates and precise alignment.',
+  title: "Reactify Cheque Printer System",
+  description: "Prepare and print Nepalese bank cheques with calibrated templates and precise alignment.",
 };
 
 export default function RootLayout({
@@ -11,8 +12,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html>
-      <body>{children}</body>
+    <html lang="en">
+      <body className="min-h-screen bg-background font-sans antialiased">
+        {children}
+      </body>
     </html>
   );
 }

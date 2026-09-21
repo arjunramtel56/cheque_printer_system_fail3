@@ -1,0 +1,32 @@
+export const siteConfig = {
+  name: "Reactify Cheque Printer System",
+  description: "Prepare and print Nepalese bank cheques with calibrated templates and precise alignment.",
+  url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  company: "Reactify Software Technologies Pvt. Ltd.",
+  navItems: [
+    { label: "Home", href: "/" },
+    { label: "Features", href: "/features" },
+    { label: "Pricing", href: "/pricing" },
+    { label: "About", href: "/about" },
+    { label: "Contact", href: "/contact" },
+  ],
+  dashboardNavItems: [
+    { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
+    { label: "Print Cheque", href: "/dashboard/print", icon: "Printer" },
+    { label: "My Cheques", href: "/dashboard/cheques", icon: "FileText" },
+    { label: "Templates", href: "/dashboard/templates", icon: "LayoutTemplate" },
+    { label: "History", href: "/dashboard/history", icon: "Clock" },
+    { label: "Payees", href: "/dashboard/payees", icon: "Users" },
+    { label: "Settings", href: "/dashboard/settings", icon: "Settings" },
+    { label: "Subscription", href: "/dashboard/subscription", icon: "CreditCard" },
+  ],
+  adminNavItems: [
+    { label: "Dashboard", href: "/admin", icon: "LayoutDashboard" },
+    { label: "Users", href: "/admin/users", icon: "Users" },
+    { label: "Banks", href: "/admin/banks", icon: "Building2" },
+    { label: "Templates", href: "/admin/templates", icon: "LayoutTemplate" },
+    { label: "Plans", href: "/admin/plans", icon: "CreditCard" },
+    { label: "Reports", href: "/admin/reports", icon: "BarChart3" },
+    { label: "Settings", href: "/admin/settings", icon: "Settings" },
+  ],
+};
