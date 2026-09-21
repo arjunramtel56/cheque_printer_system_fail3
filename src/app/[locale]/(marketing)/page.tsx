@@ -7,14 +7,13 @@ import {
   Shield,
   Clock,
   CreditCard,
-  Settings,
 } from "lucide-react";
 
 const features = [
   {
     icon: Printer,
     title: "Precise Print Alignment",
-    description: "Calibrated templates ensure your cheque details print exactly where they should.",
+    description: "Templates ensure your cheque details print exactly where they should.",
   },
   {
     icon: FileText,
@@ -35,11 +34,6 @@ const features = [
     icon: CreditCard,
     title: "Amount in Words",
     description: "Automatic Nepali/English amount-in-words conversion for Nepalese Rupees.",
-  },
-  {
-    icon: Settings,
-    title: "Printer Calibration",
-    description: "Fine-tune print position with X/Y offset and scale adjustments per printer.",
   },
 ];
 
@@ -62,7 +56,7 @@ const steps = [
   {
     step: "4",
     title: "Print",
-    description: "Preview your cheque and print with calibrated alignment.",
+    description: "Preview your cheque and print with precise alignment.",
   },
 ];
 
@@ -99,7 +93,7 @@ export default function HomePage() {
             <span className="text-primary"> Made Simple</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-            Prepare and print Nepalese bank cheques with calibrated templates and precise alignment.
+            Prepare and print Nepalese bank cheques with precise alignment.
             Perfect for businesses of all sizes.
           </p>
           <div className="mt-8 flex items-center justify-center gap-4">

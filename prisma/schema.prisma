@@ -48,7 +48,6 @@ model User {
   chequeEntries  ChequeEntry[]
   printHistories PrintHistory[]
   settings       UserSettings?
-  calibrations   PrinterCalibration[]
   sessions       Session[]
   auditLogs      AuditLog[]
 
@@ -131,7 +130,6 @@ model BankTemplate {
   bank             Bank              @relation(fields: [bankId], references: [id], onDelete: Cascade)
   fields           TemplateField[]
   chequeEntries    ChequeEntry[]
-  printerCalibrations PrinterCalibration[]
 
   @@index([bankId])
   @@unique([bankId, name])
@@ -171,9 +169,6 @@ model ChequeEntry {
   chequeDate      DateTime
   amountNumber    Decimal     @db.Decimal(12, 2)
   amountWords     String
-  chequeNumber    String?
-  memo            String?
-  isCrossed       Boolean     @default(false)
   status          ChequeStatus @default(DRAFT)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -197,7 +192,6 @@ model PrintHistory {
   printedAt    DateTime @default(now())
   printerName  String?
   copies       Int      @default(1)
-  calibrationId String?
   notes        String?
 
   user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -220,35 +214,10 @@ model UserSettings {
   dateFormat         String  @default("YYYY-MM-DD")
   currency           String  @default("NPR")
   printerName        String?
-  topOffset          Float   @default(0)
-  leftOffset         Float   @default(0)
-  printScale         Float   @default(100)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-}
-
-// ─── Printer Calibration ──────────────────────────────────────────────
-
-model PrinterCalibration {
-  id           String   @id @default(cuid())
-  userId       String
-  templateId   String
-  printerName  String
-  topOffset    Float    @default(0)
-  leftOffset   Float    @default(0)
-  printScale   Float    @default(100)
-  isDefault    Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  template BankTemplate @relation(fields: [templateId], references: [id])
-
-  @@index([userId])
-  @@index([templateId])
-  @@unique([userId, templateId, printerName])
 }
 
 // ─── System Settings ──────────────────────────────────────────────────

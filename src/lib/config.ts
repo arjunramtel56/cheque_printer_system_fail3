@@ -1,6 +1,6 @@
 export const siteConfig = {
   name: "Reactify Cheque Printer System",
-  description: "Prepare and print Nepalese bank cheques with calibrated templates and precise alignment.",
+  description: "Prepare and print Nepalese bank cheques with precise alignment.",
   url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   company: "Reactify Software Technologies Pvt. Ltd.",
   navItems: [
