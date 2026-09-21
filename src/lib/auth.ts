@@ -73,12 +73,12 @@ function writeLockout(state: LockoutState): void {
   window.localStorage.setItem(AUTH_LOCK_KEY, JSON.stringify(state));
 }
 
-export function readUser(): { email: string; passwordHash: string; salt: string } | null {
+export function readUser(): { email: string; passwordHash: string; salt: string; fullName?: string } | null {
   if (typeof window === "undefined" || !window.localStorage) return null;
   try {
     const raw = window.localStorage.getItem(AUTH_USER_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as { email: string; passwordHash: string; salt: string };
+    return JSON.parse(raw) as { email: string; passwordHash: string; salt: string; fullName?: string };
   } catch {
     return null;
   }
@@ -119,7 +119,7 @@ export function logout(): void {
   window.localStorage.removeItem(AUTH_LOCK_KEY);
 }
 
-export async function register(email: string, password: string): Promise<AuthResult> {
+export async function register(email: string, password: string, fullName?: string): Promise<AuthResult> {
   if (typeof window === "undefined" || !window.localStorage) {
     return { ok: false, retryAfterSeconds: 0, error: "Sign-up is unavailable." };
   }
@@ -128,14 +128,18 @@ export async function register(email: string, password: string): Promise<AuthRes
     return { ok: false, retryAfterSeconds: 0, error: "Please enter a valid email and a password of at least 8 characters." };
   }
 
-  if (readUser()) {
+  const existing = readUser();
+  if (existing) {
     return { ok: false, retryAfterSeconds: 0, error: "An account for this email already exists." };
   }
 
   const salt = Array.from({ length: 16 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, "0")).join("");
   const passwordHash = await sha256Hex(password + salt);
 
-  window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify({ email, passwordHash, salt }));
+  window.localStorage.setItem(
+    AUTH_USER_KEY,
+    JSON.stringify({ email, passwordHash, salt, fullName: fullName || undefined }),
+  );
   return { ok: true, retryAfterSeconds: 0 };
 }
 
