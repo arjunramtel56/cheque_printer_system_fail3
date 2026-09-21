@@ -629,7 +629,7 @@ assertContains(ws, 'import type { BankTemplate, ProfileKey, Calibration } from "
 assertContains(ws, 'from "@/lib/calibration"', "Workspace imports calibration");
 assertContains(ws, 'from "@/lib/printGeometry"', "Workspace imports printGeometry");
 assertContains(ws, 'from "@/lib/validation"', "Workspace imports validation");
-assertContains(ws, 'from "@/components/ChequeSheet"', "Workspace imports the shared renderer");
+assertContains(ws, 'from "@/components/cheque/ChequeSheet"', "Workspace imports the shared renderer");
 assert(!ws.includes("@/lib/undefined"), "No broken '@/lib/' import path that doesn't resolve");
 
 // Production build artifacts present (built earlier)
