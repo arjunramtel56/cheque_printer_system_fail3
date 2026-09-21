@@ -38,7 +38,10 @@ export default function BanksDirectoryClient({
         <Link href="/banks" className="text-button">
           {t("navBanks")}
         </Link>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
+          <Link href="/overlay" className="text-button" style={{ fontSize: "0.78rem" }}>
+            Overlay Tool
+          </Link>
           <ThemeToggle />
           <LanguageToggle />
         </div>

@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, FileText, Search, Trash2, Printer } from "lucide-react";
 import Sidebar from "@/components/dashboard/sidebar";
-import Topbar from "@/components/dashboard/topbar";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
 import { supabase } from "@/lib/supabase";
 import type { ChequeRecord, ChequeStatus } from "@/lib/types";
 
@@ -48,7 +49,7 @@ export default function ChequesPage() {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      setError("कृपया login गर्नुहोस्।");
+      setError("Please login first.");
       setLoading(false);
       return;
     }
@@ -72,7 +73,7 @@ export default function ChequesPage() {
   }, []);
 
   async function handleDelete(id: string) {
-    if (!confirm("यो cheque record delete गर्न चाहनुहुन्छ?")) return;
+    if (!confirm("Are you sure you want to delete this cheque record?")) return;
 
     const { error: deleteError } = await supabase
       .from("cheques")
@@ -108,181 +109,196 @@ export default function ChequesPage() {
   const tabs: FilterTab[] = ["all", "draft", "printed", "cancelled"];
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="flex min-h-screen" style={{ background: "var(--background)" }}>
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar />
-        <main className="flex-1 p-5 md:p-8">
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <Link
-                href="/dashboard"
-                className="mb-2 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
-              >
-                <ChevronLeft size={16} />
-                Back to Dashboard
-              </Link>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                Cheque History
-              </h1>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                तपाईंले save गरेका सबै cheque records यहाँ देखिन्छन्।
-              </p>
-            </div>
+        {/* Topbar */}
+        <header
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "16px 30px",
+            borderBottom: "1px solid var(--border)",
+            background: "var(--surface)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Link
+              href="/dashboard"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                color: "var(--text-muted)",
+                textDecoration: "none",
+                fontSize: "0.88rem",
+              }}
+            >
+              <ChevronLeft size={16} />
+              Back
+            </Link>
+            <h1 style={{ fontSize: "22px", fontWeight: 700, color: "var(--text-primary)" }}>
+              Cheque History
+            </h1>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <ThemeToggle />
+            <LanguageToggle />
             <Link
               href="/dashboard/cheques/new"
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+              className="button"
+              style={{ textDecoration: "none" }}
             >
               <FileText size={16} />
               New Cheque
             </Link>
           </div>
+        </header>
 
-          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
-              />
-              <input
-                type="search"
-                placeholder="Cheque number, payee वा bank खोज्नुहोस्..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder-slate-500 dark:focus:border-blue-400 dark:focus:ring-blue-900/40"
-              />
-            </div>
+        <main style={{ flex: 1, padding: "30px" }}>
+          {/* Search */}
+          <div style={{ marginBottom: 20, position: "relative", maxWidth: 400 }}>
+            <Search
+              size={16}
+              style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}
+            />
+            <input
+              type="search"
+              placeholder="Search cheque number, payee or bank..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "10px 12px 10px 38px",
+                borderRadius: "var(--radius-control)",
+                border: "1px solid var(--border-strong)",
+                background: "var(--surface)",
+                color: "var(--text-primary)",
+                fontSize: "0.88rem",
+              }}
+            />
           </div>
 
-          <div className="mb-4 flex gap-2 overflow-x-auto">
+          {/* Filter tabs */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
             {tabs.map((tab) => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setFilter(tab)}
-                className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition ${
-                  filter === tab
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800"
-                }`}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  border: filter === tab ? "1px solid var(--brand-blue)" : "1px solid var(--border)",
+                  cursor: "pointer",
+                  fontSize: "0.85rem",
+                  fontWeight: 500,
+                  background: filter === tab ? "var(--brand-blue)" : "var(--surface)",
+                  color: filter === tab ? "#fff" : "var(--text-secondary)",
+                }}
               >
                 {tab === "all" ? "All" : statusLabel(tab)}
-                <span className="ml-1.5 text-xs opacity-70">({counts[tab]})</span>
+                <span style={{ marginLeft: 6, opacity: 0.7 }}>({counts[tab]})</span>
               </button>
             ))}
           </div>
 
           {error && (
-            <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-400">
+            <div style={{ padding: "12px 16px", borderRadius: 10, background: "color-mix(in srgb, var(--danger) 8%, transparent)", color: "var(--danger)", fontSize: "0.88rem", marginBottom: 20 }}>
               {error}
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
             {loading ? (
-              <div className="flex items-center justify-center p-8 text-sm text-slate-500 dark:text-slate-400">
+              <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)", fontSize: "0.88rem" }}>
                 Loading cheques...
               </div>
             ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 p-12 text-slate-500 dark:text-slate-400">
-                <FileText size={36} className="opacity-40" />
-                <p className="font-semibold text-slate-700 dark:text-slate-300">
-                  कुनै cheque भेटिएन।
+              <div style={{ padding: 60, textAlign: "center", color: "var(--text-muted)" }}>
+                <FileText size={36} style={{ opacity: 0.3, marginBottom: 12 }} />
+                <p style={{ fontWeight: 600, color: "var(--text-secondary)", marginBottom: 4 }}>
+                  No cheques found.
                 </p>
-                <p className="text-sm">
+                <p style={{ fontSize: "0.85rem" }}>
                   {search || filter !== "all"
-                    ? "Search वा filter change गरेर प्रयास गर्नुहोस्।"
-                    : "पहिले नयाँ cheque create गर्नुहोस्।"}
+                    ? "Try changing your search or filter."
+                    : "Create your first cheque."}
                 </p>
                 {!search && filter === "all" && (
-                  <Link
-                    href="/dashboard/cheques/new"
-                    className="mt-2 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                  >
+                  <Link href="/dashboard/cheques/new" className="text-button" style={{ marginTop: 12, display: "inline-block" }}>
                     Create your first cheque
                   </Link>
                 )}
               </div>
             ) : (
-              <table className="w-full min-w-[900px] border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                      Cheque No.
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                      Payee
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                      Bank
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                      Amount
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                      Date
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((cheque) => (
-                    <tr
-                      key={cheque.id}
-                      className="border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
-                    >
-                      <td className="px-4 py-3 font-mono text-xs text-blue-600 dark:text-blue-400">
-                        {cheque.cheque_number}
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">
-                        {cheque.payee_name}
-                      </td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                        {cheque.bank_name}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-900 dark:text-white">
-                        {formatAmount(cheque.amount)}
-                      </td>
-                      <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
-                        {cheque.cheque_date}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusStyle(cheque.status)}`}
-                        >
-                          {statusLabel(cheque.status)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center gap-1.5">
-                          <button
-                            type="button"
-                            className="rounded-lg border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-800"
-                            aria-label="Print"
-                            title="Print"
-                          >
-                            <Printer size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded-lg border border-red-300 p-1.5 text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-900/20"
-                            aria-label="Delete"
-                            title="Delete"
-                            onClick={() => handleDelete(cheque.id)}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--surface-secondary)" }}>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Cheque No.</th>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Payee</th>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Bank</th>
+                      <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Amount</th>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Date</th>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                      <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filtered.map((cheque) => (
+                      <tr key={cheque.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                        <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono)", color: "var(--brand-blue)", fontWeight: 600 }}>{cheque.cheque_number}</td>
+                        <td style={{ padding: "12px 16px", fontWeight: 600 }}>{cheque.payee_name}</td>
+                        <td style={{ padding: "12px 16px", color: "var(--text-secondary)" }}>{cheque.bank_name}</td>
+                        <td style={{ padding: "12px 16px", textAlign: "right", fontWeight: 600 }}>{formatAmount(cheque.amount)}</td>
+                        <td style={{ padding: "12px 16px", color: "var(--text-muted)" }}>{cheque.cheque_date}</td>
+                        <td style={{ padding: "12px 16px" }}>
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusStyle(cheque.status)}`}>
+                            {statusLabel(cheque.status)}
+                          </span>
+                        </td>
+                        <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                          <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
+                            <button
+                              type="button"
+                              style={{
+                                padding: "6px 8px",
+                                borderRadius: 6,
+                                border: "1px solid var(--border)",
+                                background: "var(--surface)",
+                                color: "var(--text-secondary)",
+                                cursor: "pointer",
+                              }}
+                              aria-label="Print"
+                              title="Print"
+                            >
+                              <Printer size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              style={{
+                                padding: "6px 8px",
+                                borderRadius: 6,
+                                border: "1px solid color-mix(in srgb, var(--danger) 30%, transparent)",
+                                background: "var(--surface)",
+                                color: "var(--danger)",
+                                cursor: "pointer",
+                              }}
+                              aria-label="Delete"
+                              title="Delete"
+                              onClick={() => handleDelete(cheque.id)}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </main>

@@ -33,7 +33,10 @@ export default function ChequeWorkspaceClient({
           <Link href={`/banks/${bank.id}`} className="text-button">
             {bank.name}
           </Link>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
+            <Link href="/overlay" className="text-button" style={{ fontSize: "0.78rem" }}>
+              Overlay Tool
+            </Link>
             <ThemeToggle />
             <LanguageToggle />
           </div>

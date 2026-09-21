@@ -49,6 +49,9 @@ export default function PrintWorkflowPage() {
       <div className="no-print" style={{ position: "fixed", top: 12, right: 12, zIndex: 100, display: "flex", gap: 10 }}>
         <ThemeToggle />
         <LanguageToggle />
+        <Link href="/overlay" className="text-button" style={{ fontSize: "0.78rem", opacity: 0.6 }}>
+          Overlay Tool
+        </Link>
         <Link href="/banks" className="text-button" style={{ fontSize: "0.78rem", opacity: 0.6 }} aria-label={t("navBanks")}>
           {t("navBanks")}
         </Link>

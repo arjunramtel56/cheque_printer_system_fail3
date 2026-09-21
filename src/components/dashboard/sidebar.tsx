@@ -8,6 +8,9 @@ import {
   FileText,
   Settings,
   LogOut,
+  WalletCards,
+  Printer,
+  UserCircle,
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 
@@ -28,17 +31,29 @@ const menuItems = [
     icon: FileText,
   },
   {
-    key: "settings",
+    key: "bankTemplates",
+    href: "/dashboard/banks",
+    icon: WalletCards,
+  },
+  {
+    key: "printSettings",
     href: "/dashboard/settings",
-    icon: Settings,
+    icon: Printer,
+  },
+  {
+    key: "userSettings",
+    href: "/dashboard/profile",
+    icon: UserCircle,
   },
 ];
 
 const menuLabels: Record<string, { en: string; ne: string }> = {
-  dashboard: { en: "Dashboard", ne: "ड्यासबोर्ड" },
-  createCheque: { en: "New Cheque", ne: "नयाँ चेक" },
-  chequeHistory: { en: "History", ne: "इतिहास" },
-  settings: { en: "Settings", ne: "सेटिङ" },
+  dashboard: { en: "1. Dashboard", ne: "ड्यासबोर्ड" },
+  createCheque: { en: "2. Create Cheque", ne: "चेक बनाउनुहोस्" },
+  chequeHistory: { en: "3. Cheque History", ne: "चेक इतिहास" },
+  bankTemplates: { en: "4. Bank Templates", ne: "बैंक टेम्प्लेट" },
+  printSettings: { en: "5. Print Settings", ne: "प्रिन्ट सेटिङ" },
+  userSettings: { en: "6. User Settings", ne: "प्रयोगकर्ता सेटिङ" },
 };
 
 export default function Sidebar() {

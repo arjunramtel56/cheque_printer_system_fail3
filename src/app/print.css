@@ -187,4 +187,53 @@
      display: none !important;
    }
 
+  /* -------------------------------------------------------
+     Overlay Print Tool — print output
+     The overlay tool uses a separate print output container
+     that is hidden on screen and shown only during print.
+     A4 landscape layout with the cheque preview filling the page.
+     ------------------------------------------------------- */
+  .overlay-no-print {
+    display: none !important;
+  }
+
+  .overlay-print-output {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .overlay-print-output .overlay-cheque-preview {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 210mm !important;
+    height: 99mm !important;
+    border: none !important;
+    transform: none !important;
+    background-size: contain !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .overlay-print-output .overlay-watermark {
+    display: block !important;
+  }
+
+  .overlay-print-output .text-field {
+    font-family: "Courier New", ui-monospace, SFMono-Regular, monospace !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    line-height: 1.1 !important;
+    margin: 0 !important;
+    padding: 3px 5px !important;
+    color: #111 !important;
+    background: transparent !important;
+    z-index: 5 !important;
+  }
+
 }

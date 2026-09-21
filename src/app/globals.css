@@ -381,4 +381,231 @@ button, input, select, textarea { font-family: inherit; font-size: 1rem; }
   font-weight: 600;
 }
 
+/* ============================================================
+   Overlay Print Tool — standalone cheque overlay workspace
+   ============================================================ */
+
+.overlay-no-print { padding: 20px; }
+
+.overlay-layout {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 20px;
+  align-items: start;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.overlay-panel,
+.overlay-preview-panel {
+  background: var(--surface);
+  padding: 18px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+
+.overlay-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.overlay-panel-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.overlay-panel label {
+  display: block;
+  margin: 12px 0 5px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.overlay-panel input,
+.overlay-panel select,
+.overlay-panel textarea,
+.overlay-panel button {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  font-size: 0.9rem;
+  background: var(--surface);
+  color: var(--text-primary);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.overlay-panel input:focus,
+.overlay-panel select:focus,
+.overlay-panel textarea:focus {
+  outline: none;
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-blue) 28%, transparent);
+}
+
+.overlay-panel textarea {
+  min-height: 65px;
+  resize: vertical;
+}
+
+.overlay-panel button {
+  margin-top: 10px;
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+
+.overlay-panel button:hover { transform: scale(0.985); }
+.overlay-panel button:active { transform: scale(0.97); }
+
+.overlay-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: var(--radius-control);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: var(--brand-blue);
+  color: #fff;
+  border: none;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+.overlay-btn:hover { background: var(--brand-blue-hover); }
+.overlay-btn:active { transform: scale(0.985); }
+
+.overlay-btn-gray { background: #666; }
+.overlay-btn-gray:hover { background: #555; }
+.overlay-btn-red { background: var(--danger); }
+.overlay-btn-red:hover { filter: brightness(1.1); }
+.overlay-btn-green { background: var(--success); }
+.overlay-btn-green:hover { filter: brightness(1.1); }
+
+.overlay-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.overlay-check-label {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500 !important;
+  font-size: 0.85rem !important;
+  color: var(--text-secondary) !important;
+  cursor: pointer;
+}
+
+.overlay-check-label input[type="checkbox"] {
+  width: auto;
+}
+
+.overlay-error {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: #ffe0e0;
+  color: #9b1c1c;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.overlay-success {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: #dcfce7;
+  color: #166534;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.overlay-help {
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+/* Preview area */
+.overlay-preview-scroll {
+  width: 100%;
+  overflow: auto;
+  padding: 15px;
+  background: #ddd;
+  border-radius: 6px;
+}
+
+.overlay-cheque-preview {
+  position: relative;
+  width: 1000px;
+  height: 470px;
+  margin: auto;
+  overflow: hidden;
+  background-color: #fff;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  border: 1px solid #777;
+  transform-origin: top left;
+}
+
+.overlay-empty-message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #777;
+  font-size: 20px;
+  pointer-events: none;
+}
+
+.overlay-watermark {
+  position: absolute;
+  z-index: 10;
+  top: 42%;
+  left: 29%;
+  color: rgba(200, 0, 0, 0.22);
+  font-size: 42px;
+  font-weight: bold;
+  transform: rotate(-20deg);
+  pointer-events: none;
+}
+
+.overlay-zoom-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Print-only output (hidden on screen) */
+.overlay-print-output {
+  display: none;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .overlay-layout {
+    grid-template-columns: 1fr;
+  }
+  .overlay-cheque-preview {
+    transform: scale(0.75);
+    transform-origin: top left;
+    margin-bottom: -115px;
+  }
+}
+
 /* ---------- Print rules live in ./print.css (imported in layout.tsx). ---------- */

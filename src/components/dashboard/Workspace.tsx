@@ -664,6 +664,9 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                 </span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Link href="/overlay" className="text-button" style={{ fontSize: "0.78rem" }}>
+                  Overlay Tool
+                </Link>
                 <ThemeToggle />
                 <LanguageToggle />
                 <button type="button" className="text-button" onClick={handleClear} aria-label={t("clearAllAria")}>
