@@ -120,7 +120,7 @@ console.log("\n--- SECTION 2: Physical claims need a record sheet ---");
     "verification counters cannot exceed the template count",
   );
 
-  const doc = read(path.join("lib", "physical-test-matrix.md"));
+  const doc = read(path.join("src", "lib", "physical-test-matrix.md"));
 
   assert(
     calibrated.every((t) => t.verification?.verifiedAt && /^\d{4}-\d{2}-\d{2}$/.test(t.verification.verifiedAt)),
@@ -199,7 +199,7 @@ console.log("\n--- SECTION 4: Physical sizes come from the registry ---");
   const literals = [...new Set(registryValues.flat().map(String))];
   assert(literals.includes("190.5") && literals.includes("297"), "the registry declares the built-in sizes");
 
-  const geometry = codeOnly(read(path.join("lib", "printGeometry.ts")));
+  const geometry = codeOnly(read(path.join("src", "lib", "printGeometry.ts")));
   const offenders = literals.filter((v) => new RegExp(`(^|[^\\d.])${v.replace(".", "\\.")}([^\\d]|$)`).test(geometry));
   assert(
     offenders.length === 0,
@@ -223,7 +223,7 @@ console.log("\n--- SECTION 4: Physical sizes come from the registry ---");
       }
     }
   };
-  walk(path.join("components"));
+  walk(path.join("src", "components"));
   assert(
     componentOffenders.length === 0,
     "no component hardcodes a registered cheque or paper size" +

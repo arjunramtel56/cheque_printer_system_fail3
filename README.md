@@ -46,9 +46,9 @@ being genuinely reachable.
 | Version | Focus | Status | Evidence / gap |
 |---------|-------|--------|----------------|
 | **V0.1** | Audit the existing codebase | ✅ Done | Findings recorded above; the aspirational legacy README was moved aside rather than left to mislead |
-| **V0.2** | Core print engine | ✅ Done | `lib/printGeometry.ts`, `lib/sheetLayout.ts`, one renderer `components/ChequeSheet.tsx` |
+| **V0.2** | Core print engine | ✅ Done | `src/lib/printGeometry.ts`, `src/lib/sheetLayout.ts`, one renderer `src/components/cheque/ChequeSheet.tsx` |
 | **V0.3** | Portrait + landscape | ✅ Done (model) | `orientation` is a template property; the model is deliberately rotation-free — feed direction is a printer setting, never a CSS transform |
-| **V0.4** | Dynamic cheque size | ✅ Done | `lib/sizes.ts` registry is the only place physical mm values are declared; `lib/printGeometry.ts` derives from it |
+| **V0.4** | Dynamic cheque size | ✅ Done | `src/lib/sizes.ts` registry is the only place physical mm values are declared; `src/lib/printGeometry.ts` derives from it |
 | **V0.5** | Nepal bank + template system | ✅ Done (partial data) | 76 banks, bank ≠ one template; 5 templates, of which 1 has real geometry |
 | **V0.6** | Admin template management | ✅ Done | Bank CRUD, template workbench (size, orientation, fields, safe zones, print modes), export/import, calibration records |
 | **V0.7** | A4 carrier printing | ✅ Done | `a4_vertical` / `a4_horizontal`: cheque keeps its own size inside the carrier |
@@ -143,7 +143,7 @@ rectangles -> orientation -> calibration -> computeSheetLayout()
    +--> ChequeSheet (screen preview)  <-- same component --> ChequeSheet (print)
 ```
 
-`lib/sheetLayout.ts` produces the single set of millimetre rectangles that both
+`src/lib/sheetLayout.ts` produces the single set of millimetre rectangles that both
 the preview and the printed page render; the only difference between the two is
 a constant scale factor. Preview/print parity is therefore **structural**, not a
 promise, and it is asserted by `tests/preview-print-parity.test.mjs`.
@@ -152,21 +152,21 @@ promise, and it is asserted by `tests/preview-print-parity.test.mjs`.
 
 | Path | Role |
 |------|------|
-| `lib/types.ts` | Domain types: `Bank`, `BankTemplate`, `ChequeSize`, `PaperSize`, `SafeZone`, `ProfileKey`, `Orientation`, `Calibration` |
-| `lib/sizes.ts` | The **only** place physical millimetre constants are declared; includes the runtime size registry |
+| `src/lib/types.ts` | Domain types: `Bank`, `BankTemplate`, `ChequeSize`, `PaperSize`, `SafeZone`, `ProfileKey`, `Orientation`, `Calibration` |
+| `src/lib/sizes.ts` | The **only** place physical millimetre constants are declared; includes the runtime size registry |
 | `data/banks.ts` | Seeded NRB institution catalogue with provenance and status |
 | `data/templates.ts` | Cheque templates: seeds + clone helper, each with verification metadata |
-| `lib/catalogue.ts` | Selectors: selectable vs pending banks, bank groups, summary counts, admin import/export |
-| `lib/printGeometry.ts` | `resolveCalibratedGeometry` — page box, cheque box, rotation, clamping |
-| `lib/sheetLayout.ts` | `computeSheetLayout` — the single mm layout pipeline |
-| `lib/textFit.ts` | Font fitting and amount-in-words line splitting |
-| `lib/amountWords.ts` | Amount parsing (integer paisa), words generation, Nepali date digits |
-| `lib/calibration.ts` | Per (template × mode) calibration store, clamping, bounds validation |
-| `lib/validation.ts` | Field, template, size and calibration validation gates |
-| `components/ChequeSheet.tsx` | The one renderer used by preview **and** print |
-| `components/Workspace.tsx` | The guided print workspace: selection, entry, modes, calibration, print |
-| `components/admin/*` | Template editor and workbench used by the admin pages |
-| `lib/physical-test-matrix.md` | Per-template physical verification protocol and record sheets |
+| `src/lib/catalogue.ts` | Selectors: selectable vs pending banks, bank groups, summary counts, admin import/export |
+| `src/lib/printGeometry.ts` | `resolveCalibratedGeometry` — page box, cheque box, rotation, clamping |
+| `src/lib/sheetLayout.ts` | `computeSheetLayout` — the single mm layout pipeline |
+| `src/lib/textFit.ts` | Font fitting and amount-in-words line splitting |
+| `src/lib/amountWords.ts` | Amount parsing (integer paisa), words generation, Nepali date digits |
+| `src/lib/calibration.ts` | Per (template × mode) calibration store, clamping, bounds validation |
+| `src/lib/validation.ts` | Field, template, size and calibration validation gates |
+| `src/components/cheque/ChequeSheet.tsx` | The one renderer used by preview **and** print |
+| `src/components/dashboard/Workspace.tsx` | The guided print workspace: selection, entry, modes, calibration, print |
+| `src/components/admin/*` | Template editor and workbench used by the admin pages |
+| `src/lib/physical-test-matrix.md` | Per-template physical verification protocol and record sheets |
 
 ---
 
@@ -206,7 +206,7 @@ changes.
 
 1. **Bank** — add an entry to `data/banks.ts` with its NRB class and status.
 2. **Cheque size** — measure the real cheque (mm) and register it in
-   `lib/sizes.ts`. Never reuse a size because it is "close enough".
+   `src/lib/sizes.ts`. Never reuse a size because it is "close enough".
 3. **Template** — add the field rectangles, orientation and print modes to
    `data/templates.ts`. Keep everything in millimetres.
 4. **Safe zones** — declare the MICR band as reserved. A field overlapping a
@@ -214,7 +214,7 @@ changes.
    than printing a ruined cheque.
 5. **Verify** — set `verification.status` to `browser-verified` once the
    geometry is checked against a sample cheque, then run the record sheet in
-   `lib/physical-test-matrix.md` before marking anything `physically-calibrated`.
+   `src/lib/physical-test-matrix.md` before marking anything `physically-calibrated`.
 
 Nothing in steps 1–4 requires touching a component. That is the whole point of
 the architecture — and the regression tests enforce it.

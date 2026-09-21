@@ -11,14 +11,14 @@
 ### RQ-1: How does the print pipeline ensure @page size matches the rendered container?
 
 **Findings**: 
-- `lib/printGeometry.ts` → `resolvePrintGeometry(template, mode)` is the **single source of truth**.
+- `src/lib/printGeometry.ts` → `resolvePrintGeometry(template, mode)` is the **single source of truth**.
 - It computes `pageW`, `pageH` (for `@page` size) and `containerW`, `containerH` (for the print container) from the **same** values.
 - In `Workspace.tsx` `handlePrint()` (line ~1522), an inline `<style>` is injected before `window.print()`:
   ```css
   @page { size: {geom.pageW}mm {geom.pageH}mm; margin: 0; }
   @media print { .{containerSelector} { width: {geom.containerW}mm !important; height: {geom.containerH}mm !important; } }
   ```
-- The static `app/print.css` uses `size: auto` as a fallback — it is **overridden** at print time by the injected rule.
+- The static `src/app/print.css` uses `size: auto` as a fallback — it is **overridden** at print time by the injected rule.
 - A **duplicate-print guard** (`printLockRef`) prevents double invocation.
 - `beforeprint`/`afterprint`/`pagehide` event listeners sync the print DOM to current state and clean up injected styles after printing.
 
@@ -50,14 +50,14 @@
 ### RQ-3: How does number-to-words conversion work and what numbering system is used?
 
 **Findings**:
-- `lib/amountWords.ts` → `integerToWords()` implements the **Nepali numbering hierarchy**: Kharab (10^12), Arab (10^9), Crore (10^7), Lakh (10^5), Thousand (10^3), Hundred (10^2).
+- `src/lib/amountWords.ts` → `integerToWords()` implements the **Nepali numbering hierarchy**: Kharab (10^12), Arab (10^9), Crore (10^7), Lakh (10^5), Thousand (10^3), Hundred (10^2).
 - Money is stored as **integer paisa** (1 NPR = 100 paisa). E.g., 100.50 NPR → 10050 paisa. The only `parseFloat` usage is inside the regex-anchored parser.
 - `amountToWordsFromPaisa(amountPaisa)`: splits into rupees/paisa, produces `"X Rupees and Y Paisa Only"`.
 - `checkAmountWordsConsistency(amount, words)`: case-insensitive, whitespace-normalized comparison to prevent printing when numeric and words don't match.
 - `generateAmountWords(amount)`: returns canonical words for a valid amount, `""` for invalid/zero.
 - The shared code snippet's `convertToWordsNepali()` only handles up to Crore (missing Kharab/Arab) and doesn't handle the "One Rupees" edge case (should be "One Rupee" grammatically, but the existing implementation accepts "One Rupees" for consistency).
 
-**Decision**: Use the existing `lib/amountWords.ts` implementation with the full Nepali hierarchy (Kharab, Arab, Crore, Lakh, Thousand, Hundred) and integer paisa storage.
+**Decision**: Use the existing `src/lib/amountWords.ts` implementation with the full Nepali hierarchy (Kharab, Arab, Crore, Lakh, Thousand, Hundred) and integer paisa storage.
 
 **Rationale**: Prevents floating-point errors. Supports amounts up to 999,999,999,999.99 NPR (MAX_AMOUNT_PAISA). Consistency check prevents print of mismatched amount/words.
 
@@ -113,7 +113,7 @@
 ### RQ-6: How are bank templates structured and validated at load time?
 
 **Findings**:
-- `lib/templates.ts` defines `BANK_TEMPLATES` array: Siddhartha, Nabil, NIC Asia, Everest, Bank of Pokhara — each with field coordinates, structural positions, 4 print profiles, and print config.
+- `src/lib/templates.ts` defines `BANK_TEMPLATES` array: Siddhartha, Nabil, NIC Asia, Everest, Bank of Pokhara — each with field coordinates, structural positions, 4 print profiles, and print config.
 - `assertAllTemplatesValid()` runs at **module load**: validates dimensions, all 4 profiles, print config (calibration defaults ±25mm, supported modes), enabled flag, field coordinates (within bounds), structural positions.
 - Template field coordinates are bank-specific (e.g., Siddhartha date at x=128, Nabil at x=130).
 - `getTemplate(id)` and `getAllTemplates()` are the runtime accessors.
@@ -146,7 +146,7 @@
 ### RQ-8: How does the print CSS work and what is the screen-vs-print DOM strategy?
 
 **Findings**:
-- `app/print.css`:
+- `src/app/print.css`:
   - `.print-output-screen` is parked off-screen (`left: -10000px`) on screen so it never flashes.
   - During print: `.no-print` elements are `display: none`, print containers go to `position: static` (normal flow at page top).
   - `html, body` get `overflow: hidden`, `zoom: 1`, `transform: none` to prevent browser scaling.
@@ -181,17 +181,17 @@
 
 ## Research Output
 
-All unknowns from the Technical Context have been resolved by reading the source code in `lib/`, `components/`, `app/`, and `tests/`. No [NEEDS CLARIFICATION] items remain.
+All unknowns from the Technical Context have been resolved by reading the source code in `src/lib/`, `src/components/`, `src/app/`, and `tests/`. No [NEEDS CLARIFICATION] items remain.
 
 **Sources consulted**:
 - `package.json` — dependencies and scripts
-- `lib/types.ts` — type definitions
-- `lib/templates.ts` — 5 bank templates with field coordinates
-- `lib/amountWords.ts` — amount parsing, number-to-words, validation
-- `lib/printGeometry.ts` — geometry resolver (single source of truth)
+- `src/lib/types.ts` — type definitions
+- `src/lib/templates.ts` — 5 bank templates with field coordinates
+- `src/lib/amountWords.ts` — amount parsing, number-to-words, validation
+- `src/lib/printGeometry.ts` — geometry resolver (single source of truth)
 - `lib/calibration.ts` — calibration clamping/validation
 - `lib/validation.ts` — template/field/geometry validation
-- `components/Workspace.tsx` — main UI, preview, print orchestration
-- `app/print.css` — print stylesheet
-- `app/globals.css` — design system
+- `src/components/dashboard/Workspace.tsx` — main UI, preview, print orchestration
+- `src/app/print.css` — print stylesheet
+- `src/app/globals.css` — design system
 - `tests/validation.test.mjs` — validation test patterns

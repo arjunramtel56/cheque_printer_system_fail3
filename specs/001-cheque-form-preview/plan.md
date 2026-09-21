@@ -18,7 +18,7 @@ Build a React/Next.js web application that lets users enter Nepalese bank cheque
 
 **Storage**: None (client-side only). Calibration state is held in React component state per print-mode group (Direct Feed vs A4 Carrier). No backend or database required.
 
-**Testing**: tsx (TypeScript execution environment) running `.mjs` test files with assert-style patterns. `npm test` executes `tests/workspace.test.mjs`, `tests/print-flow.test.mjs`, `tests/validation.test.mjs`, and `tests/print-verification.mjs`. Tests import pure functions from `lib/` and exercise the sequential print gate logic.
+**Testing**: tsx (TypeScript execution environment) running `.mjs` test files with assert-style patterns. `npm test` executes `tests/workspace.test.mjs`, `tests/print-flow.test.mjs`, `tests/validation.test.mjs`, and `tests/print-verification.mjs`. Tests import pure functions from `src/lib/` and exercise the sequential print gate logic.
 
 **Target Platform**: Modern browsers (Chrome/Chromium print API) for both screen preview and `window.print()` output. Cheque stock: 190.5 × 88.9 mm (8.5" × 3.5").
 
@@ -34,7 +34,7 @@ Build a React/Next.js web application that lets users enter Nepalese bank cheque
 - @page size is injected via JavaScript at print time (not static CSS) so it matches the resolved geometry.
 - No third-party dependencies beyond React/Next.js.
 
-**Scale/Scope**: Single-page application, 5 built-in bank templates (expandable), ~3000 LOC across `components/` + `lib/`, ~1100 LOC of tests. Supports Direct Feed (blank cheque stock) and A4 Carrier (cheque on A4 sheet) print modes.
+**Scale/Scope**: Single-page application, 5 built-in bank templates (expandable), ~3000 LOC across `src/components/` + `src/lib/`, ~1100 LOC of tests. Supports Direct Feed (blank cheque stock) and A4 Carrier (cheque on A4 sheet) print modes.
 
 ## Constitution Check
 
@@ -60,16 +60,22 @@ specs/001-cheque-form-preview/
 ### Source Code (repository root)
 
 ```text
-components/
-├── Workspace.tsx        # Main UI container: form, live preview, print orchestration, calibration, state machine
+src/
+├── components/
+│   ├── Workspace.tsx        # Main UI container: form, live preview, print orchestration, calibration, state machine
+│   ├── ui/                  # Generic UI primitives (TrustBadge, etc.)
+│   ├── layout/              # Layout components (LanguageProvider, LanguageToggle, ThemeProvider, ThemeToggle, AdminSidebar)
+│   ├── cheque/              # Cheque rendering components (ChequeSheet, ChequeOverlayPDF, MicrSafetyGuide, etc.)
+│   ├── dashboard/           # Dashboard/workflow components (Workspace, CatalogueBadges)
+│   └── admin/               # Admin-specific components (AdminBankForm, TemplateEditor, TemplateWorkbench, etc.)
 
-app/
+src/app/
 ├── layout.tsx           # Root layout — imports globals.css + print.css
 ├── globals.css          # Design system: colors, typography, component styles, responsive
 ├── print.css            # Print stylesheet: @page rules, screen-vs-print visibility, mm positioning
 └── page.tsx             # Entry point — renders <Workspace />
 
-lib/
+src/lib/
 ├── types.ts             # BankTemplate, ProfileKey, Calibration, PrintProfile, ChequeFieldCoords
 ├── templates.ts         # Built-in bank templates (Siddhartha, Nabil, NIC, Everest, BoP) + getters
 ├── amountWords.ts       # Strict amount parser, integer-paisa math, number-to-words (Nepali), date + payee validation
@@ -86,7 +92,7 @@ tests/
 └── part5-qa.test.mjs             # QA / integration tests
 ```
 
-**Structure Decision**: Single Next.js web application (frontend-only, no backend). Components are split into `components/` (UI) and `lib/` (pure logic, testable without React). Tests live in `tests/` as `.mjs` files run via `tsx`. This follows the existing "Single project" structure — no monorepo needed since there is no backend API.
+**Structure Decision**: Single Next.js web application (frontend-only, no backend) using the `src/` directory convention. Source code lives under `src/` (`src/app/` for routes, `src/components/` for UI, `src/lib/` for pure logic, `src/data/` for bank/template data, `src/hooks/` for custom hooks). Tests live in `tests/` as `.mjs` files run via `tsx`. This follows the existing "Single project" structure — no monorepo needed since there is no backend API.
 
 ## Complexity Tracking
 
@@ -101,13 +107,13 @@ No violations. The project is a single Next.js web app with no backend, no datab
 ### Research Questions
 
 1. **How does the existing print pipeline ensure @page size matches the rendered container?**
-   - `lib/printGeometry.ts` → `resolvePrintGeometry()` is the single source of truth. It computes `pageW/pageH` for the `@page` rule and `containerW/containerH` for the print container — both derived from the same values. The Workspace `handlePrint()` injects an inline `<style>` with `@page { size: geom.pageW mm geom.pageH mm; ... }` and sets the container class to `print-direct-feed` or `print-a4-carrier` with matching mm dimensions. The screen `globals.css` does NOT define a static `@page` size — it uses `size: auto` as a fallback that is overridden at print time.
+   - `src/lib/printGeometry.ts` → `resolvePrintGeometry()` is the single source of truth. It computes `pageW/pageH` for the `@page` rule and `containerW/containerH` for the print container — both derived from the same values. The Workspace `handlePrint()` injects an inline `<style>` with `@page { size: geom.pageW mm geom.pageH mm; ... }` and sets the container class to `print-direct-feed` or `print-a4-carrier` with matching mm dimensions. The screen `globals.css` does NOT define a static `@page` size — it uses `size: auto` as a fallback that is overridden at print time.
 
 2. **How are Direct Feed and A4 Carrier modes differentiated?**
    - `isDirectFeed(mode)` checks if mode is `custom_short` or `custom_long`. For Direct Feed, `@page` = cheque physical size (190.5 × 88.9 mm, landscape), content rendered unrotated (no CSS `transform: rotate`). Short Edge First vs Long Edge First is a printer driver setting, not a CSS transform. For A4 Carrier, `@page` = A4 (210×297 portrait or 297×210 landscape), cheque inset at `profile.x/y` + calibration.
 
 3. **How does number-to-words conversion work for Nepali amounts?**
-   - `lib/amountWords.ts` uses `integerToWords()` which handles the Nepali numbering hierarchy: Kharab (10^12), Arab (10^9), Crore (10^7), Lakh (10^5), Thousand (10^3), Hundred (10^2). Money is stored as integer paisa (e.g., 100.50 NPR → 10050 paisa) to avoid floating-point errors. The `amountToWordsFromPaisa()` function splits into rupees/paisa and produces "X Rupees and Y Paisa Only".
+   - `src/lib/amountWords.ts` uses `integerToWords()` which handles the Nepali numbering hierarchy: Kharab (10^12), Arab (10^9), Crore (10^7), Lakh (10^5), Thousand (10^3), Hundred (10^2). Money is stored as integer paisa (e.g., 100.50 NPR → 10050 paisa) to avoid floating-point errors. The `amountToWordsFromPaisa()` function splits into rupees/paisa and produces "X Rupees and Y Paisa Only".
 
 4. **How does the print-readiness gate work?**
    - `Workspace.tsx` `handlePrint()` applies a sequential validation: date → payee → amount → amount > 0 → words non-empty → words consistency (`checkAmountWordsConsistency`) → template selected → print mode → calibration pair validity → profile exists → geometry valid (`validatePrintGeometry`) → calibrated bounds valid (`validateCalibratedBounds`). Each step short-circuits with a user-facing error if it fails.
@@ -116,7 +122,7 @@ No violations. The project is a single Next.js web app with no backend, no datab
    - Calibration has independent state for Direct Feed (`dfCalibration`) and A4 Carrier (`a4Calibration`), selected via `isDF ? dfCalibration : a4Calibration`. Values are clamped to ±25 mm via `clampCalibration()` (rejects NaN/Infinity, normalizes -0→0, rounds to 0.1mm). `resolveCalibratedGeometry()` further clamps A4 calibration at runtime so the cheque never leaves the page.
 
 6. **How are bank templates structured and validated?**
-   - `lib/templates.ts` defines `BANK_TEMPLATES` array with `BankTemplate` objects (id, bankName, widthMm, heightMm, fields, structural, profiles, print config, enabled). `validateBankTemplate()` runs at module load to validate dimensions, profile configs, field coordinates, and calibration defaults. Templates are loaded from this static array; admin overrides can be merged at runtime via localStorage.
+   - `src/lib/templates.ts` defines `BANK_TEMPLATES` array with `BankTemplate` objects (id, bankName, widthMm, heightMm, fields, structural, profiles, print config, enabled). `validateBankTemplate()` runs at module load to validate dimensions, profile configs, field coordinates, and calibration defaults. Templates are loaded from this static array; admin overrides can be merged at runtime via localStorage.
 
 7. **How does font fitting work for variable-length payee names?**
    - `fitFontSize()` in Workspace.tsx estimates text width as `charLength × (fontSize × 0.352778 × 0.55 + letterSpacing)` and iteratively reduces font size by 0.25pt until it fits within the field width, with a hard floor of 6pt (`MIN_PAYEE_FONT_SIZE`). Amount-words text is split into two lines via `splitWordsToLines()` which greedily packs words into the first line until font size would drop below the minimum.
@@ -139,10 +145,10 @@ All unknowns from the Technical Context have been resolved by reading the source
 - TypeScript 5.8 + React 18.3 + Next.js 16.3 confirmed via `package.json`
 - No external UI library confirmed — all styling is custom CSS
 - Testing is `tsx`-based `.mjs` files confirmed via `package.json` scripts and `tests/` directory
-- Browser-only client-side app confirmed — no backend routes in `app/`
+- Browser-only client-side app confirmed — no backend routes in `src/app/`
 - mm-based positioning confirmed in `print.css` and `Workspace.tsx` PrintOutput
 - @page injection confirmed in `Workspace.tsx` handlePrint() inline `<style>`
-- Integer paisa model confirmed in `lib/amountWords.ts`
+- Integer paisa model confirmed in `src/lib/amountWords.ts`
 
 ## Phase 1: Design & Contracts
 

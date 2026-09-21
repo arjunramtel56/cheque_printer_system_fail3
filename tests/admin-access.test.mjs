@@ -37,7 +37,7 @@ function assert(condition, message) {
   }
 }
 
-const ADMIN_DIR = path.join("app", "admin");
+const ADMIN_DIR = path.join("src", "app", "admin");
 const DASHBOARD_DIR = path.join(ADMIN_DIR, "(dashboard)");
 const GATE_LAYOUT = path.join(DASHBOARD_DIR, "layout.tsx");
 const LOGIN_PAGE = path.join(ADMIN_DIR, "login", "page.tsx");
@@ -136,17 +136,17 @@ console.log("\n--- SECTION 3: Protected pages live inside the group ---");
 
   assert(pages.length >= 5, `all admin pages are discoverable (${pages.length} found)`);
   assert(
-    outside.length === 1 && normalise(outside[0]) === "app/admin/login/page.tsx",
+    outside.length === 1 && normalise(outside[0]) === "src/app/admin/login/page.tsx",
     "sign-in is the only admin page outside the gated group",
   );
   assert(inside.length >= 4, `the protected area has its pages in the group (${inside.length})`);
 
   const expected = [
-    "app/admin/(dashboard)/page.tsx",
-    "app/admin/(dashboard)/banks/page.tsx",
-    "app/admin/(dashboard)/templates/page.tsx",
-    "app/admin/(dashboard)/templates/[id]/page.tsx",
-    "app/admin/(dashboard)/calibration/page.tsx",
+    "src/app/admin/(dashboard)/page.tsx",
+    "src/app/admin/(dashboard)/banks/page.tsx",
+    "src/app/admin/(dashboard)/templates/page.tsx",
+    "src/app/admin/(dashboard)/templates/[id]/page.tsx",
+    "src/app/admin/(dashboard)/calibration/page.tsx",
   ];
   const normalised = inside.map(normalise).sort();
   for (const wanted of expected) {
@@ -185,8 +185,8 @@ console.log("\n--- SECTION 4: URLs are unchanged by the group ---");
       }
     }
   };
-  scan("app");
-  scan("components");
+  scan("src/app");
+  scan("src/components");
   assert(offenders.length === 0, "no link or URL anywhere references the route group" + (offenders.length ? ` (${offenders.join(", ")})` : ""));
 }
 
@@ -196,10 +196,10 @@ console.log("\n--- SECTION 4: URLs are unchanged by the group ---");
 console.log("\n--- SECTION 5: The demo gate is not presented as security ---");
 
 {
-  const lib = read(path.join("lib", "admin.ts"));
+  const lib = read(path.join("src", "lib", "admin.ts"));
   assert(
     /demo|localStorage/i.test(lib.slice(0, 1200)),
-    "lib/admin.ts documents itself as a client-side demo gate",
+    "src/lib/admin.ts documents itself as a client-side demo gate",
   );
   assert(
     !/process\.env\.[A-Z_]*SECRET/.test(lib),

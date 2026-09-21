@@ -69,7 +69,7 @@ console.log("--- SECTION 1: Security headers are configured ---");
 console.log("\n--- SECTION 2: The demo gate is as strong as a demo can be ---");
 
 {
-  const admin = read("lib/admin.ts");
+  const admin = read("src/lib/admin.ts");
 
   // Hash: a real one, not the old 32-bit string hash.
   assert(/crypto\.subtle\.digest\(\s*"SHA-256"/.test(admin), "the password is hashed with WebCrypto SHA-256");
@@ -128,7 +128,7 @@ console.log("\n--- SECTION 2: The demo gate is as strong as a demo can be ---");
 console.log("\n--- SECTION 3: The login page does not leak the credential ---");
 
 {
-  const login = read("app/admin/login/page.tsx");
+  const login = read("src/app/admin/login/page.tsx");
   assert(!/ADMIN_DEFAULT_PASSWORD/.test(login), "the login page no longer imports or prints the demo password");
   assert(!/\{ADMIN_DEFAULT_PASSWORD\}/.test(login), "no password interpolation remains in the JSX");
   assert(/role="alert"/.test(login), "errors are announced through role=alert");
