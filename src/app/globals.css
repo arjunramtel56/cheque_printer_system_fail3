@@ -608,4 +608,62 @@ button, input, select, textarea { font-family: inherit; font-size: 1rem; }
   }
 }
 
+/* ---------- Cheque layout ---------- */
+.cheque-print {
+  position: relative;
+  width: 8.5in;
+  height: 3.5in;
+  margin: 0;
+  overflow: hidden;
+  background: white;
+}
+
+.cheque-background {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.field {
+  position: absolute;
+  z-index: 2;
+  color: #111;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.cheque-date {
+  top: 0.30in;
+  right: 0.45in;
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+
+.cheque-payee {
+  top: 1.18in;
+  left: 1.35in;
+  max-width: 5.2in;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cheque-words {
+  top: 1.65in;
+  left: 1.35in;
+  max-width: 4.9in;
+  font-size: 11px;
+  white-space: normal;
+}
+
+.cheque-number {
+  top: 1.65in;
+  right: 0.55in;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 /* ---------- Print rules live in ./print.css (imported in layout.tsx). ---------- */

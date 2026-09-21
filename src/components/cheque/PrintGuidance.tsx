@@ -14,7 +14,8 @@
 import { useTranslation } from "@/lib/i18n";
 import type { BankTemplate } from "@/lib/types";
 import { MICR_BAND_MM } from "@/data/templates";
-import { PREVIEW_SCALE } from "@/components/cheque/ChequeSheet";
+
+const PREVIEW_SCALE = 2.4;
 
 export function PrintGuidance({ template }: { template: BankTemplate }) {
   const { t } = useTranslation();

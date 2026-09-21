@@ -44,12 +44,12 @@ import {
 import { resolvePaper, resolvePrintGeometry, STANDARD_CHEQUE_W_MM, STANDARD_CHEQUE_H_MM } from "@/lib/printGeometry";
 import { validateCalibratedBounds, validatePrintGeometry, validateSafeZoneClearance, validateTemplateForPrint } from "@/lib/validation";
 import { computeSheetLayout, fieldsWithinCheque, type ChequeData } from "@/lib/sheetLayout";
-import ChequeSheet, { PREVIEW_SCALE } from "@/components/cheque/ChequeSheet";
+import ChequeSheet from "@/components/cheque/ChequeSheet";
 import { generateOverlayPdf } from "@/components/cheque/ChequeOverlayPDF";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { LanguageToggle } from "@/components/layout/LanguageToggle";
 
-const SCALE = PREVIEW_SCALE;
+const SCALE = 2.4;
 
 type FormState =
   | "empty"
@@ -967,12 +967,10 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
             <div className="preview-stage" id="preview-stage" tabIndex={-1}>
               {template ? (
                 <ChequeSheet
-                  template={template}
-                  data={chequeData}
-                  mode={printMode}
-                  calibration={currentCalibration}
-                  variant="preview"
-                  debugMode={debugMode}
+                  date={date}
+                  payeeName={payee}
+                  amountInWords={amountWords}
+                  amount={amount}
                 />
               ) : (
                 <div
@@ -1067,7 +1065,12 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
           data-caly={String(currentCalibration.y)}
           className="print-output-screen"
         >
-          <ChequeSheet template={template} data={chequeData} mode={printMode} calibration={currentCalibration} variant="print" />
+          <ChequeSheet
+            date={date}
+            payeeName={payee}
+            amountInWords={amountWords}
+            amount={amount}
+          />
         </div>
       )}
     </>

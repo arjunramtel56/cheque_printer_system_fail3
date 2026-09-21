@@ -199,11 +199,10 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
 
     root.render(
       <ChequeSheet
-        template={draft}
-        data={SAMPLE_DATA}
-        mode={mode}
-        calibration={{ x: draft.print.calibration.defaultX, y: draft.print.calibration.defaultY }}
-        variant="print"
+        date={SAMPLE_DATA.date}
+        payeeName={SAMPLE_DATA.payee}
+        amountInWords={SAMPLE_DATA.amountWords}
+        amount={SAMPLE_DATA.amount}
       />,
     );
 
@@ -517,12 +516,10 @@ export default function TemplateEditor({ template, banks, onSave, onCancel, erro
         </div>
         <div style={{ overflow: "auto", background: "var(--surface-secondary)", padding: 12, borderRadius: "var(--radius-sm)" }}>
           <ChequeSheet
-            template={draft}
-            data={SAMPLE_DATA}
-            mode={mode}
-            calibration={{ x: draft.print.calibration.defaultX, y: draft.print.calibration.defaultY }}
-            variant="preview"
-            debugMode={showGuides}
+            date={SAMPLE_DATA.date}
+            payeeName={SAMPLE_DATA.payee}
+            amountInWords={SAMPLE_DATA.amountWords}
+            amount={SAMPLE_DATA.amount}
           />
         </div>
         <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)", fontFamily: "monospace" }}>

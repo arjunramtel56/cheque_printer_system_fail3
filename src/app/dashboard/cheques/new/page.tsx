@@ -51,6 +51,12 @@ const emptyForm: ChequeForm = {
   remarks: "",
 };
 
+function formatChequeDate(date: string) {
+  if (!date) return "DDMMYYYY";
+  const [year, month, day] = date.split("-");
+  return `${day}${month}${year}`;
+}
+
 export default function NewChequePage() {
   const { locale: appLocale } = useLanguage();
   const supabase = createClient();
@@ -378,55 +384,28 @@ export default function NewChequePage() {
               </div>
 
               <div className="cheque-wrapper">
-                <div
-                  style={{
-                    width: 850,
-                    height: 360,
-                    background: "#fffdf5",
-                    border: "2px solid #334155",
-                    borderRadius: 6,
-                    position: "relative",
-                    padding: "30px 35px",
-                    boxShadow: "0 5px 10px rgba(0,0,0,.1)",
-                    backgroundImage:
-                      "linear-gradient(rgba(100, 116, 139, .08) 1px, transparent 1px), linear-gradient(90deg, rgba(100, 116, 139, .08) 1px, transparent 1px)",
-                    backgroundSize: "18px 18px",
-                    flexShrink: 0,
-                  }}
-                >
-                  <div style={{ textAlign: "center", fontSize: 22, fontWeight: "bold", marginBottom: 5 }}>
-                    {form.bankName || "Bank Name"}
-                  </div>
-                  <div style={{ textAlign: "center", fontSize: 12, color: "#475569" }}>
-                    Kathmandu, Nepal
-                  </div>
+                <div className="cheque-preview">
+                  <img
+                    src="/images/all-bank-cheque.png"
+                    alt="Cheque template"
+                    className="cheque-background"
+                  />
 
-                  <div style={{ position: "absolute", right: 38, top: 75, fontSize: 15, fontWeight: "bold" }}>
-                    {form.chequeDate
-                      ? `Date: ${new Date(form.chequeDate).toLocaleDateString("en-GB")}`
-                      : "Date: __________"}
-                  </div>
+                  <span className="cheque-date">
+                    {formatChequeDate(form.chequeDate)}
+                  </span>
 
-                  <div style={{ position: "absolute", left: 40, top: 135, fontSize: 16 }}>
-                    Pay to the order of: <strong>{form.payeeName || "________________________"}</strong>
-                  </div>
+                  <span className="cheque-payee">
+                    {form.payeeName || "Payee Name"}
+                  </span>
 
-                  <div style={{ position: "absolute", left: 40, top: 185, width: 650, borderBottom: "1px solid #334155", paddingBottom: 6, fontSize: 15 }}>
-                    {form.amountWords || "______________________________________________ Only"}
-                  </div>
+                  <span className="cheque-amount-words">
+                    {form.amountWords || "Amount in words"}
+                  </span>
 
-                  <div style={{ position: "absolute", right: 38, top: 175, width: 135, border: "1px solid #334155", padding: "11px 8px", textAlign: "center", fontWeight: "bold", fontSize: 16 }}>
-                    <span>{form.currency}</span>{" "}
-                    <span>{Number(form.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
-                  </div>
-
-                  <div style={{ position: "absolute", right: 45, bottom: 65, width: 170, textAlign: "center", borderTop: "1px solid #334155", paddingTop: 8, fontSize: 12 }}>
-                    {form.branchName || "Authorized Signature"}
-                  </div>
-
-                  <div style={{ position: "absolute", bottom: 18, left: 35, right: 35, borderTop: "1px solid #94a3b8", paddingTop: 8, fontFamily: "monospace", letterSpacing: 3, fontSize: 17 }}>
-                    ⑆ {form.accountNumber || "0000000000"} ⑆ 0000000000 ⑆
-                  </div>
+                  <span className="cheque-amount-number">
+                    {form.currency} {Number(form.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
               </div>
 
@@ -437,6 +416,134 @@ export default function NewChequePage() {
           </div>
         </main>
       </div>
+
+      <style jsx global>{`
+        .cheque-preview {
+          position: relative;
+          width: min(100%, 8.5in);
+          aspect-ratio: 8.5 / 3.5;
+          flex-shrink: 0;
+          overflow: hidden;
+          background: white;
+          border-radius: 6px;
+          box-shadow: 0 5px 10px rgba(0,0,0,.1);
+        }
+
+        .cheque-background {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: fill;
+        }
+
+        .cheque-date,
+        .cheque-payee,
+        .cheque-amount-words,
+        .cheque-amount-number {
+          position: absolute;
+          z-index: 2;
+          color: #111827;
+          font-family: Arial, sans-serif;
+          line-height: 1.15;
+        }
+
+        .cheque-date {
+          top: 8%;
+          right: 8%;
+          font-size: clamp(7px, 1.25vw, 13px);
+          font-weight: 500;
+          letter-spacing: 1px;
+          white-space: nowrap;
+        }
+
+        .cheque-payee {
+          top: 35%;
+          left: 18%;
+          max-width: 61%;
+          overflow: hidden;
+          font-size: clamp(7px, 1.35vw, 14px);
+          font-weight: 500;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .cheque-amount-words {
+          top: 48%;
+          left: 18%;
+          max-width: 54%;
+          font-size: clamp(6px, 1.15vw, 12px);
+          font-weight: 500;
+          overflow-wrap: break-word;
+        }
+
+        .cheque-amount-number {
+          top: 48%;
+          right: 10%;
+          font-size: clamp(7px, 1.3vw, 14px);
+          font-weight: 600;
+          white-space: nowrap;
+        }
+
+        @page {
+          size: 8.5in 3.5in;
+          margin: 0;
+        }
+
+        @media print {
+          html,
+          body {
+            width: 8.5in;
+            height: 3.5in;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden;
+            background: white !important;
+          }
+
+          body * {
+            visibility: hidden;
+          }
+
+          .cheque-preview,
+          .cheque-preview * {
+            visibility: visible;
+          }
+
+          .cheque-preview {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 8.5in;
+            height: 3.5in;
+            margin: 0;
+            overflow: hidden;
+          }
+
+          .cheque-background {
+            width: 8.5in;
+            height: 3.5in;
+          }
+
+          .cheque-date {
+            font-size: 12px;
+          }
+
+          .cheque-payee {
+            font-size: 13px;
+          }
+
+          .cheque-amount-words {
+            font-size: 11px;
+          }
+
+          .cheque-amount-number {
+            font-size: 13px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

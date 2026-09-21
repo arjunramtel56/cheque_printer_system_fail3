@@ -1,48 +1,17 @@
-/* ============================================================
-   Reactify Cheque Printer — Print stylesheet
-   Handles actual-size printing for Direct Feed and A4 Carrier.
-
-   SCREEN:  .print-output-screen (the 1:1 print payload) is parked
-            off-screen to the left so it never flashes or affects
-            layout. It must NOT be width:0/overflow:hidden — its
-            children carry explicit mm dimensions and would be
-            clipped to a 0×0 box.
-   PRINT:   The wrapper returns to normal flow at the top of the
-            page; screen UI is hidden; containers keep their
-            inline mm dimensions (1:1, no scaling). The print
-            button additionally injects a top-level @page rule with
-            the mode-specific page size before window.print().
-   ============================================================ */
-
-/* ---------- Screen: park the 1:1 print payload off-screen ---------- */
-.print-output-screen {
-  position: absolute !important;
-  left: -10000px !important;
-  top: 0 !important;
-}
-
-/* ---------- Top-level @page default (overridden by injected rule) ---------- */
 @page {
-  size: auto;
+  size: 8.5in 3.5in;
   margin: 0;
-  /* Prevent browser from scaling or centering the print output */
-  /* size: auto means browser decides; the injected @page rule sets the
-     exact page dimensions at print time. */
 }
 
-/* Prevent any second page from being generated */
 @media print {
-  @page {
-    margin: 0;
-  }
-  html, body {
-    background: #fff !important;
+  html,
+  body {
+    width: 8.5in;
+    height: 3.5in;
     margin: 0 !important;
     padding: 0 !important;
-    width: auto !important;
-    height: auto !important;
+    background: #fff !important;
     overflow: hidden !important;
-    /* Disable browser scaling and fit-to-page */
     zoom: 1 !important;
     transform: none !important;
     scale: 1 !important;
@@ -50,15 +19,10 @@
     print-color-adjust: exact !important;
   }
 
-  /* Hide all screen-only UI during print.
-     The .print-output-screen is the only element allowed to render.
-     Everything else (headers, nav, forms, previews, tips) is hidden. */
   .no-print {
     display: none !important;
   }
 
-  /* Belt-and-suspenders: hide the screen preview stage and its watermark
-     in case they are not wrapped in .no-print. */
   .cheque-preview,
   .cheque-watermark,
   .preview-stage,
@@ -67,7 +31,6 @@
     display: none !important;
   }
 
-  /* Reset any residual layout from globals.css */
   .compose-grid,
   .preview-column,
   .preview-stage,
@@ -78,40 +41,25 @@
   .template-summary,
   .form-actions,
   .step {
-    position: static !important;
-    inset: auto !important;
-    z-index: auto !important;
-    background: transparent !important;
-    margin: 0 !important;
-    padding: 0 !important;
     display: none !important;
-    width: auto !important;
-    height: auto !important;
-    overflow: visible !important;
-    box-shadow: none !important;
-    border: none !important;
   }
 
-  /* -------------------------------------------------------
-      Print output wrapper — back in normal flow at page top.
-      Only the active mode's container has content; the other
-      (if present) is display:none via injected rules.
-      ------------------------------------------------------- */
+  .cheque-print {
+    display: block;
+    width: 8.5in;
+    height: 3.5in;
+    margin: 0;
+  }
+
   .print-output-screen {
     position: static !important;
     left: auto !important;
     top: auto !important;
-    /* Prevent any second page or bleed-through from screen positioning */
     page-break-before: avoid;
     page-break-after: avoid;
     page-break-inside: avoid;
   }
 
-  /* -------------------------------------------------------
-     Direct Feed output — cheque-sized container at 1:1 mm.
-     Inline styles carry the exact mm width/height; @page size
-     is injected by JS at the top level before window.print().
-     ------------------------------------------------------- */
   .print-direct-feed {
     position: relative !important;
     background: #fff !important;
@@ -124,13 +72,6 @@
     padding: 0 !important;
   }
 
-/* -------------------------------------------------------
-      A4 Carrier output — full A4 page at 1:1 mm.
-      Cheque positioned within via profile.x/y + calibration.
-      The @page rule (injected by JS) sets the exact A4 dimensions;
-      the container matches those dimensions and the cheque sits at
-      its calibrated position inside.
-      ------------------------------------------------------- */
   .print-a4-carrier {
     position: relative !important;
     background: #fff !important;
@@ -141,35 +82,18 @@
     page-break-inside: avoid;
     margin: 0 !important;
     padding: 0 !important;
-    /* Container IS the page box — no centering margin needed because
-       @page margin is 0 and the container matches the page size exactly. */
   }
 
-  /* Field text: monospace, no wrapping, proper alignment */
-  .print-direct-feed [style*="position: absolute"],
-  .print-a4-carrier [style*="position: absolute"] {
-    font-family: "Courier New", ui-monospace, SFMono-Regular, monospace !important;
-    white-space: nowrap !important;
-    overflow: visible !important;
-    line-height: 1.1 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* Force exact dimensions — no browser scaling, no fit-to-page */
   .print-direct-feed,
   .print-a4-carrier {
     transform: none !important;
     scale: 1 !important;
-    /* image-rendering prevents any interpolation-based scaling */
     image-rendering: -webkit-optimize-contrast !important;
     image-rendering: crisp-edges !important;
-    /* Force exact color printing on both screen and paper */
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* Prevent any element from forcing a second page */
   .print-direct-feed *,
   .print-a4-carrier * {
     page-break-before: avoid !important;
@@ -179,20 +103,10 @@
     scale: 1 !important;
   }
 
-   /* Debug measurement guides — screen only, stripped from print output.
-      These render page boundaries, cheque boundaries, origin markers, center
-      lines, physical dimensions, calibration offsets and rotation state for
-      development/admin calibration. They must NEVER appear on the printed cheque. */
-   .debug-guides {
-     display: none !important;
-   }
+  .debug-guides {
+    display: none !important;
+  }
 
-  /* -------------------------------------------------------
-     Overlay Print Tool — print output
-     The overlay tool uses a separate print output container
-     that is hidden on screen and shown only during print.
-     A4 landscape layout with the cheque preview filling the page.
-     ------------------------------------------------------- */
   .overlay-no-print {
     display: none !important;
   }
@@ -235,5 +149,10 @@
     background: transparent !important;
     z-index: 5 !important;
   }
+}
 
+.print-output-screen {
+  position: absolute !important;
+  left: -10000px !important;
+  top: 0 !important;
 }
