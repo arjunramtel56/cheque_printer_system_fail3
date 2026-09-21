@@ -48,72 +48,9 @@ import ChequeSheet, { PREVIEW_SCALE } from "@/components/cheque/ChequeSheet";
 import { generateOverlayPdf } from "@/components/cheque/ChequeOverlayPDF";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { LanguageToggle } from "@/components/layout/LanguageToggle";
-import { PrintGuidance } from "@/components/cheque/PrintGuidance";
 
-// ---------------------------------------------------------------------------
-// Constants & helpers
-// ---------------------------------------------------------------------------
-
-// Mode presentation labels. The paper box and orientation are DERIVED from the
-// paper registry at runtime (paperIdForMode -> getPaperSize) rather than typed
-// here — this map must never become a second place that declares an orientation.
-const PRINT_MODE_PRESENTATION: Record<ProfileKey, { mode: string; paperId: ProfileKey | "cheque" }> = {
-  custom_short: { mode: "Custom Cheque Size", paperId: "cheque" },
-  custom_long: { mode: "Custom Cheque Size", paperId: "cheque" },
-  a4_vertical: { mode: "A4 Carrier", paperId: "a4_vertical" },
-  a4_horizontal: { mode: "A4 Carrier", paperId: "a4_horizontal" },
-};
-
-/** Screen-facing description of a print mode: which paper, which orientation.
- *  Both facts come from the registry, capitalised for display only. */
-export function printModeInfo(mode: ProfileKey, chequeSizeId: string): { mode: string; paper: string; orientation: string } {
-  const presentation = PRINT_MODE_PRESENTATION[mode];
-  const paperId = paperIdForMode(mode, chequeSizeId);
-  const paper = presentation.paperId === "cheque" ? null : getPaperSize(paperId);
-  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-  return {
-    mode: presentation.mode,
-    paper:
-      presentation.paperId === "cheque"
-        ? "Custom Cheque"
-        : paper
-          ? `A4 (${paper.widthMm} × ${paper.heightMm} mm)`
-          : "A4",
-    orientation: cap(paper ? paper.orientation : "landscape"),
-  };
-}
-
-const PROFILE_LABELS: Record<ProfileKey, string> = {
-  custom_short: "Direct Feed · Short Edge First",
-  custom_long: "Direct Feed · Long Edge First",
-  a4_vertical: "A4 Carrier · Portrait",
-  a4_horizontal: "A4 Carrier · Landscape",
-};
-
-/** Localized profile labels used inside select options. Falls back to the
- *  English label if the locale lacks a translation. */
-function localizedProfileLabel(mode: ProfileKey, locale: "en" | "ne"): string {
-  const key = `profileLabel_${mode}`;
-  // The t() hook can't be used here (this is a top-level function, not a component).
-  // We'll inline the localized labels since they're stable strings.
-  if (locale === "ne") {
-    switch (mode) {
-      case "custom_short": return "डाइरेक्ट फिड · अल्प किनारा अगाडि";
-      case "custom_long": return "डाइरेक्ट फिड · लामो किनारा अगाडि";
-      case "a4_vertical": return "A4 क्यारियर · स्वरूप";
-      case "a4_horizontal": return "A4 क्यारियर · भुवमर्द्ध";
-      default: return PROFILE_LABELS[mode];
-    }
-  }
-  return PROFILE_LABELS[mode];
-}
-
-/** Kept as an alias of the shared screen scale so older readers still resolve. */
 const SCALE = PREVIEW_SCALE;
 
-// Explicit workflow states — a single, unambiguous indicator of where the
-// user is in the print pipeline. The UI renders a state badge and the print
-// button surfaces the concrete reason it is blocked.
 type FormState =
   | "empty"
   | "template-selected"
@@ -128,10 +65,6 @@ interface PrintReadiness {
   reason: string | null;
 }
 
-/**
- * Sanitize an error for display: strip stack traces, internal exception messages,
- * and implementation details. Only professional, user-facing messages are surfaced.
- */
 function sanitizeError(err: unknown): string {
   if (typeof err === "string") return err;
   if (err instanceof Error) return err.message;
@@ -148,12 +81,32 @@ function safeFormatDate(date: string): string {
   }
 }
 
-/** Validate a mode set from a template, defaulting to the built-in order. */
 function supportedModesOf(template: BankTemplate | null): ProfileKey[] {
   const modes = template?.print?.supportedModes ?? [];
   const order: ProfileKey[] = ["custom_short", "custom_long", "a4_vertical", "a4_horizontal"];
   const filtered = order.filter((m) => modes.includes(m));
   return filtered.length > 0 ? filtered : ["custom_short"];
+}
+
+const PROFILE_LABELS: Record<ProfileKey, string> = {
+  custom_short: "Direct Feed · Short Edge First",
+  custom_long: "Direct Feed · Long Edge First",
+  a4_vertical: "A4 Carrier · Portrait",
+  a4_horizontal: "A4 Carrier · Landscape",
+};
+
+function localizedProfileLabel(mode: ProfileKey, locale: "en" | "ne"): string {
+  const key = `profileLabel_${mode}`;
+  if (locale === "ne") {
+    switch (mode) {
+      case "custom_short": return "डाइरेक्ट फिड · अल्प किनारा अगाडि";
+      case "custom_long": return "डाइरेक्ट फिड · लामो किनारा अगाडि";
+      case "a4_vertical": return "A4 क्यारियर · स्वरूप";
+      case "a4_horizontal": return "A4 क्यारियर · भुवमर्द्ध";
+      default: return PROFILE_LABELS[mode];
+    }
+  }
+  return PROFILE_LABELS[mode];
 }
 
 // ---------------------------------------------------------------------------
@@ -173,9 +126,6 @@ function CalibrationControl({ label, value, onChange, disabled }: CalibrationCon
   const decrease = () => onChange(clampCalibration(value - step));
   const reset = () => onChange(0);
 
-  // Strictly parse the input: only accept strings that are valid numbers
-  // (optionally signed with a decimal point, but NOT "30mm" → 30). Invalid
-  // strings are rejected and the value stays unchanged.
   function parseCalibrationInput(raw: string): number | null {
     const trimmed = raw.trim();
     if (trimmed === "") return null;
@@ -227,158 +177,12 @@ function CalibrationControl({ label, value, onChange, disabled }: CalibrationCon
         type="button"
         className="text-button"
         disabled={disabled || value === 0}
-         onClick={reset}
-         title={`Reset ${label} to 0`}
-         style={{ fontSize: "0.8rem", padding: "4px 6px" }}
-       >
-         Reset
-       </button>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Template selector
-// ---------------------------------------------------------------------------
-
-function BankSelector({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: string;
-  onChange: (id: string) => void;
-  disabled?: boolean;
-}) {
-  const options = useMemo(() => getBankOptions(), []);
-  const { t } = useTranslation();
-  return (
-    <div className="field">
-      <label htmlFor="bank-select">{t("selectBank")}</label>
-      <select id="bank-select" required value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
-        <option value="">— {t("selectBank")} —</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value} disabled={!option.hasTemplate}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <small>{t("bankTemplateNote")}</small>
-    </div>
-  );
-}
-
-function BankTemplateSelector({
-  templates,
-  selectedId,
-  onChange,
-  disabled,
-}: {
-  templates: BankTemplate[];
-  selectedId: string;
-  onChange: (id: string) => void;
-  disabled?: boolean;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className="field">
-      <label htmlFor="template-select">{t("selectBank")}</label>
-      <select id="template-select" required value={selectedId} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
-        <option value="">— {t("selectBankTemplate")} —</option>
-        {templates.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.label}
-          </option>
-        ))}
-      </select>
-      <small>{t("pickTemplateHelp")}</small>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Prep checklist — shows what is verified before the print dialog opens. The
-// real gate is the sequential validation inside handlePrint.
-// ---------------------------------------------------------------------------
-
-interface PrepChecklistProps {
-  template: BankTemplate | null;
-  date: string;
-  payee: string;
-  amount: string;
-  amountWords: string;
-  printMode: ProfileKey;
-  calibration: Calibration;
-  isDF: boolean;
-  safeZonesClear: boolean;
-}
-
-function PrepChecklist({
-  template,
-  date,
-  payee,
-  amount,
-  amountWords,
-  printMode,
-  calibration,
-  isDF,
-  safeZonesClear,
-}: PrepChecklistProps) {
-  const { t } = useTranslation();
-  const payeeCheck = validatePayee(payee);
-  const amountCheck = validateAmount(amount);
-  const consistency =
-    amountCheck.valid && amountWords.trim() !== ""
-      ? checkAmountWordsConsistency(amount, amountWords)
-      : { consistent: false, expected: "" };
-  const dateCheck = date ? validateChequeDate(date) : { valid: false, error: t("dateRequiredError") };
-  const calOk = validateCalibrationPair(calibration.x, calibration.y) === null;
-  const geometryOk = template ? validatePrintGeometry(resolvePrintGeometry(template, printMode), template, printMode) === null : false;
-
-  const items: { label: string; ok: boolean }[] = [
-    { label: t("checklistBankTemplate"), ok: !!template && validateTemplateForPrint(template) === null },
-    { label: t("checklistDate"), ok: dateCheck.valid },
-    { label: t("checklistPayee"), ok: payeeCheck.valid },
-    { label: t("checklistAmount"), ok: amountCheck.valid && amountCheck.paisa > 0 },
-    { label: t("checklistAmountWords"), ok: consistency.consistent },
-    { label: t("checklistPrintMode"), ok: !!printMode },
-    { label: t("checklistCalibration", isDF ? t("directFeed") : t("a4Carrier")), ok: calOk },
-    { label: t("checklistGeometry"), ok: geometryOk },
-    { label: t("checklistSafeZones"), ok: safeZonesClear },
-  ];
-  const allOk = items.every((i) => i.ok);
-  // Non-blocking: a template whose geometry has never been checked against a
-  // real cheque can still be test-printed on plain paper (that is how it gets
-  // verified), but the operator must know the ink position is a guess.
-  const geometryUnverified = template?.verification?.status === "unverified";
-
-  return (
-    <div aria-label="Print readiness checklist (application-level checks only)" className="card" style={{ marginTop: 12 }}>
-      <strong style={{ fontSize: "0.85rem", display: "block", marginBottom: 6 }}>
-        {allOk ? t("printReadinessTitleReady") : t("printReadinessTitleIncomplete")}
-      </strong>
-      <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "grid", gap: 4, fontSize: "0.82rem" }}>
-        {items.map((item) => (
-          <li key={item.label} style={{ display: "flex", gap: 8 }}>
-            <span aria-hidden="true" style={{ color: item.ok ? "var(--success)" : "var(--danger)" }}>
-              {item.ok ? "✓" : "✗"}
-            </span>
-            <span>{item.label}</span>
-            {!item.ok && <span className="sr-only">{t("fieldNeedsAttention")}: {item.label}</span>}
-          </li>
-        ))}
-      </ul>
-      {geometryUnverified && (
-        <p
-          role="status"
-          style={{ margin: "8px 0 0 0", fontSize: "0.78rem", fontWeight: 600, color: "var(--warning)" }}
-        >
-          ⚠ {t("geometryWarning")}
-        </p>
-      )}
-      <p style={{ margin: "8px 0 0 0", fontSize: "0.76rem", color: "var(--text-muted)" }}>
-        {t("checklistDisclaimer")}
-      </p>
+        onClick={reset}
+        title={`Reset ${label} to 0`}
+        style={{ fontSize: "0.8rem", padding: "4px 6px" }}
+      >
+        Reset
+      </button>
     </div>
   );
 }
@@ -388,16 +192,12 @@ function PrepChecklist({
 // ---------------------------------------------------------------------------
 
 export interface WorkspaceProps {
-  /** When set (deep-linked bank route), the bank selection is locked. */
   bankId?: string;
-  /** When set (deep-linked template route), the template selection is locked. */
   templateId?: string;
 }
 
 export default function Workspace({ bankId: boundBankId, templateId: boundTemplateId }: WorkspaceProps = {}) {
   useEffect(() => {
-    // Order matters: sizes and banks must be loaded before templates are
-    // validated against them.
     initChequeSizes();
     initBankCatalogue();
     initRuntimeTemplates();
@@ -420,6 +220,7 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
   const [pdfOverlayUrl, setPdfOverlayUrl] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [micrVerified, setMicrVerified] = useState(false);
+  const [currency, setCurrency] = useState("NPR");
 
   const wordOverrideRef = useRef(false);
   const printStyleRef = useRef<HTMLStyleElement | null>(null);
@@ -430,7 +231,6 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
   const beforePrintRef = useRef<(() => void) | null>(null);
   const calibrationsLoadedRef = useRef(false);
 
-  // Persisted per (template, mode) calibration, restored once on mount.
   useEffect(() => {
     setCalibrations(loadCalibrations());
     calibrationsLoadedRef.current = true;
@@ -452,12 +252,10 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
   const template = useMemo(() => {
     if (!templateId) return null;
     const found = getTemplate(templateId) ?? null;
-    // Deep-link safety: never serve a template under a different bank.
     if (found && boundBankId && found.bankId !== boundBankId) return null;
     return found;
   }, [templateId, boundBankId]);
 
-  // Keep the selected template inside the bank's own template list.
   useEffect(() => {
     if (!templateId) return;
     const allowed = templates.some((t) => t.id === templateId);
@@ -488,10 +286,6 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
     setCalibrations((prev) => resetCalibrationFor(prev, template.id, printMode));
   }
 
-   // -----------------------------------------------------------------------
-  // Explicit workflow state + print-readiness (single source of truth for the
-  // reason the print button surfaces).
-  // -----------------------------------------------------------------------
   const { t, locale: appLocale, toggleLocale } = useTranslation();
 
   const chequeData: ChequeData = { date, payee, reference, amount, amountWords, accountPayee, locale: appLocale };
@@ -559,9 +353,6 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
     return "ready-print";
   }, [template, isPrinting, printCompleted, date, payee, hasAmount, amountWords, printMode, currentCalibration]);
 
-  // Reset terminal states when the bank template changes and abort any
-  // in-progress print cycle: remove injected print styles, drop lingering
-  // beforeprint/afterprint/pagehide listeners, and release the print lock.
   useEffect(() => {
     if (printStyleRef.current) {
       printStyleRef.current.remove();
@@ -598,7 +389,6 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
     };
   }, [templateId]);
 
-  // Clean up generated PDF overlay URL when template changes
   useEffect(() => {
     return () => {
       if (pdfOverlayUrl) {
@@ -608,7 +398,6 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
     };
   }, [templateId]);
 
-  // Auto-sync words when the amount changes (user edits are preserved).
   useEffect(() => {
     if (!wordOverrideRef.current) {
       if (autoWords) setAmountWords(autoWords);
@@ -632,12 +421,9 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
   }
 
   function handlePrint() {
-    // DUPLICATE-PRINT GUARD: synchronously lock to prevent double-click from
-    // triggering duplicate print attempts.
     if (printLockRef.current || isPrinting) return;
     printLockRef.current = true;
     setIsPrinting(true);
-
     setPrintError("");
     setPrintCompleted(false);
 
@@ -646,7 +432,6 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
       setIsPrinting(false);
     };
 
-     // STEP 1: VALIDATE DATA
     const dateCheck = validateChequeDate(date);
     if (!dateCheck.valid) { setPrintError(dateCheck.error ?? t("dateInvalidError")); release(); return; }
     const payeeCheck = validatePayee(payee);
@@ -666,74 +451,34 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
       return;
     }
 
-    // STEP 2: VALIDATE BANK TEMPLATE
     if (!template) { setPrintError(t("selectBankTemplateError")); release(); return; }
-    const resolvedTemplate = template; // narrow for closure safety
+    const resolvedTemplate = template;
     const templateErrors = validateTemplateForPrint(resolvedTemplate);
-    if (templateErrors) {
-      setPrintError(t("printErrorTemplate"));
-      release();
-      return;
-    }
+    if (templateErrors) { setPrintError(t("printErrorTemplate")); release(); return; }
     const owningBank = getBank(resolvedTemplate.bankId);
-    if (!owningBank || !owningBank.enabled) {
-      setPrintError(t("printErrorBankDisabled"));
-      release();
-      return;
-    }
+    if (!owningBank || !owningBank.enabled) { setPrintError(t("printErrorBankDisabled")); release(); return; }
 
-    // STEP 3: VALIDATE PRINT MODE
     if (!printMode) { setPrintError(t("printErrorMode")); release(); return; }
-    if (!supportedModes.includes(printMode)) {
-      setPrintError(t("printErrorModeUnsupported"));
-      release();
-      return;
-    }
+    if (!supportedModes.includes(printMode)) { setPrintError(t("printErrorModeUnsupported")); release(); return; }
 
-    // STEP 4: APPLY CALIBRATION (per template + print mode; range + finiteness checked)
     const cal = currentCalibration;
     const calError = validateCalibrationPair(cal.x, cal.y);
     if (calError) { setPrintError(sanitizeError(calError)); release(); return; }
 
-    // STEP 5: PREPARE PRINT LAYOUT
     const resolvedProfile = resolvedTemplate.profiles[printMode];
     if (!resolvedProfile) { setPrintError(t("printErrorProfile")); release(); return; }
 
-    // STEP 5b: VALIDATE GEOMETRY (single source of truth guard)
     const geom = resolvePrintGeometry(resolvedTemplate, printMode);
     const geomErrors = validatePrintGeometry(geom, resolvedTemplate, printMode);
-    if (geomErrors) {
-      setPrintError(t("printErrorLayout"));
-      release();
-      return;
-    }
+    if (geomErrors) { setPrintError(t("printErrorLayout")); release(); return; }
 
-    // STEP 5c: CALIBRATED BOUNDS CHECK — the cheque must stay within the page.
     const calBoundsErrors = validateCalibratedBounds(resolvedTemplate, printMode);
-    if (calBoundsErrors) {
-      setPrintError(t("printErrorCalibration"));
-      release();
-      return;
-    }
+    if (calBoundsErrors) { setPrintError(t("printErrorCalibration")); release(); return; }
 
-    // STEP 5d: RESERVED ZONE CHECK — no printable field may enter the MICR band.
-    if (validateSafeZoneClearance(resolvedTemplate).length > 0) {
-      setPrintError(t("reservedZoneError"));
-      release();
-      return;
-    }
+    if (validateSafeZoneClearance(resolvedTemplate).length > 0) { setPrintError(t("reservedZoneError")); release(); return; }
 
-    // STEP 5e: MICR VERIFICATION GATE — user must physically confirm the MICR
-    // line on the cheque stock is clear of any ink before printing.
-    if (!micrVerified) {
-      setPrintError(t("micrConfirmError"));
-      release();
-      return;
-    }
+    if (!micrVerified) { setPrintError(t("micrConfirmError")); release(); return; }
 
-    // STEP 6: INJECT PAGE RULES — top-level @page plus mode-specific container
-    // sizing before window.print(). Both come from the same resolver the print
-    // DOM uses, so @page and the container box can never disagree.
     const currentPrintKey = ++printKeyRef.current;
 
     if (printStyleRef.current) {
@@ -761,7 +506,6 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
     document.head.appendChild(style);
     printStyleRef.current = style;
 
-    // STEP 7: TRIGGER BROWSER PRINT via beforeprint for deterministic timing
     function onBeforePrint() {
       if (printOutputRef.current) {
         printOutputRef.current.dataset.printKey = String(currentPrintKey);
@@ -804,30 +548,25 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
       window.removeEventListener("pagehide", onAfterPrint);
       beforePrintRef.current = null;
       afterPrintRef.current = null;
-   }
-   }
+    }
+  }
 
-   async function handleGeneratePdfOverlay() {
-     if (!template || isGeneratingPdf) return;
+  async function handleGeneratePdfOverlay() {
+    if (!template || isGeneratingPdf) return;
+    setPrintError("");
+    setIsGeneratingPdf(true);
+    try {
+      const result = await generateOverlayPdf(template, chequeData, printMode, currentCalibration);
+      if (pdfOverlayUrl) URL.revokeObjectURL(pdfOverlayUrl);
+      setPdfOverlayUrl(result.blobUrl);
+    } catch (err) {
+      setPrintError(err instanceof Error ? err.message : t("printErrorGeneral"));
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  }
 
-     setPrintError("");
-     setIsGeneratingPdf(true);
-
-     try {
-       const result = await generateOverlayPdf(template, chequeData, printMode, currentCalibration);
-       // Revoke any previous URL to avoid leaks
-       if (pdfOverlayUrl) URL.revokeObjectURL(pdfOverlayUrl);
-       setPdfOverlayUrl(result.blobUrl);
-     } catch (err) {
-        setPrintError(err instanceof Error ? err.message : t("printErrorGeneral"));
-     } finally {
-       setIsGeneratingPdf(false);
-     }
-   }
-
-   function handleClear() {
-    // Preserve system configuration (print mode is a persistent UI preference);
-    // only reset cheque data and transient state, with an explicit confirmation.
+  function handleClear() {
     const calibrationDirty = Object.keys(calibrations).length > 0;
     if (
       templateId !== "" ||
@@ -840,15 +579,14 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
     ) {
       if (!window.confirm(t("clearConfirm"))) return;
     }
-
-      setDate("");
-      setPayee("");
-      setReference("");
-      setAmount("");
-     setAmountWords("");
-     setAccountPayee(true);
-     setMicrVerified(false);
-     setPrintCompleted(false);
+    setDate("");
+    setPayee("");
+    setReference("");
+    setAmount("");
+    setAmountWords("");
+    setAccountPayee(true);
+    setMicrVerified(false);
+    setPrintCompleted(false);
     setPrintError("");
     setIsPrinting(false);
     wordOverrideRef.current = false;
@@ -858,19 +596,15 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
       printStyleRef.current.remove();
       printStyleRef.current = null;
     }
-     // Deep-linked selection is restored by the URL, so only an unbound
-     // selection is cleared here.
-     if (!boundTemplateId) setTemplateId("");
-     if (!boundBankId) setSelectedBankId("");
-     setCalibrations({});
-
-     // Clean up PDF overlay
-     if (pdfOverlayUrl) {
-       URL.revokeObjectURL(pdfOverlayUrl);
-       setPdfOverlayUrl(null);
-     }
-     setIsGeneratingPdf(false);
-   }
+    if (!boundTemplateId) setTemplateId("");
+    if (!boundBankId) setSelectedBankId("");
+    setCalibrations({});
+    if (pdfOverlayUrl) {
+      URL.revokeObjectURL(pdfOverlayUrl);
+      setPdfOverlayUrl(null);
+    }
+    setIsGeneratingPdf(false);
+  }
 
   const calibrationRows = useMemo(() => {
     if (!template) return [];
@@ -884,9 +618,6 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
 
   return (
     <>
-      {/* ================================================================
-          SCREEN UI — wrapped in no-print so it disappears during browser print
-          ================================================================ */}
       <div className="no-print">
         <div className="compose-grid">
           {/* ---------- LEFT: Form ---------- */}
@@ -896,51 +627,50 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
             autoComplete="off"
             onSubmit={(e) => { e.preventDefault(); handlePrint(); }}
           >
-          <div className="panel-heading">
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span className="step">01</span>
-              <h2>{t("chequeDetails")}</h2>
-                   <span
-                      className="state-badge"
-                      style={{
-                        background:
-                          derivedFormState === "ready-print" || derivedFormState === "ready-preview"
-                            ? "color-mix(in srgb, var(--success) 14%, transparent)"
+            <div className="panel-heading">
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <h2>{t("chequeDetails")}</h2>
+                <span
+                  className="state-badge"
+                  style={{
+                    background:
+                      derivedFormState === "ready-print" || derivedFormState === "ready-preview"
+                        ? "color-mix(in srgb, var(--success) 14%, transparent)"
+                        : derivedFormState === "printing"
+                          ? "color-mix(in srgb, var(--info) 14%, transparent)"
+                          : "color-mix(in srgb, var(--text-secondary) 10%, transparent)",
+                    color:
+                      derivedFormState === "ready-print" || derivedFormState === "ready-preview"
+                        ? "var(--success)"
+                        : derivedFormState === "printing"
+                          ? "var(--info)"
+                          : "var(--text-secondary)",
+                  }}
+                  aria-label={`Workflow state: ${derivedFormState}`}
+                >
+                  {derivedFormState === "empty"
+                    ? t("stateSelectBank")
+                    : derivedFormState === "template-selected"
+                      ? t("stateBankSelected")
+                      : derivedFormState === "data-entering"
+                        ? t("stateFillingDetails")
+                        : derivedFormState === "ready-preview"
+                          ? t("stateReviewPreview")
+                          : derivedFormState === "ready-print"
+                            ? t("stateReadyToPrint")
                             : derivedFormState === "printing"
-                              ? "color-mix(in srgb, var(--info) 14%, transparent)"
-                              : "color-mix(in srgb, var(--text-secondary) 10%, transparent)",
-                        color:
-                          derivedFormState === "ready-print" || derivedFormState === "ready-preview"
-                            ? "var(--success)"
-                            : derivedFormState === "printing"
-                              ? "var(--info)"
-                              : "var(--text-secondary)",
-                      }}
-                      aria-label={`Workflow state: ${derivedFormState}`}
-                    >
-                     {derivedFormState === "empty"
-                       ? t("stateSelectBank")
-                       : derivedFormState === "template-selected"
-                         ? t("stateBankSelected")
-                         : derivedFormState === "data-entering"
-                           ? t("stateFillingDetails")
-                           : derivedFormState === "ready-preview"
-                             ? t("stateReviewPreview")
-                             : derivedFormState === "ready-print"
-                               ? t("stateReadyToPrint")
-                               : derivedFormState === "printing"
-                                 ? t("statePrinting")
-                                 : t("statePrintFinished")}
-                   </span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <ThemeToggle />
-                    <LanguageToggle />
-                    <button type="button" className="text-button" onClick={handleClear} aria-label={t("clearAllAria")}>
-                      {t("clearAllBtn")}
-                    </button>
-                  </div>
-                </div>
+                              ? t("statePrinting")
+                              : t("statePrintFinished")}
+                </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <ThemeToggle />
+                <LanguageToggle />
+                <button type="button" className="text-button" onClick={handleClear} aria-label={t("clearAllAria")}>
+                  {t("clearAllBtn")}
+                </button>
+              </div>
+            </div>
 
             {boundBankId ? (
               <div className="field">
@@ -951,19 +681,44 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                 </small>
               </div>
             ) : (
-              <BankSelector value={selectedBankId} onChange={(id) => { setSelectedBankId(id); setTemplateId(""); }} />
+              <div className="field">
+                <label htmlFor="bank-select">{t("selectBank")}</label>
+                <select
+                  id="bank-select"
+                  required
+                  value={selectedBankId}
+                  onChange={(e) => { setSelectedBankId(e.target.value); setTemplateId(""); }}
+                >
+                  <option value="">— {t("selectBank")} —</option>
+                  {getBankOptions().map((option) => (
+                    <option key={option.value} value={option.value} disabled={!option.hasTemplate}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <small>{t("bankTemplateNote")}</small>
+              </div>
             )}
 
-            <BankTemplateSelector
-              templates={templates}
-              selectedId={templateId}
-              onChange={setTemplateId}
-              disabled={templates.length === 0}
-            />
+            {templates.length > 0 && (
+              <div className="field">
+                <label htmlFor="template-select">{t("selectBankTemplate")}</label>
+                <select
+                  id="template-select"
+                  required
+                  value={templateId}
+                  onChange={(e) => setTemplateId(e.target.value)}
+                >
+                  <option value="">— {t("selectBankTemplate")} —</option>
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>{t.label}</option>
+                  ))}
+                </select>
+                <small>{t("pickTemplateHelp")}</small>
+              </div>
+            )}
             {templates.length === 0 && (
-              <p className="error-state" role="status">
-                {t("noTemplates")}
-              </p>
+              <p className="error-state" role="status">{t("noTemplates")}</p>
             )}
 
             {/* Print Mode + Date */}
@@ -975,30 +730,23 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                   value={printMode}
                   onChange={(e) => handleModeChange(e.target.value as ProfileKey)}
                   disabled={!template}
-                  aria-required={true}
-                  aria-describedby={template ? "print-mode-help" : "field-disabled-bank"}
-                  aria-disabled={!template}
                 >
-                <optgroup label={t("directFeedGroup")}>
-                  {supportedModes
-                    .filter((m) => isDirectFeed(m))
-                    .map((m) => (
-                      <option key={m} value={m}>
-                        {localizedProfileLabel(m, appLocale)}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label={t("a4CarrierGroup")}>
-                  {supportedModes
-                    .filter((m) => !isDirectFeed(m))
-                    .map((m) => (
-                      <option key={m} value={m}>
-                        {localizedProfileLabel(m, appLocale)}
-                      </option>
-                    ))}
-                </optgroup>
+                  <optgroup label={t("directFeedGroup")}>
+                    {supportedModes
+                      .filter((m) => isDirectFeed(m))
+                      .map((m) => (
+                        <option key={m} value={m}>{localizedProfileLabel(m, appLocale)}</option>
+                      ))}
+                  </optgroup>
+                  <optgroup label={t("a4CarrierGroup")}>
+                    {supportedModes
+                      .filter((m) => !isDirectFeed(m))
+                      .map((m) => (
+                        <option key={m} value={m}>{localizedProfileLabel(m, appLocale)}</option>
+                      ))}
+                  </optgroup>
                 </select>
-                <small id="print-mode-help">{t("printModeHelp")}</small>
+                <small>{t("printModeHelp")}</small>
               </div>
               <div className="field">
                 <label htmlFor="date-input">{t("dateLabel")}</label>
@@ -1009,64 +757,38 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                   max={new Date().toISOString().slice(0, 10)}
                   onChange={(e) => setDate(e.target.value)}
                   disabled={!template}
-                  aria-required={true}
-                  aria-describedby={template ? "date-help" : "field-disabled-bank"}
-                  aria-disabled={!template}
                 />
-                <small id="date-help">
+                <small>
                   {dateWarning ? <span className="error-state">{dateWarning}</span> : t("dateHelpText")}
                 </small>
               </div>
             </div>
 
             {/* Payee */}
-              <div className="field">
-                <label htmlFor="payee-input">{t("payeeLabel")}</label>
-                <input
-                  id="payee-input"
-                  type="text"
-                  maxLength={120}
-                  placeholder={template ? t("payeePlaceholder") : ""}
-                  value={payee}
-                  onChange={(e) => setPayee(e.target.value.slice(0, 120))}
-                  disabled={!template}
-                  aria-describedby={template ? "payee-help" : "field-disabled-bank"}
-                  aria-disabled={!template}
-                />
-                {(() => {
-                  const pc = validatePayee(payee);
-                  return !pc.valid && payee !== "" ? <span className="error-state" role="alert">{pc.error}</span> : null;
-                })()}
-                <small id="payee-help">{t("payeeHelpText")}</small>
-                {!template && (
-                  <span id="field-disabled-bank" className="sr-only">
-                    {t("fieldDisabledBank")}
-                  </span>
-                )}
-              </div>
+            <div className="field">
+              <label htmlFor="payee-input">{t("payeeLabel")}</label>
+              <input
+                id="payee-input"
+                type="text"
+                maxLength={120}
+                placeholder={template ? t("payeePlaceholder") : ""}
+                value={payee}
+                onChange={(e) => setPayee(e.target.value.slice(0, 120))}
+                disabled={!template}
+              />
+              {(() => {
+                const pc = validatePayee(payee);
+                return !pc.valid && payee !== "" ? <span className="error-state" role="alert">{pc.error}</span> : null;
+              })()}
+              <small>{t("payeeHelpText")}</small>
+            </div>
 
             {/* Amount + Amount in Words */}
             <div className="two-columns">
               <div className="field">
-                <label htmlFor="reference-input">{t("referenceLabel")}</label>
-                <input
-                  id="reference-input"
-                  type="text"
-                  maxLength={60}
-                  placeholder={template ? t("referencePlaceholder") : ""}
-                  value={reference}
-                  onChange={(e) => setReference(e.target.value.slice(0, 60))}
-                  disabled={!template}
-                  aria-describedby={template ? "reference-help" : "field-disabled-bank"}
-                  aria-disabled={!template}
-                />
-                <small id="reference-help">{t("referenceHelpText")}</small>
-              </div>
-              <div className="field">
                 <label htmlFor="amount-input">{t("amountLabel")}</label>
                 <div className="input-prefix">
                   <b aria-hidden="true">{t("amountPrefix")}</b>
-                  <label htmlFor="amount-input" className="sr-only">{t("amountLabel")}</label>
                   <input
                     id="amount-input"
                     type="text"
@@ -1075,12 +797,9 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                     value={amount}
                     onChange={(e) => handleAmountChange(e.target.value)}
                     disabled={!template}
-                    aria-invalid={!!amountError}
-                    aria-describedby={amountError ? "amount-error" : template ? undefined : "field-disabled-bank"}
-                    aria-required={true}
                   />
                 </div>
-                {amountError && <span className="error-state" id="amount-error" role="alert">{amountError}</span>}
+                {amountError && <span className="error-state" role="alert">{amountError}</span>}
                 <small>{t("amountHelp")}</small>
               </div>
               <div className="field">
@@ -1093,11 +812,24 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                   value={amountWords}
                   onChange={(e) => handleWordEdit(e.target.value)}
                   disabled={!template}
-                  aria-describedby={template ? "words-help" : "field-disabled-bank"}
-                  aria-disabled={!template}
                 />
-                <small id="words-help">{t("wordsHelp")}</small>
+                <small>{t("wordsHelp")}</small>
               </div>
+            </div>
+
+            {/* Reference */}
+            <div className="field">
+              <label htmlFor="reference-input">{t("referenceLabel")}</label>
+              <input
+                id="reference-input"
+                type="text"
+                maxLength={60}
+                placeholder={template ? t("referencePlaceholder") : ""}
+                value={reference}
+                onChange={(e) => setReference(e.target.value.slice(0, 60))}
+                disabled={!template}
+              />
+              <small>{t("referenceHelpText")}</small>
             </div>
 
             {/* A/C Payee Only */}
@@ -1108,229 +840,104 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
                 checked={accountPayee}
                 onChange={(e) => setAccountPayee(e.target.checked)}
                 disabled={!template}
-                aria-describedby={template ? undefined : "field-disabled-bank"}
-                aria-disabled={!template}
               />
-                <label htmlFor="ac-payee" style={{ margin: 0, fontWeight: 600, fontSize: "0.88rem", color: "var(--text-secondary)" }}>
+              <label htmlFor="ac-payee" style={{ margin: 0, fontWeight: 600, fontSize: "0.88rem", color: "var(--text-secondary)" }}>
                 {t("acPayeeOnly")} <b>A/C PAYEE ONLY</b>
                 <span style={{ fontWeight: 400, fontSize: "0.8rem", color: "var(--text-muted)" }}>
                   {" "}·{t("acPayeeHelp")}
                 </span>
-               </label>
-             </div>
-
-             {/* MICR Verification Gate — must be checked before print/PDF generation */}
-             <div className="field check" style={{ marginTop: 8, padding: "8px 10px", border: "1px solid color-mix(in srgb, var(--warning) 30%, transparent)", borderRadius: "var(--radius-sm)", background: "color-mix(in srgb, var(--warning) 4%, transparent)" }}>
-               <input
-                 id="micr-verify"
-                 type="checkbox"
-                 checked={micrVerified}
-                 onChange={(e) => setMicrVerified(e.target.checked)}
-                 disabled={!template}
-                 aria-describedby={template ? "micr-verify-help" : "field-disabled-bank"}
-                 aria-disabled={!template}
-               />
-               <label htmlFor="micr-verify" style={{ margin: 0, fontWeight: 600, fontSize: "0.88rem", color: "var(--warning)" }}>
-                 {appLocale === "ne" ? "कृपया MICR लाईन सफा पुष्टि गर्नुस्" : "MICR line (bottom 0.5\" of cheque) is clear?"}
-                 <small id="micr-verify-help" style={{ display: "block", marginTop: 2, fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 400 }}>
-                   {appLocale === "ne" ? "चेकको तल ०.५ इंचको MICR ब्यान्ड कुनै पनि स्याहीले छोएको छैन भन्न जाँच गर्नुहोस्।" : "Check that no ink overlaps the MICR band (bottom 0.5\")."}
-                 </small>
-               </label>
-             </div>
-            {template && paper && (
-              <div className="field" style={{ marginTop: 16, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
-                <h3 style={{ margin: "0 0 10px 0", fontSize: "0.82rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                  {t("printSettingsTitle")}
-                </h3>
-                <div style={{ display: "grid", gap: 10, fontSize: "0.85rem" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>{t("printModeDisplay")}</span>
-                    <b style={{ color: isDF ? "var(--brand-blue)" : "var(--brand-teal)" }}>
-                      {isDF ? t("customChequeSize") : t("a4Carrier")}
-                    </b>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>{t("chequeSizeDisplay")}</span>
-                    <b>{template.widthMm} mm × {template.heightMm} mm</b>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>{t("orientationDisplay")}</span>
-                    <b>{template.orientation === "portrait" ? t("portrait") : t("landscape")} {t("chequeSizeLabel")}</b>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>{t("paperDisplay")}</span>
-                    <b>{paper.label}</b>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>{t("calibrationDisplay")}</span>
-                    <b>{formatCalibration(currentCalibration)}</b>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>{t("scaleDisplay")}</span>
-                    <b>100% / Actual Size</b>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>{t("templateStatusDisplay")}</span>
-                    <b>
-                      {template.verification?.status === "physically-calibrated"
-                        ? t("physicallyCalibrated")
-                        : template.verification?.status === "browser-verified"
-                          ? t("browserVerified")
-                          : t("unverifiedLayout")}
-                    </b>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-                    <span style={{ color: "var(--text-muted)" }}>{t("modeCalibrationsDisplay")}</span>
-                    <b style={{ fontSize: "0.8rem" }}>
-                      {calibrationRows
-                        .map((row) => `${PROFILE_LABELS[row.mode].split(" · ")[0]}: ${formatCalibration(row.calibration)}`)
-                        .join(" · ")}
-                    </b>
-                  </div>
-                </div>
-
-                {/* Debug mode toggle */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingLeft: 2 }}>
-                  <label htmlFor="debug-toggle" style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: "0.82rem" }}>
-                    <input
-                      id="debug-toggle"
-                      type="checkbox"
-                      checked={debugMode}
-                      onChange={(e) => setDebugMode(e.target.checked)}
-                    />
-                    <span style={{ color: "var(--text-muted)" }}>{t("debugToggleLabel")}</span>
-                  </label>
-                  <small style={{ color: "var(--text-muted)" }}>{t("devAdminOnly")}</small>
-                </div>
-              </div>
-            )}
-
-            {/* Calibration — mode-aware heading */}
-            <div className="field" style={{ marginTop: 8 }}>
-              <span>
-                Calibration (mm offset) ·{" "}
-                <b style={{ color: isDF ? "var(--brand-blue)" : "var(--brand-teal)" }}>
-                  {isDF ? t("directFeed") : t("a4Carrier")}
-                </b>
-              </span>
-              <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
-                   <CalibrationControl
-                  label={t("xOffsetLabel")}
-                  value={currentCalibration.x}
-                  onChange={(v) => updateCalibration({ ...currentCalibration, x: clampCalibration(v) })}
-                  disabled={!template}
-                />
-                <CalibrationControl
-                  label={t("yOffsetLabel")}
-                  value={currentCalibration.y}
-                  onChange={(v) => updateCalibration({ ...currentCalibration, y: clampCalibration(v) })}
-                  disabled={!template}
-                />
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
-                  <button
-                    type="button"
-                    className="text-button"
-                    disabled={!template || isNeutralCalibration(currentCalibration)}
-                    onClick={resetAllCalibration}
-                    title={t("resetCalibrationHint")}
-                    style={{ fontSize: "0.8rem", padding: "4px 6px" }}
-                   >
-                     {t("resetAllBtn")}
-                  </button>
-                  <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                    {calibrationRows
-                      .map((row) => `${PROFILE_LABELS[row.mode].split(" · ")[0]}: X ${row.calibration.x.toFixed(1)} Y ${row.calibration.y.toFixed(1)}`)
-                      .join(" · ")}
-                  </span>
-                </div>
-              </div>
-                <small>
-                {t("calibrationHelp")}{CALIBRATION_STEP_MM} {t("mmSteps")}{CALIBRATION_MAX_MM} {t("mmRange")}
-              </small>
+              </label>
             </div>
 
-            {/* Selected template summary */}
-            {template && profile && (
-              <div className="template-summary" aria-label={t("templateInfoAria")}>
-                <div><span>{t("bankLabel")}</span><b>{template.bankName}</b></div>
-                <div><span>{t("layoutLabel")}</span><b>{template.label}</b></div>
-                <div><span>{t("sizeLabel")}</span><b>{template.widthMm} × {template.heightMm} mm ({template.orientation})</b></div>
-                <div><span>{t("modeLabel")}</span><b>{PROFILE_LABELS[printMode]}</b></div>
-                <div><span>{t("pageLabel")}</span><b>{profile.pageWidth} × {profile.pageHeight} mm</b></div>
-                <div><span>{t("calibrationLabel")}</span><b>{formatCalibration(currentCalibration)}</b></div>
+            {/* MICR Verification */}
+            <div className="field check" style={{ marginTop: 8, padding: "8px 10px", border: "1px solid color-mix(in srgb, var(--warning) 30%, transparent)", borderRadius: "var(--radius-sm)", background: "color-mix(in srgb, var(--warning) 4%, transparent)" }}>
+              <input
+                id="micr-verify"
+                type="checkbox"
+                checked={micrVerified}
+                onChange={(e) => setMicrVerified(e.target.checked)}
+                disabled={!template}
+              />
+              <label htmlFor="micr-verify" style={{ margin: 0, fontWeight: 600, fontSize: "0.88rem", color: "var(--warning)" }}>
+                {appLocale === "ne" ? "कृपया MICR लाईन सफा पुष्टि गर्नुस्" : "MICR line (bottom 0.5\" of cheque) is clear?"}
+                <small style={{ display: "block", marginTop: 2, fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 400 }}>
+                  {appLocale === "ne" ? "चेकको तल ०.५ इंचको MICR ब्यान्ड कुनै पनि स्याहीले छोएको छैन भन्न जाँच गर्नुहोस्।" : "Check that no ink overlaps the MICR band (bottom 0.5\")."}
+                </small>
+              </label>
+            </div>
+
+            {/* Advanced Settings: Calibration */}
+            <div style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+              <details>
+                <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 8 }}>
+                  Advanced Settings ▼
+                </summary>
+                <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
+                      Calibration (mm offset) · <b style={{ color: isDF ? "var(--brand-blue)" : "var(--brand-teal)" }}>
+                        {isDF ? t("directFeed") : t("a4Carrier")}
+                      </b>
+                    </span>
+                    <div style={{ display: "grid", gap: 10, marginTop: 6 }}>
+                      <CalibrationControl
+                        label={t("xOffsetLabel")}
+                        value={currentCalibration.x}
+                        onChange={(v) => updateCalibration({ ...currentCalibration, x: clampCalibration(v) })}
+                        disabled={!template}
+                      />
+                      <CalibrationControl
+                        label={t("yOffsetLabel")}
+                        value={currentCalibration.y}
+                        onChange={(v) => updateCalibration({ ...currentCalibration, y: clampCalibration(v) })}
+                        disabled={!template}
+                      />
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <button
+                          type="button"
+                          className="text-button"
+                          disabled={!template || isNeutralCalibration(currentCalibration)}
+                          onClick={resetAllCalibration}
+                          title={t("resetCalibrationHint")}
+                          style={{ fontSize: "0.8rem", padding: "4px 6px" }}
+                        >
+                          {t("resetAllBtn")}
+                        </button>
+                      </div>
+                    </div>
+                    <small>{t("calibrationHelp")}{CALIBRATION_STEP_MM} {t("mmSteps")}{CALIBRATION_MAX_MM} {t("mmRange")}</small>
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            {/* Print Actions */}
+            <div className="sticky-print-bar" style={{ marginTop: 16 }}>
+              <div className="form-actions" style={{ flexDirection: "column", alignItems: "stretch", gap: 8 }}>
+                <button
+                  type="button"
+                  className="button secondary"
+                  disabled={!printReadiness.ready || isPrinting}
+                  onClick={handlePrint}
+                >
+                  {isPrinting ? t("printingLabel") : printCompleted ? t("printAgain") : t("printChequeBtn")}
+                </button>
+                {!printReadiness.ready && !isPrinting && (
+                  <p className="error-state" role="status" aria-live="polite">
+                    {printReadiness.reason}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="button secondary"
+                  style={{ fontSize: "0.82rem" }}
+                  disabled={!printReadiness.ready || isGeneratingPdf || isPrinting}
+                  onClick={handleGeneratePdfOverlay}
+                >
+                  {isGeneratingPdf ? t("generatingPdf") : t("generateBtn")}
+                </button>
               </div>
-            )}
-
-            <PrepChecklist
-              template={template}
-              date={date}
-              payee={payee}
-              amount={amount}
-              amountWords={amountWords}
-              printMode={printMode}
-              calibration={currentCalibration}
-              isDF={isDF}
-              safeZonesClear={safeZonesClear}
-             />
-
-             {/* Print summary card — scannable snapshot of what will print */}
-             {template && (
-               <div className="template-summary" aria-label="Print summary" style={{ marginTop: 8 }}>
-                 <div><span>{t("bankLabel")}</span><b>{template.bankName}</b></div>
-                 <div><span>{t("modeLabel")}</span><b>{PROFILE_LABELS[printMode]}</b></div>
-                 <div><span>{t("scaleDisplay")}</span><b>100%</b></div>
-                 <div><span>{t("calibrationLabel")}</span><b>{formatCalibration(currentCalibration)}</b></div>
-               </div>
-             )}
-
-              {/* Sticky print bar: pinned to the bottom of the form on mobile so the
-                   primary print action is always reachable without scrolling back up
-                   after reviewing the live preview. */}
-              <div className="sticky-print-bar" style={{ marginTop: 16 }}>
-               <div className="form-actions" style={{ flexDirection: "column", alignItems: "stretch", gap: 8 }}>
-               <button
-                 type="button"
-                 className="button secondary"
-                 disabled={!printReadiness.ready || isPrinting}
-                 onClick={handlePrint}
-                 aria-disabled={!printReadiness.ready || isPrinting}
-                 aria-describedby={printReadiness.ready ? "print-help" : "print-reason"}
-                 aria-label={
-                   isPrinting
-                     ? t("ariaPrintingCheque")
-                   : printCompleted
-                       ? t("ariaPrintCompleted")
-                       : printReadiness.ready
-                         ? t("ariaPrintCheque")
-                         : `${t("ariaPrintCheque")} — ${t("requiresLabel")}: ${printReadiness.reason ?? t("allFieldsComplete")}`
-                 }
-               >
-                 {isPrinting ? t("printingLabel") : printCompleted ? t("printAgain") : t("printChequeBtn")}
-               </button>
-               {!printReadiness.ready && !isPrinting && (
-                 <p id="print-reason" className="error-state" role="status" aria-live="polite">
-                   {printReadiness.reason}
-                 </p>
-               )}
-               <p id="print-help" className="sr-only">
-                 {t("printHelp")}
-               </p>
-
-               {/* PDF Overlay export — generates a transparent 1:1mm PDF overlay
-                   for printing on transparency film over existing cheque stock. */}
-               <button
-                 type="button"
-                 className="button secondary"
-                 style={{ fontSize: "0.82rem" }}
-                 disabled={!printReadiness.ready || isGeneratingPdf || isPrinting}
-                 onClick={handleGeneratePdfOverlay}
-                 aria-label={isGeneratingPdf ? t("generatingPdfOverlay") : t("generatePdfOverlay")}
-                 title={t("generatePdfOverlay")}
-               >
-                 {isGeneratingPdf ? t("generatingPdf") : t("generateBtn")}
-               </button>
-               </div>
-              </div>
+            </div>
 
             {printError && (
               <p className="error-state" style={{ marginTop: 8 }} role="alert" aria-live="assertive">{printError}</p>
@@ -1346,8 +953,8 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
           <section className="preview-column">
             <div className="preview-heading">
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span className="step">02</span>
                 <h2>{t("previewTitle")}</h2>
+                <span className="preview-label">Live Preview</span>
               </div>
               <span style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>
                 {template?.bankName || t("noBankSelected")}
@@ -1386,75 +993,67 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
               </p>
             )}
 
-              <div className="tip-card">
-                <div className="tip-icon" aria-hidden="true">i</div>
-                <div>
-                  <strong>{t("beforePrintingTitle")}</strong>
-                  <p>
-                    {isDF ? (
-                      <>{t("beforePrintingDirectFeed")}</>
-                    ) : (
-                      <>{t("beforePrintingA4Carrier")}</>
-                    )}
-                  </p>
-                </div>
+            <div className="tip-card">
+              <div className="tip-icon" aria-hidden="true">i</div>
+              <div>
+                <strong>{t("beforePrintingTitle")}</strong>
+                <p>
+                  {isDF ? (
+                    <>{t("beforePrintingDirectFeed")}</>
+                  ) : (
+                    <>{t("beforePrintingA4Carrier")}</>
+                  )}
+                </p>
               </div>
+            </div>
 
-              {template && <PrintGuidance template={template} />}
-
-             {/* PDF Overlay preview — shows when a transparent PDF has been generated */}
-             {pdfOverlayUrl && (
-               <div className="card" style={{ marginTop: 12, padding: 12 }}>
-                  <h3 style={{ margin: "0 0 8px 0", fontSize: "0.82rem", color: "var(--text-secondary)", fontWeight: 700 }}>
-                    {t("pdfOverlayTitle")}
-                  </h3>
-               <p style={{ margin: "0 0 8px 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                 {t("pdfOverlayHelp")}
-               </p>
-               <iframe
-                   src={pdfOverlayUrl}
-                   title="Cheque overlay PDF preview"
-                   style={{ width: "100%", height: "200px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
-                 />
-                 <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "flex-end" }}>
-                      <a
-                        href={pdfOverlayUrl}
-                        download="cheque-overlay.pdf"
-                        className="text-button"
-                        style={{ fontSize: "0.8rem" }}
-                        onClick={() => {
-                          // Clean up URL after download starts
-                          setTimeout(() => {
-                            if (pdfOverlayUrl) URL.revokeObjectURL(pdfOverlayUrl);
-                            setPdfOverlayUrl(null);
-                          }, 1000);
-                        }}
-                      >
-                        {t("downloadPdf")}
-                    </a>
-                    <button
-                      type="button"
-                      className="text-button"
-                      style={{ fontSize: "0.8rem" }}
-                      onClick={() => {
+            {pdfOverlayUrl && (
+              <div className="card" style={{ marginTop: 12, padding: 12 }}>
+                <h3 style={{ margin: "0 0 8px 0", fontSize: "0.82rem", color: "var(--text-secondary)", fontWeight: 700 }}>
+                  {t("pdfOverlayTitle")}
+                </h3>
+                <p style={{ margin: "0 0 8px 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                  {t("pdfOverlayHelp")}
+                </p>
+                <iframe
+                  src={pdfOverlayUrl}
+                  title="Cheque overlay PDF preview"
+                  style={{ width: "100%", height: "200px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                />
+                <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "flex-end" }}>
+                  <a
+                    href={pdfOverlayUrl}
+                    download="cheque-overlay.pdf"
+                    className="text-button"
+                    style={{ fontSize: "0.8rem" }}
+                    onClick={() => {
+                      setTimeout(() => {
                         if (pdfOverlayUrl) URL.revokeObjectURL(pdfOverlayUrl);
                         setPdfOverlayUrl(null);
-                      }}
-                    >
-                      {t("discardBtn")}
-                    </button>
-                 </div>
-               </div>
-             )}
-           </section>
+                      }, 1000);
+                    }}
+                  >
+                    {t("downloadPdf")}
+                  </a>
+                  <button
+                    type="button"
+                    className="text-button"
+                    style={{ fontSize: "0.8rem" }}
+                    onClick={() => {
+                      if (pdfOverlayUrl) URL.revokeObjectURL(pdfOverlayUrl);
+                      setPdfOverlayUrl(null);
+                    }}
+                  >
+                    {t("discardBtn")}
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
         </div>
       </div>
 
-      {/* ================================================================
-          PRINT OUTPUT — hidden off-screen on display, visible only during
-          browser print. Rendered by the SAME component as the preview, at
-          physical 1:1 mm scale.
-          ================================================================ */}
+      {/* PRINT OUTPUT */}
       {template && profile && (
         <div
           ref={printOutputRef}
@@ -1465,35 +1064,13 @@ export default function Workspace({ bankId: boundBankId, templateId: boundTempla
           data-caly={String(currentCalibration.y)}
           className="print-output-screen"
         >
-          <PrintOutput
-            template={template}
-            data={chequeData}
-            mode={printMode}
-            calibration={currentCalibration}
-          />
+          <ChequeSheet template={template} data={chequeData} mode={printMode} calibration={currentCalibration} variant="print" />
         </div>
       )}
     </>
   );
 }
 
-/** The print payload: the same sheet, at 1:1 physical scale. */
-function PrintOutput({
-  template,
-  data,
-  mode,
-  calibration,
-}: {
-  template: BankTemplate;
-  data: ChequeData;
-  mode: ProfileKey;
-  calibration: Calibration;
-}) {
-  return <ChequeSheet template={template} data={data} mode={mode} calibration={calibration} variant="print" />;
-}
-
-/** Screen-only guard: the print payload must fit inside its cheque box. */
 export function layoutFits(template: BankTemplate, data: ChequeData, mode: ProfileKey, calibration: Calibration): boolean {
   return fieldsWithinCheque(computeSheetLayout(template, data, mode, calibration));
 }
-

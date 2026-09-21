@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  Calendar,
   CheckCircle2,
   Clock3,
   FilePlus2,
@@ -35,10 +36,16 @@ function formatAmount(amount: number) {
   return `NPR ${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
 export default function DashboardPage() {
   const { role } = useUserRole();
   const [stats, setStats] = useState({ total: 0, printed: 0, draft: 0, cancelled: 0 });
   const [recentCheques, setRecentCheques] = useState<ChequeRecord[]>([]);
+  const [todayCount, setTodayCount] = useState(0);
 
   useEffect(() => {
     async function fetchData() {
@@ -49,6 +56,11 @@ export default function DashboardPage() {
 
       if (cheques) {
         setRecentCheques(cheques.slice(0, 5));
+        
+        const today = new Date().toISOString().slice(0, 10);
+        const todayCheques = cheques.filter((c) => c.created_at?.startsWith(today));
+        
+        setTodayCount(todayCheques.length);
         setStats({
           total: cheques.length,
           printed: cheques.filter((c) => c.status === "printed").length,
@@ -68,16 +80,16 @@ export default function DashboardPage() {
         <Topbar />
 
         <main className="flex-1 p-5 md:p-8">
-          <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-center">
+          <div className="mb-6 flex flex-col justify-between gap-5 md:flex-row md:items-center">
             <div>
               <p className="text-sm font-medium text-blue-600">
-                User Dashboard
+                Dashboard
               </p>
               <h1 className="mt-1 text-3xl font-bold text-slate-950 dark:text-white">
-                Cheque Overview
+                Today
               </h1>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                तपाईंको cheque records र printing activity manage गर्नुहोस्।
+                Total Cheques: {stats.total} | Printed: {stats.printed} | Drafts: {stats.draft}
               </p>
             </div>
 
@@ -92,15 +104,23 @@ export default function DashboardPage() {
 
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
-              title="Total Cheques"
-              value={String(stats.total)}
-              description="All cheque records"
-              icon={FileText}
+              title="Today"
+              value={String(todayCount)}
+              description="Cheques created today"
+              icon={Calendar}
               color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300"
             />
 
             <StatCard
-              title="Printed Cheques"
+              title="Total Cheques"
+              value={String(stats.total)}
+              description="All cheque records"
+              icon={FileText}
+              color="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            />
+
+            <StatCard
+              title="Printed"
               value={String(stats.printed)}
               description="Successfully printed"
               icon={Printer}
@@ -108,48 +128,36 @@ export default function DashboardPage() {
             />
 
             <StatCard
-              title="Draft Cheques"
+              title="Drafts"
               value={String(stats.draft)}
               description="Waiting for printing"
               icon={Clock3}
               color="bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-300"
             />
-
-            <StatCard
-              title="Cancelled"
-              value={String(stats.cancelled)}
-              description="Cancelled cheque records"
-              icon={XCircle}
-              color="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300"
-            />
           </div>
 
-          <div className="mt-8 grid gap-6 xl:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 xl:col-span-2">
+          <div className="mt-8">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="font-bold text-slate-900 dark:text-white">
                     Recent Cheques
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    तपाईंका पछिल्ला cheque records
-                  </p>
                 </div>
 
                 <Link
-                  href="/dashboard/cheques"
-                  className="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                  href="/dashboard/cheques/new"
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
                 >
-                  View all
-                  <ArrowRight size={16} />
+                  <FilePlus2 size={16} />
+                  Create New Cheque
                 </Link>
               </div>
 
               <div className="mt-6 overflow-x-auto">
-                <table className="w-full min-w-[650px] text-left">
+                <table className="w-full min-w-[600px] text-left">
                   <thead>
                     <tr className="border-b border-slate-200 text-xs uppercase text-slate-400 dark:border-slate-700">
-                      <th className="pb-3 font-semibold">Cheque No.</th>
                       <th className="pb-3 font-semibold">Payee</th>
                       <th className="pb-3 font-semibold">Amount</th>
                       <th className="pb-3 font-semibold">Date</th>
@@ -160,7 +168,7 @@ export default function DashboardPage() {
                   <tbody>
                     {recentCheques.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                        <td colSpan={4} className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
                           No cheques yet. Create your first cheque.
                         </td>
                       </tr>
@@ -170,11 +178,7 @@ export default function DashboardPage() {
                           key={cheque.id}
                           className="border-b border-slate-100 last:border-0 dark:border-slate-800"
                         >
-                          <td className="py-4 text-sm font-mono text-blue-600 dark:text-blue-400">
-                            {cheque.cheque_number}
-                          </td>
-
-                          <td className="py-4 text-sm text-slate-700 dark:text-slate-300">
+                          <td className="py-4 text-sm font-semibold text-slate-900 dark:text-white">
                             {cheque.payee_name}
                           </td>
 
@@ -183,7 +187,7 @@ export default function DashboardPage() {
                           </td>
 
                           <td className="py-4 text-sm text-slate-500 dark:text-slate-400">
-                            {cheque.cheque_date}
+                            {formatDate(cheque.cheque_date)}
                           </td>
 
                           <td className="py-4">
@@ -192,7 +196,7 @@ export default function DashboardPage() {
                                 cheque.status,
                               )}`}
                             >
-                              {cheque.status}
+                              {cheque.status === "draft" ? "Draft Create New Cheque" : cheque.status}
                             </span>
                           </td>
                         </tr>
@@ -200,51 +204,6 @@ export default function DashboardPage() {
                     )}
                   </tbody>
                 </table>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-              <h2 className="font-bold text-slate-900 dark:text-white">Quick Actions</h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Frequently used options
-              </p>
-
-              <div className="mt-6 space-y-3">
-                <Link
-                  href="/dashboard/cheques/new"
-                  className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-blue-700 hover:bg-blue-100 dark:border-blue-900/40 dark:bg-blue-900/20 dark:text-blue-300"
-                >
-                  <FilePlus2 size={20} />
-                  <div>
-                    <p className="text-sm font-semibold">New Cheque</p>
-                    <p className="text-xs text-blue-600 dark:text-blue-300">
-                      Create a new cheque
-                    </p>
-                  </div>
-                </Link>
-
-                <Link
-                  href="/dashboard/cheques"
-                  className="flex items-center gap-3 rounded-xl border border-slate-200 p-4 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                >
-                  <FileText size={20} />
-                  <div>
-                    <p className="text-sm font-semibold">Cheque History</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      View all records
-                    </p>
-                  </div>
-                </Link>
-
-                <div className="flex items-center gap-3 rounded-xl border border-green-100 bg-green-50 p-4 text-green-700 dark:border-green-900/40 dark:bg-green-900/20 dark:text-green-300">
-                  <CheckCircle2 size={20} />
-                  <div>
-                    <p className="text-sm font-semibold">System Status</p>
-                    <p className="text-xs text-green-600 dark:text-green-300">
-                      All systems active
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
