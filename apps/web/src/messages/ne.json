@@ -1,0 +1,38 @@
+{
+  "app": {
+    "name": "Reactify Cheque Printer System",
+    "description": "नेपाली बैंक चेकहरू तयार र प्रिन्ट गर्नुहोस्।"
+  },
+  "nav": {
+    "home": "मुखपृष्ठ",
+    "about": "हाम्रो बारेमा",
+    "features": "विशेषताहरू",
+    "pricing": "मूल्य निर्धारण",
+    "faq": "प्रश्नहरू",
+    "contact": "सम्पर्क",
+    "blog": "ब्लग",
+    "login": "लग इन",
+    "register": "दर्ता गर्नुहोस्",
+    "dashboard": "ड्यासबोर्ड"
+  },
+  "dashboard": {
+    "overview": "सिंहावलोकन",
+    "print": "नयाँ चेक प्रिन्ट",
+    "cheques": "मेरा चेकहरू",
+    "templates": "सुरक्षित टेम्पलेटहरू",
+    "payees": "सुरक्षित प्रापकहरू",
+    "history": "प्रिन्ट इतिहास",
+    "settings": "सेटिङहरू",
+    "subscription": "सदस्यता",
+    "reports": "प्रतिवेदनहरू",
+    "security": "सुरक्षा"
+  },
+  "auth": {
+    "login": "लग इन",
+    "register": "दर्ता गर्नुहोस्",
+    "forgotPassword": "पासवर्ड बिर्सनुभयो",
+    "resetPassword": "पासवर्ड रीसेट गर्नुहोस्",
+    "verifyEmail": "इमेल प्रमाणित गर्नुहोस्",
+    "twoFactor": "दुई-कारक प्रमाणीकरण"
+  }
+}
