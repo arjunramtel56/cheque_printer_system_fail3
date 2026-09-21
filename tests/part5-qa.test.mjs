@@ -361,7 +361,11 @@ console.log("\n=== REGRESSION: Landing, Trial, User, Admin ===");
 function fileExists(p) {
   try { readFileSync(p); return true; } catch { return false; }
 }
-assert(fileExists(repoRoot + "app/page.tsx"), "Landing (app/page.tsx) intact");
+assert(fileExists(repoRoot + "app/page.tsx"), "Marketing homepage (app/page.tsx) intact");
+assert(fileExists(repoRoot + "app/print/page.tsx"), "Print workflow route (app/print/page.tsx) intact");
+assert(fileExists(repoRoot + "app/auth/login/page.tsx"), "Auth login route (app/auth/login/page.tsx) intact");
+assert(fileExists(repoRoot + "app/auth/register/page.tsx"), "Auth register route (app/auth/register/page.tsx) intact");
+assert(fileExists(repoRoot + "lib/auth.ts"), "Client-side auth store (lib/auth.ts) intact");
 assert(fileExists(repoRoot + "app/layout.tsx"), "Root layout (app/layout.tsx) intact");
 assert(fileExists(repoRoot + "components/Workspace.tsx"), "Workspace component intact");
 assert(fileExists(repoRoot + "app/globals.css"), "globals.css intact");

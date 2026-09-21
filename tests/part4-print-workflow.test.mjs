@@ -66,7 +66,7 @@ const ws = readFileSync(repoRoot + "components/Workspace.tsx", "utf8");
 const printCss = readFileSync(repoRoot + "app/print.css", "utf8");
 const globalsCss = readFileSync(repoRoot + "app/globals.css", "utf8");
 const layoutTsx = readFileSync(repoRoot + "app/layout.tsx", "utf8");
-const pageTsx = readFileSync(repoRoot + "app/page.tsx", "utf8");
+const pageTsx = readFileSync(repoRoot + "app/print/page.tsx", "utf8");
 const workspaceTsx = ws;
 const sheetLayoutTs = readFileSync(repoRoot + "lib/sheetLayout.ts", "utf8");
 const chequeSheetSource = readFileSync(repoRoot + "components/ChequeSheet.tsx", "utf8");
@@ -615,10 +615,10 @@ assert(printGeometryUsesMillimetres(), "print output expresses geometry in milli
 // ---------------------------------------------------------------------------
 console.log("\n=== LIGHT SYSTEM REGRESSION ===");
 
-// Landing page intact
-assert(fileExists(repoRoot + "app/page.tsx"), "Landing: app/page.tsx intact");
-assert(fileExists(repoRoot + "app/layout.tsx"), "Landing: app/layout.tsx intact");
-assertContains(pageTsx, "Workspace", "Landing imports Workspace component");
+// Print workflow route intact (gated behind /auth)
+assert(fileExists(repoRoot + "app/print/page.tsx"), "Workflow route (app/print/page.tsx) intact");
+assert(fileExists(repoRoot + "app/page.tsx"), "Marketing homepage (app/page.tsx) intact");
+assertContains(pageTsx, "Workspace", "Workflow page imports Workspace component");
 assertContains(layoutTsx, "./globals.css", "Root layout imports globals.css");
 assertContains(layoutTsx, "./print.css", "Root layout imports print.css (print styles active)");
 assertContains(layoutTsx, "color-scheme", "Root layout sets color-scheme for print");
