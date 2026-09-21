@@ -1,19 +1,15 @@
 # dependencies
 node_modules/
-.pnpm-store/
 
 # build outputs
-dist/
 .next/
 out/
+dist/
 
 # environment
 .env
 .env.local
 .env.*.local
-
-# turbo
-.turbo/
 
 # testing
 coverage/
