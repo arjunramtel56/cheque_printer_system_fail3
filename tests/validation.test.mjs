@@ -16,11 +16,11 @@ import {
   MAX_AMOUNT_PAISA,
   MAX_PAYEE_CHARS,
   MIN_PAYEE_FONT_SIZE,
-} from "../lib/amountWords.ts";
-import { getTemplate, getAllTemplates } from "../lib/templates.ts";
-import { validateCalibrationPair } from "../lib/calibration.ts";
-import { resolvePrintGeometry } from "../lib/printGeometry.ts";
-import { validatePrintGeometry, validateCalibratedBounds } from "../lib/validation.ts";
+} from "../src/lib/amountWords.ts";
+import { getTemplate, getAllTemplates } from "../src/lib/templates.ts";
+import { validateCalibrationPair } from "../src/lib/calibration.ts";
+import { resolvePrintGeometry } from "../src/lib/printGeometry.ts";
+import { validatePrintGeometry, validateCalibratedBounds } from "../src/lib/validation.ts";
 
 let passed = 0;
 let failed = 0;
@@ -1160,3 +1160,5 @@ if (failed > 0) {
 } else {
   console.log("\nAll validation tests PASSED.");
 }
+
+

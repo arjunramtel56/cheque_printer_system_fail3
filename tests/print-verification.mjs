@@ -1,12 +1,12 @@
 // Comprehensive print verification script
 // Tests all print scenarios programmatically
 
-import { getTemplate, getAllTemplates } from "../lib/templates.ts";
-import { validateAmount, formatDateDigits, validatePayee, checkAmountWordsConsistency, validateChequeDate, amountToWordsFromPaisa } from "../lib/amountWords.ts";
-import { clampCalibration, validateCalibrationPair, CALIBRATION_MIN_MM, CALIBRATION_MAX_MM } from "../lib/calibration.ts";
-import { resolvePrintGeometry, rotatedContentOffset, resolveCalibratedGeometry, STANDARD_CHEQUE_W_MM, STANDARD_CHEQUE_H_MM, A4_PORTRAIT_W_MM, A4_PORTRAIT_H_MM, A4_LANDSCAPE_W_MM, A4_LANDSCAPE_H_MM } from "../lib/printGeometry.ts";
-import { validatePrintGeometry, validateCalibratedBounds, validateBankTemplate } from "../lib/validation.ts";
-import { isDirectFeed, DIRECT_FEED_MODES, A4_CARRIER_MODES } from "../lib/types.ts";
+import { getTemplate, getAllTemplates } from "../src/lib/templates.ts";
+import { validateAmount, formatDateDigits, validatePayee, checkAmountWordsConsistency, validateChequeDate, amountToWordsFromPaisa } from "../src/lib/amountWords.ts";
+import { clampCalibration, validateCalibrationPair, CALIBRATION_MIN_MM, CALIBRATION_MAX_MM } from "../src/lib/calibration.ts";
+import { resolvePrintGeometry, rotatedContentOffset, resolveCalibratedGeometry, STANDARD_CHEQUE_W_MM, STANDARD_CHEQUE_H_MM, A4_PORTRAIT_W_MM, A4_PORTRAIT_H_MM, A4_LANDSCAPE_W_MM, A4_LANDSCAPE_H_MM } from "../src/lib/printGeometry.ts";
+import { validatePrintGeometry, validateCalibratedBounds, validateBankTemplate } from "../src/lib/validation.ts";
+import { isDirectFeed, DIRECT_FEED_MODES, A4_CARRIER_MODES } from "../src/lib/types.ts";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -237,9 +237,9 @@ for (const t of templates) {
 // ============================================================================
 console.log("\n--- SECTION 9: Print CSS QA ---");
 
-const printCss = readFileSync(repoRoot + "app/print.css", "utf8");
-const globalsCss = readFileSync(repoRoot + "app/globals.css", "utf8");
-const layoutTsx = readFileSync(repoRoot + "app/layout.tsx", "utf8");
+const printCss = readFileSync(repoRoot + "src/app/print.css", "utf8");
+const globalsCss = readFileSync(repoRoot + "src/app/globals.css", "utf8");
+const layoutTsx = readFileSync(repoRoot + "src/app/layout.tsx", "utf8");
 
 assert(layoutTsx.includes("./print.css") || layoutTsx.includes("'./print.css'"), "layout.tsx imports ./print.css");
 assert(printCss.includes("@media print"), "print.css contains @media print block");
@@ -285,15 +285,15 @@ assert(geom.pageW === 190.5 && geom.pageH === 88.9, `Geometry: page ${geom.pageW
 // ============================================================================
 console.log("\n--- SECTION 11: Code Structure Verification ---");
 
-const workspaceCode = readFileSync(repoRoot + "components/Workspace.tsx", "utf8");
+const workspaceCode = readFileSync(repoRoot + "src/components/Workspace.tsx", "utf8");
 assert(!workspaceCode.includes("parseFloat(e.target.value)"), "Workspace.tsx no longer uses raw parseFloat for calibration input");
 assert(!workspaceCode.includes("amountWords, amountWords"), "No duplicate amountWords in dependency array");
 assert(!workspaceCode.includes("as any"), "No 'as any' type casts in Workspace.tsx");
 assert(workspaceCode.includes("printLockRef"), "Workspace.tsx has synchronous print lock ref");
 assert(workspaceCode.includes("pagehide"), "Workspace.tsx registers pagehide fallback listener");
 assert(workspaceCode.includes("parseCalibrationInput"), "Workspace.tsx has strict calibration input parser");
-const sheetLayoutSource = readFileSync(repoRoot + "lib/sheetLayout.ts", "utf8");
-const chequeSheetSource = readFileSync(repoRoot + "components/ChequeSheet.tsx", "utf8");
+const sheetLayoutSource = readFileSync(repoRoot + "src/lib/sheetLayout.ts", "utf8");
+const chequeSheetSource = readFileSync(repoRoot + "src/components/ChequeSheet.tsx", "utf8");
 assert(sheetLayoutSource.includes("resolveCalibratedGeometry"), "sheetLayout.ts uses resolveCalibratedGeometry for preview+print consistency");
 assert(chequeSheetSource.includes("computeSheetLayout"), "ChequeSheet renders the shared layout (no private field list)");
 assert(!chequeSheetSource.includes("'payee'") && !chequeSheetSource.includes('"payee"'), "ChequeSheet contains no hardcoded field keys");
@@ -352,3 +352,5 @@ console.log("Passed: " + passed);
 console.log("Failed: " + failed);
 if (failed > 0) process.exit(1);
 else console.log("ALL VERIFICATIONS PASSED");
+
+

@@ -8,9 +8,9 @@
 // template claims verification it has not earned.
 // ---------------------------------------------------------------------------
 
-import { BANK_LIST, CATALOGUE_REVISION, BANK_GROUPS } from "../data/banks.ts";
-import { TEMPLATE_SEEDS, MICR_BAND_MM } from "../data/templates.ts";
-import { getAllTemplates, getTemplate, getTemplateForBank, getTemplatesForBankId } from "../lib/templates.ts";
+import { BANK_LIST, CATALOGUE_REVISION, BANK_GROUPS } from "../src/data/banks.ts";
+import { TEMPLATE_SEEDS, MICR_BAND_MM } from "../src/data/templates.ts";
+import { getAllTemplates, getTemplate, getTemplateForBank, getTemplatesForBankId } from "../src/lib/templates.ts";
 import {
   formatBankLabel,
   getBank,
@@ -23,9 +23,9 @@ import {
   getSelectableBanks,
   getTemplatesForBank,
   isBankEnabled,
-} from "../lib/catalogue.ts";
-import { validateBank, validateBankTemplate, validateCatalogue } from "../lib/validation.ts";
-import { CHEQUE_SIZES, PAPER_SIZES, getChequeSize, orientationMatchesSize } from "../lib/sizes.ts";
+} from "../src/lib/catalogue.ts";
+import { validateBank, validateBankTemplate, validateCatalogue } from "../src/lib/validation.ts";
+import { CHEQUE_SIZES, PAPER_SIZES, getChequeSize, orientationMatchesSize } from "../src/lib/sizes.ts";
 
 let passed = 0;
 let failed = 0;
@@ -250,3 +250,5 @@ if (failed > 0) {
 } else {
   console.log("\nAll catalogue tests PASSED.");
 }
+
+

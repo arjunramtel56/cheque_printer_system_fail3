@@ -15,16 +15,16 @@
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { getAllTemplates, getTemplate } from "../lib/templates.ts";
-import { computeSheetLayout, fieldsWithinCheque, printableFields, resolveWords } from "../lib/sheetLayout.ts";
-import { fitFontSize, estimateTextWidthMm, splitWordsAcrossFields, splitWordsToLines } from "../lib/textFit.ts";
-import { formatAmountDisplay, formatDateDigits, validateAmount } from "../lib/amountWords.ts";
-import { validateSafeZoneClearance } from "../lib/validation.ts";
+import { getAllTemplates, getTemplate } from "../src/lib/templates.ts";
+import { computeSheetLayout, fieldsWithinCheque, printableFields, resolveWords } from "../src/lib/sheetLayout.ts";
+import { fitFontSize, estimateTextWidthMm, splitWordsAcrossFields, splitWordsToLines } from "../src/lib/textFit.ts";
+import { formatAmountDisplay, formatDateDigits, validateAmount } from "../src/lib/amountWords.ts";
+import { validateSafeZoneClearance } from "../src/lib/validation.ts";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url)) + "/";
-const chequeSheetSource = readFileSync(repoRoot + "components/ChequeSheet.tsx", "utf8");
-const sheetLayoutSource = readFileSync(repoRoot + "lib/sheetLayout.ts", "utf8");
-const workspaceSource = readFileSync(repoRoot + "components/Workspace.tsx", "utf8");
+const chequeSheetSource = readFileSync(repoRoot + "src/components/ChequeSheet.tsx", "utf8");
+const sheetLayoutSource = readFileSync(repoRoot + "src/lib/sheetLayout.ts", "utf8");
+const workspaceSource = readFileSync(repoRoot + "src/components/Workspace.tsx", "utf8");
 
 let passed = 0;
 let failed = 0;
@@ -250,3 +250,5 @@ if (failed > 0) {
 } else {
   console.log("\nAll preview/print parity tests PASSED.");
 }
+
+

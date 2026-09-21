@@ -15,9 +15,9 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { getAllTemplates, getTemplate } from "../lib/templates.ts";
-import { getCatalogueSummary } from "../lib/catalogue.ts";
-import { CHEQUE_SIZES, PAPER_SIZES } from "../lib/sizes.ts";
+import { getAllTemplates, getTemplate } from "../src/lib/templates.ts";
+import { getCatalogueSummary } from "../src/lib/catalogue.ts";
+import { CHEQUE_SIZES, PAPER_SIZES } from "../src/lib/sizes.ts";
 
 let passed = 0;
 let failed = 0;
@@ -245,3 +245,5 @@ if (failed > 0) {
 } else {
   console.log("\nAll verification honesty tests PASSED.");
 }
+
+

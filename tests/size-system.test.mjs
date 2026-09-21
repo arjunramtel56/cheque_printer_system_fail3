@@ -16,10 +16,10 @@
 // ---------------------------------------------------------------------------
 
 import fs from "node:fs";
-import { CHEQUE_SIZES, PAPER_SIZES, MAX_DIMENSION_MM, createCustomChequeSize, getChequeSize, getPaperSize, isValidSizeValue, orientationFor, orientationMatchesSize, upsertChequeSize, validateSize } from "../lib/sizes.ts";
-import { resolvePrintGeometry } from "../lib/printGeometry.ts";
-import { getTemplate } from "../lib/templates.ts";
-import { validateBankTemplate } from "../lib/validation.ts";
+import { CHEQUE_SIZES, PAPER_SIZES, MAX_DIMENSION_MM, createCustomChequeSize, getChequeSize, getPaperSize, isValidSizeValue, orientationFor, orientationMatchesSize, upsertChequeSize, validateSize } from "../src/lib/sizes.ts";
+import { resolvePrintGeometry } from "../src/lib/printGeometry.ts";
+import { getTemplate } from "../src/lib/templates.ts";
+import { validateBankTemplate } from "../src/lib/validation.ts";
 
 let passed = 0;
 let failed = 0;
@@ -164,7 +164,7 @@ console.log("\n--- SECTION 5: Labels derive from the registry ---");
 {
   // The workspace must not carry a second hard-coded orientation table. The
   // exported printModeInfo() function is the derived replacement.
-  const ws = fs.readFileSync("components/Workspace.tsx", "utf8");
+  const ws = fs.readFileSync("src/components/dashboard/Workspace.tsx", "utf8");
   assert(
     /export function printModeInfo/.test(ws),
     "Workspace exports printModeInfo() as the derived mode-description helper",
@@ -188,3 +188,5 @@ if (failed > 0) {
 } else {
   console.log("\nAll size-system tests PASSED.");
 }
+
+

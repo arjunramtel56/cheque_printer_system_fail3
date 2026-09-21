@@ -1,9 +1,9 @@
-import { validateAmount, amountToWordsFromPaisa, checkAmountWordsConsistency, validatePayee, validateChequeDate, isValidDate, formatDateDigits, formatAmountDisplay, MAX_AMOUNT_PAISA } from "../lib/amountWords.ts";
-import { getAllTemplates, getTemplate } from "../lib/templates.ts";
-import { resolvePrintGeometry, resolveCalibratedGeometry, rotatedContentOffset, STANDARD_CHEQUE_W_MM, STANDARD_CHEQUE_H_MM } from "../lib/printGeometry.ts";
-import { validateBankTemplate, validatePrintGeometry, validateCalibratedBounds } from "../lib/validation.ts";
-import { clampCalibration, validateCalibrationPair, CALIBRATION_MIN_MM, CALIBRATION_MAX_MM } from "../lib/calibration.ts";
-import { isDirectFeed } from "../lib/types.ts";
+import { validateAmount, amountToWordsFromPaisa, checkAmountWordsConsistency, validatePayee, validateChequeDate, isValidDate, formatDateDigits, formatAmountDisplay, MAX_AMOUNT_PAISA } from "../src/lib/amountWords.ts";
+import { getAllTemplates, getTemplate } from "../src/lib/templates.ts";
+import { resolvePrintGeometry, resolveCalibratedGeometry, rotatedContentOffset, STANDARD_CHEQUE_W_MM, STANDARD_CHEQUE_H_MM } from "../src/lib/printGeometry.ts";
+import { validateBankTemplate, validatePrintGeometry, validateCalibratedBounds } from "../src/lib/validation.ts";
+import { clampCalibration, validateCalibrationPair, CALIBRATION_MIN_MM, CALIBRATION_MAX_MM } from "../src/lib/calibration.ts";
+import { isDirectFeed } from "../src/lib/types.ts";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -314,10 +314,10 @@ assert(true, "print.css page-break:* avoid on all print elements (single page)")
 // PRINT CSS QA
 // ============================================================================
 console.log("\n=== PRINT CSS QA ===");
-const printCss = readFileSync(repoRoot + "app/print.css", "utf8");
-const layoutTsx = readFileSync(repoRoot + "app/layout.tsx", "utf8");
-const globalsCss = readFileSync(repoRoot + "app/globals.css", "utf8");
-const workspaceTsx = readFileSync(repoRoot + "components/Workspace.tsx", "utf8");
+const printCss = readFileSync(repoRoot + "src/app/print.css", "utf8");
+const layoutTsx = readFileSync(repoRoot + "src/app/layout.tsx", "utf8");
+const globalsCss = readFileSync(repoRoot + "src/app/globals.css", "utf8");
+const workspaceTsx = readFileSync(repoRoot + "src/components/Workspace.tsx", "utf8");
 
 console.log("\n  @page:");
 assert(printCss.includes("@page"), "has @page rule");
@@ -361,21 +361,21 @@ console.log("\n=== REGRESSION: Landing, Trial, User, Admin ===");
 function fileExists(p) {
   try { readFileSync(p); return true; } catch { return false; }
 }
-assert(fileExists(repoRoot + "app/page.tsx"), "Marketing homepage (app/page.tsx) intact");
-assert(fileExists(repoRoot + "app/print/page.tsx"), "Print workflow route (app/print/page.tsx) intact");
-assert(fileExists(repoRoot + "app/auth/login/page.tsx"), "Auth login route (app/auth/login/page.tsx) intact");
-assert(fileExists(repoRoot + "app/auth/register/page.tsx"), "Auth register route (app/auth/register/page.tsx) intact");
-assert(fileExists(repoRoot + "lib/auth.ts"), "Client-side auth store (lib/auth.ts) intact");
-assert(fileExists(repoRoot + "app/layout.tsx"), "Root layout (app/layout.tsx) intact");
-assert(fileExists(repoRoot + "components/Workspace.tsx"), "Workspace component intact");
-assert(fileExists(repoRoot + "app/globals.css"), "globals.css intact");
-assert(fileExists(repoRoot + "app/print.css"), "print.css intact");
-assert(fileExists(repoRoot + "lib/templates.ts"), "templates.ts intact");
-assert(fileExists(repoRoot + "lib/amountWords.ts"), "amountWords.ts intact");
-assert(fileExists(repoRoot + "lib/printGeometry.ts"), "printGeometry.ts intact");
-assert(fileExists(repoRoot + "lib/calibration.ts"), "calibration.ts intact");
-assert(fileExists(repoRoot + "lib/validation.ts"), "validation.ts intact");
-assert(fileExists(repoRoot + "lib/types.ts"), "types.ts intact");
+assert(fileExists(repoRoot + "src/app/page.tsx"), "Marketing homepage (app/page.tsx) intact");
+assert(fileExists(repoRoot + "src/app/print/page.tsx"), "Print workflow route (app/print/page.tsx) intact");
+assert(fileExists(repoRoot + "src/app/auth/login/page.tsx"), "Auth login route (app/auth/login/page.tsx) intact");
+assert(fileExists(repoRoot + "src/app/auth/register/page.tsx"), "Auth register route (app/auth/register/page.tsx) intact");
+assert(fileExists(repoRoot + "src/lib/auth.ts"), "Client-side auth store (lib/auth.ts) intact");
+assert(fileExists(repoRoot + "src/app/layout.tsx"), "Root layout (app/layout.tsx) intact");
+assert(fileExists(repoRoot + "src/components/Workspace.tsx"), "Workspace component intact");
+assert(fileExists(repoRoot + "src/app/globals.css"), "globals.css intact");
+assert(fileExists(repoRoot + "src/app/print.css"), "print.css intact");
+assert(fileExists(repoRoot + "src/lib/templates.ts"), "templates.ts intact");
+assert(fileExists(repoRoot + "src/lib/amountWords.ts"), "amountWords.ts intact");
+assert(fileExists(repoRoot + "src/lib/printGeometry.ts"), "printGeometry.ts intact");
+assert(fileExists(repoRoot + "src/lib/calibration.ts"), "calibration.ts intact");
+assert(fileExists(repoRoot + "src/lib/validation.ts"), "validation.ts intact");
+assert(fileExists(repoRoot + "src/lib/types.ts"), "types.ts intact");
 assert(fileExists(repoRoot + ".next/server/app/page.js"), "production build artifact exists");
 assert(fileExists(repoRoot + ".next/server/app/index.html"), "prerendered index exists");
 // No features added or redesigned — all files are the original printing system
@@ -396,3 +396,5 @@ console.log("Passed: " + pass);
 console.log("Failed: " + fail);
 if (fail > 0) process.exit(1);
 else console.log("ALL PART 5 QA CHECKS PASSED");
+
+

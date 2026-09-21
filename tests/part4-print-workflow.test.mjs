@@ -28,7 +28,7 @@
 
 import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { getTemplate, getAllTemplates } from "../lib/templates.ts";
+import { getTemplate, getAllTemplates } from "../src/lib/templates.ts";
 import {
   validateAmount,
   amountToWordsFromPaisa,
@@ -37,21 +37,21 @@ import {
   validatePayee,
   validateChequeDate,
   isValidDate,
-} from "../lib/amountWords.ts";
-import { clampCalibration, validateCalibrationPair } from "../lib/calibration.ts";
+} from "../src/lib/amountWords.ts";
+import { clampCalibration, validateCalibrationPair } from "../src/lib/calibration.ts";
 import {
   resolvePrintGeometry,
   rotatedContentOffset,
   resolveCalibratedGeometry,
-} from "../lib/printGeometry.ts";
+} from "../src/lib/printGeometry.ts";
 import {
   validateBankTemplate,
   validatePrintGeometry,
   validateCalibratedBounds,
-} from "../lib/validation.ts";
-import { isDirectFeed, isA4Carrier, DIRECT_FEED_MODES, A4_CARRIER_MODES } from "../lib/types.ts";
-import { computeSheetLayout } from "../lib/sheetLayout.ts";
-import { getCalibrationFor, setCalibrationFor } from "../lib/calibration.ts";
+} from "../src/lib/validation.ts";
+import { isDirectFeed, isA4Carrier, DIRECT_FEED_MODES, A4_CARRIER_MODES } from "../src/lib/types.ts";
+import { computeSheetLayout } from "../src/lib/sheetLayout.ts";
+import { getCalibrationFor, setCalibrationFor } from "../src/lib/calibration.ts";
 
 let pass = 0;
 let fail = 0;
@@ -62,16 +62,16 @@ function assert(cond, msg) {
 function assertContains(code, needle, msg) { assert(code.includes(needle), msg); }
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url)) + "/";
-const ws = readFileSync(repoRoot + "components/Workspace.tsx", "utf8");
-const printCss = readFileSync(repoRoot + "app/print.css", "utf8");
-const globalsCss = readFileSync(repoRoot + "app/globals.css", "utf8");
-const layoutTsx = readFileSync(repoRoot + "app/layout.tsx", "utf8");
-const pageTsx = readFileSync(repoRoot + "app/print/page.tsx", "utf8");
+const ws = readFileSync(repoRoot + "src/components/Workspace.tsx", "utf8");
+const printCss = readFileSync(repoRoot + "src/app/print.css", "utf8");
+const globalsCss = readFileSync(repoRoot + "src/app/globals.css", "utf8");
+const layoutTsx = readFileSync(repoRoot + "src/app/layout.tsx", "utf8");
+const pageTsx = readFileSync(repoRoot + "src/app/print/page.tsx", "utf8");
 const workspaceTsx = ws;
-const sheetLayoutTs = readFileSync(repoRoot + "lib/sheetLayout.ts", "utf8");
-const chequeSheetSource = readFileSync(repoRoot + "components/ChequeSheet.tsx", "utf8");
-const textFitTs = readFileSync(repoRoot + "lib/textFit.ts", "utf8");
-const calibrationTs = readFileSync(repoRoot + "lib/calibration.ts", "utf8");
+const sheetLayoutTs = readFileSync(repoRoot + "src/lib/sheetLayout.ts", "utf8");
+const chequeSheetSource = readFileSync(repoRoot + "src/components/ChequeSheet.tsx", "utf8");
+const textFitTs = readFileSync(repoRoot + "src/lib/textFit.ts", "utf8");
+const calibrationTs = readFileSync(repoRoot + "src/lib/calibration.ts", "utf8");
 
 /** Representative cheque data used by the behavioural geometry checks. */
 const sampleData = {
@@ -616,8 +616,8 @@ assert(printGeometryUsesMillimetres(), "print output expresses geometry in milli
 console.log("\n=== LIGHT SYSTEM REGRESSION ===");
 
 // Print workflow route intact (gated behind /auth)
-assert(fileExists(repoRoot + "app/print/page.tsx"), "Workflow route (app/print/page.tsx) intact");
-assert(fileExists(repoRoot + "app/page.tsx"), "Marketing homepage (app/page.tsx) intact");
+assert(fileExists(repoRoot + "src/app/print/page.tsx"), "Workflow route (app/print/page.tsx) intact");
+assert(fileExists(repoRoot + "src/app/page.tsx"), "Marketing homepage (app/page.tsx) intact");
 assertContains(pageTsx, "Workspace", "Workflow page imports Workspace component");
 assertContains(layoutTsx, "./globals.css", "Root layout imports globals.css");
 assertContains(layoutTsx, "./print.css", "Root layout imports print.css (print styles active)");
@@ -710,3 +710,5 @@ function fileExists(p) {
 function dirExists(p) {
   try { statSync(p); return true; } catch { return false; }
 }
+
+

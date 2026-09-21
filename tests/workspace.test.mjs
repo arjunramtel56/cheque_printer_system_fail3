@@ -1,6 +1,6 @@
-import { getTemplate, getAllTemplates } from "../lib/templates.ts";
-import { amountToWordsFromPaisa, formatDateDigits, validateAmount } from "../lib/amountWords.ts";
-import { isDirectFeed, isA4Carrier, DIRECT_FEED_MODES, A4_CARRIER_MODES } from "../lib/types.ts";
+import { getTemplate, getAllTemplates } from "../src/lib/templates.ts";
+import { amountToWordsFromPaisa, formatDateDigits, validateAmount } from "../src/lib/amountWords.ts";
+import { isDirectFeed, isA4Carrier, DIRECT_FEED_MODES, A4_CARRIER_MODES } from "../src/lib/types.ts";
 
 // Test 1: Templates load
 const all = getAllTemplates();
@@ -183,3 +183,5 @@ for (const t of all) {
 console.log("TEST_24_A4_HORIZONTAL_NO_OVERFLOW: OK");
 
 console.log("\n=== ALL 24 TESTS PASSED ===");
+
+

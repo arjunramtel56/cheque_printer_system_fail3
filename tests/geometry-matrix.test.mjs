@@ -14,8 +14,8 @@
 //   - printable fields never enter the reserved MICR band.
 // ---------------------------------------------------------------------------
 
-import { getTemplate, getAllTemplates } from "../lib/templates.ts";
-import { DIRECT_FEED_MODES, A4_CARRIER_MODES, isDirectFeed } from "../lib/types.ts";
+import { getTemplate, getAllTemplates } from "../src/lib/templates.ts";
+import { DIRECT_FEED_MODES, A4_CARRIER_MODES, isDirectFeed } from "../src/lib/types.ts";
 import {
   A4_PORTRAIT_W_MM,
   A4_PORTRAIT_H_MM,
@@ -27,16 +27,16 @@ import {
   resolvePaper,
   resolvePrintGeometry,
   rotatedContentOffset,
-} from "../lib/printGeometry.ts";
+} from "../src/lib/printGeometry.ts";
 import {
   validateBankTemplate,
   validateCalibratedBounds,
   validatePrintGeometry,
   validateSafeZoneClearance,
-} from "../lib/validation.ts";
-import { createCustomChequeSize, orientationFor, orientationMatchesSize, upsertChequeSize, resetChequeSizes } from "../lib/sizes.ts";
-import { micrSafeZone, MICR_BAND_MM } from "../data/templates.ts";
-import { computeSheetLayout, fieldsWithinCheque } from "../lib/sheetLayout.ts";
+} from "../src/lib/validation.ts";
+import { createCustomChequeSize, orientationFor, orientationMatchesSize, upsertChequeSize, resetChequeSizes } from "../src/lib/sizes.ts";
+import { micrSafeZone, MICR_BAND_MM } from "../src/data/templates.ts";
+import { computeSheetLayout, fieldsWithinCheque } from "../src/lib/sheetLayout.ts";
 
 let passed = 0;
 let failed = 0;
@@ -389,3 +389,5 @@ if (failed > 0) {
 } else {
   console.log("\nAll geometry matrix tests PASSED.");
 }
+
+

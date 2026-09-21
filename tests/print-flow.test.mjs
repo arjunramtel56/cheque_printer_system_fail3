@@ -3,16 +3,16 @@
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { getTemplate, getAllTemplates } from "../lib/templates.ts";
-import { validateAmount, formatDateDigits } from "../lib/amountWords.ts";
-import { isDirectFeed } from "../lib/types.ts";
+import { getTemplate, getAllTemplates } from "../src/lib/templates.ts";
+import { validateAmount, formatDateDigits } from "../src/lib/amountWords.ts";
+import { isDirectFeed } from "../src/lib/types.ts";
 import {
   clampCalibration,
   validateCalibrationPair,
   CALIBRATION_MIN_MM,
   CALIBRATION_MAX_MM,
-} from "../lib/calibration.ts";
-import { validateBankTemplate, validatePrintGeometry, validateCalibratedBounds } from "../lib/validation.ts";
+} from "../src/lib/calibration.ts";
+import { validateBankTemplate, validatePrintGeometry, validateCalibratedBounds } from "../src/lib/validation.ts";
 
 let passed = 0;
 let failed = 0;
@@ -165,7 +165,7 @@ assert(layout4.pageSizeH === 210, "a4_horizontal page height = 210mm");
 
 // 2.5 Container vs page dimensions — sourced from the shared resolver
 //     (lib/printGeometry.ts) so the test exercises the real code path.
-import { resolvePrintGeometry } from "../lib/printGeometry.ts";
+import { resolvePrintGeometry } from "../src/lib/printGeometry.ts";
 
 const dfShortG = resolvePrintGeometry(siddhartha, "custom_short");
 assert(dfShortG.containerW === 190.5 && dfShortG.containerH === 88.9, "DF short-edge: container is cheque size (190.5×88.9) — no rotation, page box = cheque");
@@ -192,7 +192,7 @@ assert(a4hG.rotate === undefined, "A4 modes never rotate content");
 //     The @page is always the cheque's physical size (190.5×88.9 mm, landscape)
 //     for Direct Feed, with content rendered unrotated. Short Edge First vs
 //     Long Edge First is handled by the printer paper-feed direction.
-import { rotatedContentOffset } from "../lib/printGeometry.ts";
+import { rotatedContentOffset } from "../src/lib/printGeometry.ts";
 const off90 = rotatedContentOffset(dfShortG);
 assert(off90.leftMm === 0 && off90.topMm === 0, "DF short-edge: no rotation offset (content rendered flat, no CSS rotation)");
 
@@ -331,7 +331,7 @@ assert(validateCalibrationPair(0, Infinity) !== null, "Infinity Y rejected");
 // 6.4 Range safety: runtime clamping ensures cheque stays on-page at any calibration.
 //      resolveCalibratedGeometry clamps A4 calibration so the cheque can never
 //      leave the page — verified here at ±25mm extreme inputs.
-import { resolveCalibratedGeometry } from "../lib/printGeometry.ts";
+import { resolveCalibratedGeometry } from "../src/lib/printGeometry.ts";
 const extremeCal = { x: 25, y: 25 };
 for (const t of getAllTemplates()) {
   for (const key of ["a4_vertical", "a4_horizontal"]) {
@@ -466,9 +466,9 @@ assert(dfCalG.finalChequeX === 0 && dfCalG.finalChequeY === 0, "DF calibration d
 console.log("\n=== TEST GROUP 8: PRINT CSS WIRING ===");
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
-const printCss = readFileSync(repoRoot + "app/print.css", "utf8");
-const globalsCss = readFileSync(repoRoot + "app/globals.css", "utf8");
-const layoutTsx = readFileSync(repoRoot + "app/layout.tsx", "utf8");
+const printCss = readFileSync(repoRoot + "src/app/print.css", "utf8");
+const globalsCss = readFileSync(repoRoot + "src/app/globals.css", "utf8");
+const layoutTsx = readFileSync(repoRoot + "src/app/layout.tsx", "utf8");
 
 assert(layoutTsx.includes('./print.css') || layoutTsx.includes("'./print.css'"), "layout.tsx imports ./print.css (stylesheet is actually active)");
 assert(printCss.includes("@media print"), "print.css contains @media print block");
@@ -611,7 +611,7 @@ for (const t of getAllTemplates()) {
 // ---------------------------------------------------------------------------
 console.log("\n=== TEST GROUP 13: PRINT CSS HARDENING ===");
 
-const workspaceTsx = readFileSync(repoRoot + "components/Workspace.tsx", "utf8");
+const workspaceTsx = readFileSync(repoRoot + "src/components/Workspace.tsx", "utf8");
 
 assert(printCss.includes("scale: 1"), "print.css forces scale:1 on print containers");
 assert(printCss.includes("image-rendering"), "print.css includes image-rendering anti-scaling rules");
@@ -638,8 +638,8 @@ assert(geom1.calibratedClamped === geom2.calibratedClamped, "resolveCalibratedGe
 
 // Preview and print are now the SAME component rendered at two scales. The
 // calibration/geometry resolution lives in one pure module that both paths use.
-const sheetLayoutTs = readFileSync(repoRoot + "lib/sheetLayout.ts", "utf8");
-const chequeSheetTsx = readFileSync(repoRoot + "components/ChequeSheet.tsx", "utf8");
+const sheetLayoutTs = readFileSync(repoRoot + "src/lib/sheetLayout.ts", "utf8");
+const chequeSheetTsx = readFileSync(repoRoot + "src/components/ChequeSheet.tsx", "utf8");
 
 assert(sheetLayoutTs.includes("resolveCalibratedGeometry"), "sheetLayout resolves calibrated geometry (single source)");
 assert(sheetLayoutTs.includes("computeSheetLayout"), "sheetLayout exposes computeSheetLayout for both paths");
@@ -670,3 +670,5 @@ if (failed > 0) {
 } else {
   console.log("\nAll print-flow tests PASSED.");
 }
+
+
