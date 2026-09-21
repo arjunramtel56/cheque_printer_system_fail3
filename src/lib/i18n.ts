@@ -29,18 +29,18 @@ const localeCache: Partial<Record<Locale, Record<string, string>>> = {};
 async function loadLocale(locale: Locale): Promise<Record<string, string>> {
   if (localeCache[locale]) return localeCache[locale];
   try {
-    const module = await import(`../../src/lib/locales/${locale}.json`, {
+    const module = await import(`./locales/${locale}.json`, {
       with: { type: "json" },
     });
-    const translations = (module.default ?? module) as Record<string, string>;
+    const translations = (module.default ?? module) as Record<string, unknown> as Record<string, string>;
     localeCache[locale] = translations;
     return translations;
   } catch {
     if (locale !== "en" && localeCache.en) return localeCache.en;
-    const enModule = await import("../../src/lib/locales/en.json", {
+    const enModule = await import("./locales/en.json", {
       with: { type: "json" },
     });
-    const translations = (enModule.default ?? enModule) as Record<string, string>;
+    const translations = (enModule.default ?? enModule) as Record<string, unknown> as Record<string, string>;
     localeCache.en = translations;
     return translations;
   }
