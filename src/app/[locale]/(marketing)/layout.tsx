@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
 import { siteConfig } from "@/lib/config";
 
 export default function MarketingLayout({
@@ -6,11 +9,14 @@ export default function MarketingLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const t = useTranslations("nav");
+  const locale = useLocale();
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
-          <Link href="/en" className="flex items-center space-x-2">
+          <Link href={`/${locale}`} className="flex items-center space-x-2">
             <span className="text-xl font-bold text-primary">RCPS</span>
             <span className="hidden text-sm font-medium sm:inline-block">
               {siteConfig.name}
@@ -20,24 +26,24 @@ export default function MarketingLayout({
             {siteConfig.navItems.map((item) => (
               <Link
                 key={item.href}
-                href={`/en${item.href}`}
+                href={`/${locale}${item.href}`}
                 className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               >
-                {item.label}
+                {t(item.label.toLowerCase() as keyof typeof t)}
               </Link>
             ))}
             <div className="ml-2 flex items-center gap-2">
               <Link
-                href="/en/login"
+                href={`/${locale}/login`}
                 className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent"
               >
-                Login
+                {t("login")}
               </Link>
               <Link
-                href="/en/register"
+                href={`/${locale}/register`}
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               >
-                Get Started
+                {t("register")}
               </Link>
             </div>
           </nav>

@@ -15,6 +15,61 @@
     "register": "Register",
     "dashboard": "Dashboard"
   },
+  "home": {
+    "heroTitle": "Cheque Printing",
+    "heroTitleHighlight": "Made Simple",
+    "heroDescription": "Prepare and print Nepalese bank cheques with precise alignment. Perfect for businesses of all sizes.",
+    "startTrial": "Start Free Trial",
+    "learnMore": "Learn More",
+    "featuresTitle": "Everything You Need",
+    "featuresSubtitle": "A complete cheque printing solution for Nepalese businesses",
+    "preciseAlignment": "Precise Print Alignment",
+    "preciseAlignmentDesc": "Templates ensure your cheque details print exactly where they should.",
+    "multipleBanks": "Multiple Bank Templates",
+    "multipleBanksDesc": "Support for all major Nepalese banks with customizable cheque layouts.",
+    "secure": "Secure & Private",
+    "secureDesc": "Your cheque data is encrypted and isolated. Only you can access your information.",
+    "history": "Print History",
+    "historyDesc": "Keep track of all your printed cheques with complete history and reprint capability.",
+    "amountInWords": "Amount in Words",
+    "amountInWordsDesc": "Automatic Nepali/English amount-in-words conversion for Nepalese Rupees.",
+    "howItWorksTitle": "How It Works",
+    "createAccount": "Create Account",
+    "createAccountDesc": "Sign up for a free 14-day trial. No credit card required.",
+    "selectBank": "Select Bank",
+    "selectBankDesc": "Choose your bank and cheque template from our pre-configured options.",
+    "fillDetails": "Fill Details",
+    "fillDetailsDesc": "Enter payee name, amount, and date. Amount in words converts automatically.",
+    "print": "Print",
+    "printDesc": "Preview your cheque and print with precise alignment.",
+    "pricingTitle": "Simple Pricing",
+    "pricingSubtitle": "Start free, upgrade when you need more",
+    "popular": "Popular",
+    "trial": "Trial",
+    "trialPrice": "Free",
+    "trialDuration": " / 14 days",
+    "trialF1": "10 cheque prints",
+    "trialF2": "Basic bank templates",
+    "trialF3": "Print history",
+    "standard": "Standard",
+    "standardPrice": "NPR 500",
+    "standardDuration": " /month",
+    "standardF1": "100 cheque prints",
+    "standardF2": "All bank templates",
+    "standardF3": "Export to PDF",
+    "standardF4": "Email support",
+    "business": "Business",
+    "businessPrice": "NPR 1,500",
+    "businessDuration": " /month",
+    "businessF1": "Unlimited prints",
+    "businessF2": "All bank templates",
+    "businessF3": "Bulk printing",
+    "businessF4": "Priority support",
+    "businessF5": "Custom templates",
+    "getStarted": "Get Started",
+    "ctaTitle": "Ready to Get Started?",
+    "ctaDescription": "Join businesses across Nepal who trust RCPS for their cheque printing needs."
+  },
   "dashboard": {
     "overview": "Overview",
     "print": "Print New Cheque",
@@ -34,5 +89,29 @@
     "resetPassword": "Reset Password",
     "verifyEmail": "Verify Email",
     "twoFactor": "Two-Factor Authentication"
+  },
+  "about": {
+    "title": "About Reactify Cheque Printer System",
+    "description": "We are dedicated to simplifying cheque printing for Nepalese businesses."
+  },
+  "features": {
+    "title": "Features",
+    "description": "Discover all the features that make RCPS the best choice for cheque printing."
+  },
+  "pricing": {
+    "title": "Pricing",
+    "description": "Choose the plan that fits your needs."
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "description": "Find answers to common questions about RCPS."
+  },
+  "contact": {
+    "title": "Contact Us",
+    "description": "Get in touch with our team."
+  },
+  "blog": {
+    "title": "Blog",
+    "description": "Latest news and updates from RCPS."
   }
 }

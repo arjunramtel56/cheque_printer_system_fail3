@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -12,99 +15,101 @@ import {
 const features = [
   {
     icon: Printer,
-    title: "Precise Print Alignment",
-    description: "Templates ensure your cheque details print exactly where they should.",
+    titleKey: "preciseAlignment",
+    descKey: "preciseAlignmentDesc",
   },
   {
     icon: FileText,
-    title: "Multiple Bank Templates",
-    description: "Support for all major Nepalese banks with customizable cheque layouts.",
+    titleKey: "multipleBanks",
+    descKey: "multipleBanksDesc",
   },
   {
     icon: Shield,
-    title: "Secure & Private",
-    description: "Your cheque data is encrypted and isolated. Only you can access your information.",
+    titleKey: "secure",
+    descKey: "secureDesc",
   },
   {
     icon: Clock,
-    title: "Print History",
-    description: "Keep track of all your printed cheques with complete history and reprint capability.",
+    titleKey: "history",
+    descKey: "historyDesc",
   },
   {
     icon: CreditCard,
-    title: "Amount in Words",
-    description: "Automatic Nepali/English amount-in-words conversion for Nepalese Rupees.",
+    titleKey: "amountInWords",
+    descKey: "amountInWordsDesc",
   },
 ];
 
 const steps = [
   {
     step: "1",
-    title: "Create Account",
-    description: "Sign up for a free 14-day trial. No credit card required.",
+    titleKey: "createAccount",
+    descKey: "createAccountDesc",
   },
   {
     step: "2",
-    title: "Select Bank",
-    description: "Choose your bank and cheque template from our pre-configured options.",
+    titleKey: "selectBank",
+    descKey: "selectBankDesc",
   },
   {
     step: "3",
-    title: "Fill Details",
-    description: "Enter payee name, amount, and date. Amount in words converts automatically.",
+    titleKey: "fillDetails",
+    descKey: "fillDetailsDesc",
   },
   {
     step: "4",
-    title: "Print",
-    description: "Preview your cheque and print with precise alignment.",
+    titleKey: "print",
+    descKey: "printDesc",
   },
 ];
 
 const plans = [
   {
-    name: "Trial",
-    price: "Free",
-    duration: "14 days",
-    features: ["10 cheque prints", "Basic bank templates", "Print history"],
+    nameKey: "trial",
+    priceKey: "trialPrice",
+    durationKey: "trialDuration",
+    featuresKeys: ["trialF1", "trialF2", "trialF3"],
   },
   {
-    name: "Standard",
-    price: "NPR 500",
-    duration: "/month",
-    features: ["100 cheque prints", "All bank templates", "Export to PDF", "Email support"],
+    nameKey: "standard",
+    priceKey: "standardPrice",
+    durationKey: "standardDuration",
+    featuresKeys: ["standardF1", "standardF2", "standardF3", "standardF4"],
     popular: true,
   },
   {
-    name: "Business",
-    price: "NPR 1,500",
-    duration: "/month",
-    features: ["Unlimited prints", "All bank templates", "Bulk printing", "Priority support", "Custom templates"],
+    nameKey: "business",
+    priceKey: "businessPrice",
+    durationKey: "businessDuration",
+    featuresKeys: ["businessF1", "businessF2", "businessF3", "businessF4", "businessF5"],
   },
 ];
 
 export default function HomePage() {
+  const t = useTranslations("home");
+  const locale = useLocale();
+
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 to-background py-20 md:py-32">
         <div className="mx-auto max-w-7xl px-4 text-center">
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-            Cheque Printing
-            <span className="text-primary"> Made Simple</span>
+            {t("heroTitle")}
+            <span className="text-primary"> {t("heroTitleHighlight")}</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-            Prepare and print Nepalese bank cheques with precise alignment.
-            Perfect for businesses of all sizes.
+            {t("heroDescription")}
           </p>
           <div className="mt-8 flex items-center justify-center gap-4">
-            <Link href="/en/register">
+            <Link href={`/${locale}/register`}>
               <Button size="lg" className="text-base">
-                Start Free Trial
+                {t("startTrial")}
               </Button>
             </Link>
-            <Link href="/en/features">
+            <Link href={`/${locale}/features`}>
               <Button variant="outline" size="lg" className="text-base">
-                Learn More
+                {t("learnMore")}
               </Button>
             </Link>
           </div>
@@ -114,18 +119,18 @@ export default function HomePage() {
       {/* Features */}
       <section className="py-20">
         <div className="mx-auto max-w-7xl px-4">
-          <h2 className="text-center text-3xl font-bold">Everything You Need</h2>
+          <h2 className="text-center text-3xl font-bold">{t("featuresTitle")}</h2>
           <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">
-            A complete cheque printing solution for Nepalese businesses
+            {t("featuresSubtitle")}
           </p>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((feature) => (
-              <Card key={feature.title} className="border-0 shadow-sm">
+              <Card key={feature.titleKey} className="border-0 shadow-sm">
                 <CardContent className="pt-6">
                   <feature.icon className="h-10 w-10 text-primary" />
-                  <h3 className="mt-4 text-lg font-semibold">{feature.title}</h3>
+                  <h3 className="mt-4 text-lg font-semibold">{t(feature.titleKey)}</h3>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    {feature.description}
+                    {t(feature.descKey)}
                   </p>
                 </CardContent>
               </Card>
@@ -137,16 +142,16 @@ export default function HomePage() {
       {/* How it works */}
       <section className="bg-card py-20">
         <div className="mx-auto max-w-7xl px-4">
-          <h2 className="text-center text-3xl font-bold">How It Works</h2>
+          <h2 className="text-center text-3xl font-bold">{t("howItWorksTitle")}</h2>
           <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((step) => (
               <div key={step.step} className="text-center">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground text-lg font-bold">
                   {step.step}
                 </div>
-                <h3 className="mt-4 text-lg font-semibold">{step.title}</h3>
+                <h3 className="mt-4 text-lg font-semibold">{t(step.titleKey)}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {step.description}
+                  {t(step.descKey)}
                 </p>
               </div>
             ))}
@@ -157,41 +162,41 @@ export default function HomePage() {
       {/* Pricing */}
       <section className="py-20">
         <div className="mx-auto max-w-7xl px-4">
-          <h2 className="text-center text-3xl font-bold">Simple Pricing</h2>
+          <h2 className="text-center text-3xl font-bold">{t("pricingTitle")}</h2>
           <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">
-            Start free, upgrade when you need more
+            {t("pricingSubtitle")}
           </p>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {plans.map((plan) => (
               <Card
-                key={plan.name}
+                key={plan.nameKey}
                 className={`relative ${plan.popular ? "border-primary shadow-md" : ""}`}
               >
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
-                    Popular
+                    {t("popular")}
                   </div>
                 )}
                 <CardContent className="pt-6">
-                  <h3 className="text-xl font-bold">{plan.name}</h3>
+                  <h3 className="text-xl font-bold">{t(plan.nameKey)}</h3>
                   <div className="mt-2">
-                    <span className="text-3xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground">{plan.duration}</span>
+                    <span className="text-3xl font-bold">{t(plan.priceKey)}</span>
+                    <span className="text-muted-foreground">{t(plan.durationKey)}</span>
                   </div>
                   <ul className="mt-6 space-y-3">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-center gap-2 text-sm">
+                    {plan.featuresKeys.map((featureKey) => (
+                      <li key={featureKey} className="flex items-center gap-2 text-sm">
                         <span className="text-primary">&#10003;</span>
-                        {feature}
+                        {t(featureKey)}
                       </li>
                     ))}
                   </ul>
-                  <Link href="/en/register" className="mt-6 block">
+                  <Link href={`/${locale}/register`} className="mt-6 block">
                     <Button
                       variant={plan.popular ? "default" : "outline"}
                       className="w-full"
                     >
-                      Get Started
+                      {t("getStarted")}
                     </Button>
                   </Link>
                 </CardContent>
@@ -204,13 +209,13 @@ export default function HomePage() {
       {/* CTA */}
       <section className="bg-primary py-20 text-primary-foreground">
         <div className="mx-auto max-w-4xl px-4 text-center">
-          <h2 className="text-3xl font-bold">Ready to Get Started?</h2>
+          <h2 className="text-3xl font-bold">{t("ctaTitle")}</h2>
           <p className="mt-4 text-lg opacity-90">
-            Join businesses across Nepal who trust RCPS for their cheque printing needs.
+            {t("ctaDescription")}
           </p>
-          <Link href="/en/register">
+          <Link href={`/${locale}/register`}>
             <Button size="lg" variant="secondary" className="mt-8 text-base">
-              Start Your Free Trial
+              {t("startTrial")}
             </Button>
           </Link>
         </div>
