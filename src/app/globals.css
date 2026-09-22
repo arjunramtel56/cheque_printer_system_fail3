@@ -37,16 +37,26 @@
     margin: 0;
   }
 
-  :root {
-    color-scheme: light !important;
-  }
+  :root,
   html,
   body {
+    color-scheme: light !important;
     background: #fff !important;
     color: #000 !important;
     margin: 0 !important;
     padding: 0 !important;
   }
+
+  *,
+  *::before,
+  *::after {
+    color-scheme: light !important;
+    background: #fff !important;
+    color: #000 !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
   .no-print {
     display: none !important;
   }

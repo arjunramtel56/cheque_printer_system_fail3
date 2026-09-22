@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
         accountHolder: accountHolder || user.name || "",
         payeeName: payeeName || null,
         chequeDate: new Date(chequeDate),
-        amountNumber: parseFloat(amountNumber),
+        amountNumber: amountNumber,
         amountWords: amountWords || "",
         chequeNumber: chequeNumber || null,
         status: "DRAFT",
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
         entity: "ChequeEntry",
         entityId: cheque.id,
         details: JSON.stringify({
-          amount: parseFloat(amountNumber),
+          amount: amountNumber,
           payee: payeeName,
           chequeNumber: chequeNumber || null,
         }),
@@ -195,7 +195,7 @@ export async function PUT(request: NextRequest) {
       data: {
         payeeName: payeeName ?? null,
         chequeDate: chequeDate ? new Date(chequeDate) : existing.chequeDate,
-        amountNumber: amountNumber !== undefined ? parseFloat(amountNumber) : existing.amountNumber,
+        amountNumber: amountNumber !== undefined ? amountNumber : existing.amountNumber,
         amountWords: amountWords !== undefined ? amountWords : existing.amountWords,
         chequeNumber: chequeNumber ?? existing.chequeNumber,
         accountHolder: accountHolder ?? existing.accountHolder,

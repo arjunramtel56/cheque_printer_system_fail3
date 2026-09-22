@@ -238,7 +238,7 @@ export default function AdminTemplatesPage() {
   const previewTemplate: ChequeTemplate | null =
     formData.fields.length > 0
       ? {
-          id: formData.id || "",
+          id: editingTemplate?.id || "",
           name: formData.name || "Template",
           bankId: formData.bankId,
           bankName: banks.find((b) => b.id === formData.bankId)?.name || "",

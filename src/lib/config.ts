@@ -26,8 +26,9 @@ export const siteConfig = {
     { label: "Users", href: "/admin/users", icon: "Users" },
     { label: "Banks", href: "/admin/banks", icon: "Building2" },
     { label: "Templates", href: "/admin/templates", icon: "LayoutTemplate" },
+    { label: "Audit Logs", href: "/admin/audit-logs", icon: "BarChart3" },
+    { label: "Settings", href: "/admin/settings", icon: "Settings" },
     { label: "Plans", href: "/admin/plans", icon: "CreditCard" },
     { label: "Reports", href: "/admin/reports", icon: "BarChart3" },
-    { label: "Settings", href: "/admin/settings", icon: "Settings" },
   ],
 };

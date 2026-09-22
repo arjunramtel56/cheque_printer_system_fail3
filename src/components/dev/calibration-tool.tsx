@@ -46,9 +46,14 @@ export default function CalibrationTool() {
     const style = document.createElement("style");
     style.setAttribute("data-calibration", "true");
     style.textContent = `
-@page { size: A4; margin: 0; }
 @media print {
-  body { margin: 0 !important; padding: 0 !important; }
+  @page { size: A4; margin: 0; }
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
 }
 `;
     document.head.appendChild(style);

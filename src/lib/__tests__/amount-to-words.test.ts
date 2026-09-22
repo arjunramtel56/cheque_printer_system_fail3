@@ -102,6 +102,25 @@ describe("amountToWords — English", () => {
   it("converts 10 with single-digit paise", () => {
     assert.equal(amountToWords(10.05, "en"), "Ten Rupees and Five Paise Only");
   });
+
+  it("converts 100 (roadmap edge case)", () => {
+    assert.equal(amountToWords(100, "en"), "One Hundred Rupees Only");
+  });
+
+  it("converts 100000 — one lakh (roadmap edge case)", () => {
+    assert.equal(amountToWords(100000, "en"), "One Lakh Rupees Only");
+  });
+
+  it("converts 10000000 — one crore (roadmap edge case)", () => {
+    assert.equal(amountToWords(10000000, "en"), "One Crore Rupees Only");
+  });
+
+  it("converts 1250.50 with decimal (roadmap edge case)", () => {
+    assert.equal(
+      amountToWords(1250.5, "en"),
+      "One Thousand Two Hundred Fifty Rupees and Fifty Paise Only"
+    );
+  });
 });
 
 describe("amountToWords — Nepali", () => {
@@ -141,6 +160,25 @@ describe("amountToWords — Nepali", () => {
 
   it("converts rupees with paise", () => {
     assert.equal(amountToWords("1250.50", "ne"), "एक हजार दुई सय पचास रुपैयाँ र पचास पैसा मात्र");
+  });
+
+  it("converts 100 (roadmap edge case)", () => {
+    assert.equal(amountToWords(100, "ne"), "एक सय मात्र");
+  });
+
+  it("converts 100000 — one lakh (roadmap edge case)", () => {
+    assert.equal(amountToWords(100000, "ne"), "एक लाख मात्र");
+  });
+
+  it("converts 10000000 — one crore (roadmap edge case)", () => {
+    assert.equal(amountToWords(10000000, "ne"), "एक करोड मात्र");
+  });
+
+  it("converts 1250.50 with decimal (roadmap edge case)", () => {
+    assert.equal(
+      amountToWords(1250.5, "ne"),
+      "एक हजार दुई सय पचास रुपैयाँ र पचास पैसा मात्र"
+    );
   });
 
   it("carries paise rounding into rupees", () => {

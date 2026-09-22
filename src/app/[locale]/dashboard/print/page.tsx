@@ -10,6 +10,7 @@ import {
   Banknote,
   Save,
 } from "lucide-react";
+import { useLocale } from "next-intl";
 import { amountToWords, formatDate } from "@/lib/amount-to-words";
 import { ChequeTemplate } from "@/types";
 import ChequePreview from "@/components/cheque/cheque-preview";
@@ -69,6 +70,7 @@ interface TemplateOption {
 }
 
 export default function PrintPage() {
+  const locale = useLocale();
   const [banks, setBanks] = useState<Bank[]>([]);
   const [selectedBankId, setSelectedBankId] = useState<string>("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
@@ -83,6 +85,8 @@ export default function PrintPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedChequeId, setSavedChequeId] = useState<string | null>(null);
+
+  const lang = locale as "en" | "ne";
 
   const selectedBank = banks.find((b) => b.id === selectedBankId);
   const selectedTemplate: TemplateOption | undefined = selectedBank?.templates.find(
@@ -121,6 +125,7 @@ export default function PrintPage() {
     amountWords: amountWords || "",
     amountNumber: amount || "",
     name: accountHolder || "",
+    chequeNumber: chequeNumber || "",
   };
 
   useEffect(() => {
@@ -143,10 +148,10 @@ export default function PrintPage() {
     if (autoConvert && amount) {
       const parsed = parseFloat(amount);
       if (!isNaN(parsed) && parsed > 0) {
-        setAmountWords(amountToWords(parsed, "en"));
+        setAmountWords(amountToWords(parsed, lang));
       }
     }
-  }, [amount, autoConvert]);
+  }, [amount, autoConvert, lang]);
 
   async function fetchBanks() {
     try {
@@ -215,7 +220,7 @@ export default function PrintPage() {
           payeeName,
           chequeDate: new Date(chequeDate).toISOString(),
           amountNumber: parseFloat(amount),
-          amountWords: autoConvert ? amountToWords(parseFloat(amount), "en") : amountWords,
+          amountWords: autoConvert ? amountToWords(parseFloat(amount), lang) : amountWords,
           accountHolder,
           chequeNumber,
         }),

@@ -1,7 +1,8 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Printer, FileText, Clock, CreditCard } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Printer, FileText, Clock, CreditCard, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 
 export default async function DashboardPage() {
@@ -11,6 +12,7 @@ export default async function DashboardPage() {
   let chequeCount = 0;
   let recentCheques: any[] = [];
   let subscription: any = null;
+  let trialInfo: { daysLeft: number; isTrial: boolean } = { daysLeft: 0, isTrial: false };
 
   try {
     chequeCount = await prisma.chequeEntry.count({
@@ -28,6 +30,13 @@ export default async function DashboardPage() {
       where: { userId: user?.id, isActive: true },
       include: { plan: true },
     });
+
+    if (subscription && user?.role === "TRIAL_USER") {
+      const daysLeft = Math.ceil(
+        (new Date(subscription.endDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000),
+      );
+      trialInfo = { daysLeft: daysLeft > 0 ? daysLeft : 0, isTrial: true };
+    }
   } catch {
     // Database not available, show placeholder data
   }
@@ -64,6 +73,46 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {trialInfo.isTrial && trialInfo.daysLeft <= 7 && trialInfo.daysLeft > 0 && (
+        <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600" />
+            <div>
+              <p className="font-semibold">
+                Your trial period ends in {trialInfo.daysLeft} day{trialInfo.daysLeft !== 1 ? "s" : ""}.
+              </p>
+              <p className="mt-1">
+                Upgrade now to continue creating cheques without interruption.
+              </p>
+              <Link href="/en/dashboard/subscription">
+                <Button size="sm" className="mt-2">
+                  Upgrade Now
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {trialInfo.isTrial && trialInfo.daysLeft <= 0 && (
+        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-red-600" />
+            <div>
+              <p className="font-semibold">Your trial period has expired.</p>
+              <p className="mt-1">
+                Please upgrade your subscription to continue using the service.
+              </p>
+              <Link href="/en/dashboard/subscription">
+                <Button size="sm" className="mt-2">
+                  Upgrade Now
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Overview</h2>
         <Link
