@@ -11,10 +11,7 @@ export async function POST(request: Request) {
     const result = registerSchema.safeParse(body);
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error.issues[0].message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
     }
 
     const { name, email, password, company, phone } = result.data;
@@ -24,10 +21,7 @@ export async function POST(request: Request) {
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: "Email already registered" },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: "Email already registered" }, { status: 409 });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
@@ -59,6 +53,7 @@ export async function POST(request: Request) {
         phone: phone || null,
         role: "TRIAL_USER",
         status: "ACTIVE",
+        trialExpires: endDate,
         subscription: {
           create: {
             planId: trialPlan.id,
@@ -78,9 +73,9 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Registration error:", error);
+    console.error("[REGISTER_ERROR]", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error. Please check server logs." },
       { status: 500 }
     );
   }

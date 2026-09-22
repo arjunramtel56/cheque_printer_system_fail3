@@ -53,6 +53,7 @@ interface Template {
   bank: Bank;
   chequeWidth: number;
   chequeHeight: number;
+  backgroundUrl?: string | null;
   isDefault: boolean;
   isActive: boolean;
   version: number;
@@ -80,6 +81,7 @@ export default function AdminTemplatesPage() {
     name: "",
     chequeWidth: 210,
     chequeHeight: 90,
+    backgroundUrl: "",
     isDefault: false,
     isActive: true,
     fields: [] as any[],
@@ -121,6 +123,7 @@ export default function AdminTemplatesPage() {
       name: "",
       chequeWidth: 210,
       chequeHeight: 90,
+      backgroundUrl: "",
       isDefault: false,
       isActive: true,
       fields: [],
@@ -135,6 +138,7 @@ export default function AdminTemplatesPage() {
       name: template.name,
       chequeWidth: template.chequeWidth,
       chequeHeight: template.chequeHeight,
+      backgroundUrl: template.backgroundUrl || "",
       isDefault: template.isDefault,
       isActive: template.isActive,
       fields: template.fields,

@@ -4,13 +4,7 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Printer,
-  FileText,
-  Shield,
-  Clock,
-  CreditCard,
-} from "lucide-react";
+import { Printer, FileText, Shield, Clock, CreditCard, User, LayoutDashboard } from "lucide-react";
 
 const features = [
   {
@@ -116,6 +110,49 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Quick Access Panel */}
+      <section className="py-12 bg-card">
+        <div className="mx-auto max-w-7xl px-4">
+          <h2 className="text-center text-3xl font-bold">{t("quickAccess")}</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">
+            {t("quickAccessDesc")}
+          </p>
+          <div className="mt-10 flex flex-wrap justify-center gap-4">
+            <Link href={`/${locale}/register`}>
+              <Button size="lg" className="text-base">
+                <svg
+                  className="mr-2 h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 10V3L4 14h7v7l9-7h-7z"
+                  />
+                </svg>
+                {t("startTrial")}
+              </Button>
+            </Link>
+            <Link href={`/${locale}/login`}>
+              <Button variant="outline" size="lg" className="text-base">
+                <User className="mr-2 h-5 w-5" />
+                {t("userLogin")}
+              </Button>
+            </Link>
+            <Link href={`/${locale}/login`}>
+              <Button variant="secondary" size="lg" className="text-base">
+                <LayoutDashboard className="mr-2 h-5 w-5" />
+                {t("adminPortal")}
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
       <section className="py-20">
         <div className="mx-auto max-w-7xl px-4">
@@ -129,9 +166,7 @@ export default function HomePage() {
                 <CardContent className="pt-6">
                   <feature.icon className="h-10 w-10 text-primary" />
                   <h3 className="mt-4 text-lg font-semibold">{t(feature.titleKey)}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {t(feature.descKey)}
-                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">{t(feature.descKey)}</p>
                 </CardContent>
               </Card>
             ))}
@@ -150,9 +185,7 @@ export default function HomePage() {
                   {step.step}
                 </div>
                 <h3 className="mt-4 text-lg font-semibold">{t(step.titleKey)}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {t(step.descKey)}
-                </p>
+                <p className="mt-2 text-sm text-muted-foreground">{t(step.descKey)}</p>
               </div>
             ))}
           </div>
@@ -192,10 +225,7 @@ export default function HomePage() {
                     ))}
                   </ul>
                   <Link href={`/${locale}/register`} className="mt-6 block">
-                    <Button
-                      variant={plan.popular ? "default" : "outline"}
-                      className="w-full"
-                    >
+                    <Button variant={plan.popular ? "default" : "outline"} className="w-full">
                       {t("getStarted")}
                     </Button>
                   </Link>
@@ -210,9 +240,7 @@ export default function HomePage() {
       <section className="bg-primary py-20 text-primary-foreground">
         <div className="mx-auto max-w-4xl px-4 text-center">
           <h2 className="text-3xl font-bold">{t("ctaTitle")}</h2>
-          <p className="mt-4 text-lg opacity-90">
-            {t("ctaDescription")}
-          </p>
+          <p className="mt-4 text-lg opacity-90">{t("ctaDescription")}</p>
           <Link href={`/${locale}/register`}>
             <Button size="lg" variant="secondary" className="mt-8 text-base">
               {t("startTrial")}

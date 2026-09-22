@@ -9,10 +9,17 @@ interface ChequePreviewProps {
   className?: string;
 }
 
-export default function ChequePreview({ template, fields, chequeImage, className = "" }: ChequePreviewProps) {
+export default function ChequePreview({
+  template,
+  fields,
+  chequeImage,
+  className = "",
+}: ChequePreviewProps) {
   if (!template) {
     return (
-      <div className={`cheque-preview-placeholder rounded-lg border-2 border-dashed border-slate-300 p-8 text-center ${className}`}>
+      <div
+        className={`cheque-preview-placeholder rounded-lg border-2 border-dashed border-slate-300 p-8 text-center ${className}`}
+      >
         <p className="text-sm text-slate-500">Select a bank to see cheque preview</p>
       </div>
     );
@@ -30,7 +37,14 @@ export default function ChequePreview({ template, fields, chequeImage, className
         aspectRatio: `${width}/${height}`,
       }}
     >
-      {chequeImage && (
+      {template.backgroundUrl && (
+        <img
+          src={template.backgroundUrl}
+          alt="Cheque background"
+          className="absolute inset-0 z-1 h-full w-full object-fill"
+        />
+      )}
+      {chequeImage && !template.backgroundUrl && (
         <img
           src={chequeImage}
           alt="Cheque background"
@@ -40,7 +54,11 @@ export default function ChequePreview({ template, fields, chequeImage, className
       <div className="absolute inset-0 z-2 flex flex-col justify-between p-2">
         {template.fields.map((field) => {
           const value = fields[field.field] || "";
-          const shouldShow = field.field === "date" || field.field === "payee" || field.field === "amountWords" || field.field === "amountNumber";
+          const shouldShow =
+            field.field === "date" ||
+            field.field === "payee" ||
+            field.field === "amountWords" ||
+            field.field === "amountNumber";
 
           if (!shouldShow && !value) return null;
 

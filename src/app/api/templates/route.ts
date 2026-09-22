@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { bankId, name, chequeWidth, chequeHeight, isDefault, fields } = body;
+    const { bankId, name, chequeWidth, chequeHeight, backgroundUrl, isDefault, fields } = body;
 
     if (!bankId || !name) {
       return NextResponse.json({ error: "Bank ID and name are required" }, { status: 400 });
@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
         name,
         chequeWidth: chequeWidth || 210,
         chequeHeight: chequeHeight || 90,
+        backgroundUrl: backgroundUrl || null,
         isDefault: isDefault || false,
         fields: {
           create: fields || [],

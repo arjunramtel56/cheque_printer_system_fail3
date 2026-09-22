@@ -25,8 +25,14 @@ enum AccountStatus {
 
 enum ChequeStatus {
   DRAFT
+  READY
   PRINTED
   CANCELLED
+}
+
+enum Orientation {
+  PORTRAIT
+  LANDSCAPE
 }
 
 // ─── Users & Auth ─────────────────────────────────────────────────────
@@ -42,6 +48,7 @@ model User {
   isActive      Boolean       @default(true)
   phone         String?
   company       String?
+  trialExpires  DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -127,6 +134,7 @@ model BankTemplate {
   name           String
   chequeWidth    Float    @default(210)
   chequeHeight   Float    @default(90)
+  backgroundUrl  String?
   isActive       Boolean  @default(true)
   isDefault      Boolean  @default(false)
   version        Int      @default(1)

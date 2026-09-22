@@ -31,6 +31,7 @@ export interface ChequeTemplate {
   bankName: string;
   chequeWidth: number;
   chequeHeight: number;
+  backgroundUrl?: string | null;
   fields: ChequeFieldConfig[];
 }
 

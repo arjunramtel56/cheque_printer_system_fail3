@@ -101,6 +101,9 @@ export default function PrintPage() {
         bankName: selectedBank?.name || "",
         chequeWidth: selectedTemplate.chequeWidth,
         chequeHeight: selectedTemplate.chequeHeight,
+        backgroundUrl: selectedBank?.code
+          ? `/images/${selectedBank.code.toLowerCase()}-bank-cheque.png`
+          : undefined,
         fields: selectedTemplate.fields.map((f) => ({
           field: f.field,
           x: f.x,
@@ -311,15 +314,7 @@ export default function PrintPage() {
             </div>
 
             <div className="flex min-h-[300px] items-center justify-center overflow-auto bg-slate-50 p-4 md:p-6">
-              <ChequePreview
-                template={templateForPreview}
-                fields={previewFields}
-                chequeImage={
-                  selectedBank?.code
-                    ? `/images/${selectedBank.code.toLowerCase()}-bank-cheque.png`
-                    : undefined
-                }
-              />
+              <ChequePreview template={templateForPreview} fields={previewFields} />
             </div>
 
             <p className="pt-3 text-center text-xs text-slate-400 no-print">

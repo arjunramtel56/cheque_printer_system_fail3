@@ -176,5 +176,22 @@
     "post2Desc": "Discover the best practices for printing cheques accurately and avoiding common mistakes.",
     "post3Title": "Supported Banks: Complete List for 2024",
     "post3Desc": "See the full list of Nepalese banks supported by RCPS and what each template offers."
+  },
+  "cheque": {
+    "formTitle": "Cheque Details",
+    "payeeName": "Beneficiary Name",
+    "chequeDate": "Cheque Date",
+    "amountFigure": "Amount (in figures)",
+    "amountWords": "Amount (in words)",
+    "useAuto": "Regenerate from figure",
+    "chequeNumber": "Cheque Number (optional)",
+    "chequeNumberPlaceholder": "e.g. 000123",
+    "orientation": "Feed Direction",
+    "portrait": "Portrait",
+    "landscape": "Landscape",
+    "language": "Language",
+    "fineTune": "Fine-tune alignment",
+    "print": "Print Cheque",
+    "saveDraft": "Save Draft"
   }
 }

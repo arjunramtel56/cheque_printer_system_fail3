@@ -28,7 +28,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, chequeWidth, chequeHeight, isDefault, isActive, fields } = body;
+    const { name, chequeWidth, chequeHeight, isDefault, isActive, backgroundUrl, fields } = body;
 
     const template = await prisma.bankTemplate.update({
       where: { id },
@@ -36,6 +36,7 @@ export async function PUT(request: NextRequest) {
         ...(name && { name }),
         ...(chequeWidth && { chequeWidth }),
         ...(chequeHeight && { chequeHeight }),
+        ...(backgroundUrl !== undefined && { backgroundUrl }),
         ...(isDefault !== undefined && { isDefault }),
         ...(isActive !== undefined && { isActive }),
         ...(fields && {

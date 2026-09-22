@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { bankId, name, chequeWidth, chequeHeight, isDefault, fields } = body;
+    const { bankId, name, chequeWidth, chequeHeight, isDefault, backgroundUrl, fields } = body;
 
     if (!bankId || !name) {
       return NextResponse.json({ error: "Bank ID and name are required" }, { status: 400 });
@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
         name,
         chequeWidth: chequeWidth || 210,
         chequeHeight: chequeHeight || 90,
+        backgroundUrl: backgroundUrl || null,
         isDefault: isDefault || false,
         fields: {
           create: fields || [],
@@ -108,7 +109,8 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { id, name, chequeWidth, chequeHeight, isDefault, isActive, fields } = body;
+    const { id, name, chequeWidth, chequeHeight, isDefault, isActive, backgroundUrl, fields } =
+      body;
 
     if (!id) {
       return NextResponse.json({ error: "Template ID is required" }, { status: 400 });
@@ -120,6 +122,7 @@ export async function PUT(request: NextRequest) {
         name: name || undefined,
         chequeWidth: chequeWidth || undefined,
         chequeHeight: chequeHeight || undefined,
+        backgroundUrl: backgroundUrl !== undefined ? backgroundUrl : undefined,
         isDefault: isDefault !== undefined ? isDefault : undefined,
         isActive: isActive !== undefined ? isActive : undefined,
         ...(fields && {
