@@ -68,7 +68,11 @@
     "businessF5": "Custom templates",
     "getStarted": "Get Started",
     "ctaTitle": "Ready to Get Started?",
-    "ctaDescription": "Join businesses across Nepal who trust RCPS for their cheque printing needs."
+    "ctaDescription": "Join businesses across Nepal who trust RCPS for their cheque printing needs.",
+    "quickAccess": "Quick Access",
+    "quickAccessDesc": "Choose your panel to get started.",
+    "userLogin": "User Login",
+    "adminPortal": "Admin Portal"
   },
   "dashboard": {
     "overview": "Overview",

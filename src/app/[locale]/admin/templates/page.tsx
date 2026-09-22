@@ -191,6 +191,7 @@ export default function AdminTemplatesPage() {
         name: formData.name,
         chequeWidth: formData.chequeWidth,
         chequeHeight: formData.chequeHeight,
+        backgroundUrl: formData.backgroundUrl || null,
         isDefault: formData.isDefault,
         isActive: formData.isActive,
         fields: formData.fields,
@@ -248,6 +249,7 @@ export default function AdminTemplatesPage() {
           bankName: banks.find((b) => b.id === formData.bankId)?.name || "",
           chequeWidth: formData.chequeWidth,
           chequeHeight: formData.chequeHeight,
+          backgroundUrl: formData.backgroundUrl || undefined,
           fields: formData.fields.map((f) => ({
             field: f.field,
             x: f.x,
