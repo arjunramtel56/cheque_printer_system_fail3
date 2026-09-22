@@ -26,10 +26,15 @@ export default async function AdminDashboardPage() {
       totalPrints: await prisma.printHistory.count(),
       totalBanks: await prisma.bank.count(),
       totalTemplates: await prisma.bankTemplate.count(),
-      totalRevenue: (await prisma.plan.aggregate({
-        _sum: { price: true },
-        where: { isActive: true },
-      }))._sum?.price || 0,
+      totalRevenue:
+        Number(
+          (
+            await prisma.plan.aggregate({
+              _sum: { price: true },
+              where: { isActive: true },
+            })
+          )._sum?.price
+        ) || 0,
       activeSubscriptions: await prisma.subscription.count({
         where: { isActive: true },
       }),
@@ -111,7 +116,9 @@ export default async function AdminDashboardPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">NPR {Number(stats.totalRevenue).toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              NPR {Number(stats.totalRevenue).toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">From plans</p>
           </CardContent>
         </Card>
@@ -128,7 +135,10 @@ export default async function AdminDashboardPage() {
             ) : (
               <div className="space-y-3">
                 {stats.recentAuditLogs.map((log) => (
-                  <div key={log.id} className="flex items-center justify-between rounded-md border p-3">
+                  <div
+                    key={log.id}
+                    className="flex items-center justify-between rounded-md border p-3"
+                  >
                     <div>
                       <p className="font-medium">{log.action}</p>
                       <p className="text-xs text-muted-foreground">
