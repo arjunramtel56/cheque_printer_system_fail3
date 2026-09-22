@@ -412,6 +412,16 @@ export default function AdminTemplatesPage() {
                 </div>
               </div>
 
+              <div>
+                <Label htmlFor="backgroundUrl">Background Image URL</Label>
+                <Input
+                  id="backgroundUrl"
+                  value={formData.backgroundUrl}
+                  onChange={(e) => setFormData({ ...formData, backgroundUrl: e.target.value })}
+                  placeholder="/images/nabil-bank-cheque.png"
+                />
+              </div>
+
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2">
                   <input

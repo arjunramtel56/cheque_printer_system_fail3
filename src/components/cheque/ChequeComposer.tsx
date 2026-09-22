@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChequePrintLayout } from "./ChequePrintLayout";
 import { amountToWords } from "@/lib/amount-to-words";
-import { chequeSchema } from "@/lib/cheque/schema";
 
 type FormState = {
   payeeName: string;
@@ -17,13 +16,17 @@ type FormState = {
   language: "en" | "ne";
   offsetXmm: number;
   offsetYmm: number;
+  bankTemplate: string;
+  printingMethod: string;
+  feedDirection: string;
+  memo: string;
+  accountPayeeOnly: boolean;
 };
 
 export function ChequeComposer() {
   const t = useTranslations("cheque");
   const router = useRouter();
   const printRef = useRef<HTMLDivElement>(null);
-  const [pending, start] = useTransition();
 
   const [form, setForm] = useState<FormState>({
     payeeName: "",
@@ -35,6 +38,11 @@ export function ChequeComposer() {
     language: "en",
     offsetXmm: 0,
     offsetYmm: 0,
+    bankTemplate: "Siddhartha Bank Limited — calibrated",
+    printingMethod: "A4 carrier — fallback",
+    feedDirection: "Long edge first (0°)",
+    memo: "",
+    accountPayeeOnly: true,
   });
 
   const numericAmount = useMemo(() => Number(form.amountFigure) || 0, [form.amountFigure]);
@@ -47,59 +55,6 @@ export function ChequeComposer() {
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
-  async function handleSave(status: "DRAFT" | "READY") {
-    const payload = {
-      payeeName: form.payeeName,
-      chequeDate: form.chequeDate,
-      amountFigure: form.amountFigure,
-      amountWords: form.amountWords || autoWords,
-      chequeNumber: form.chequeNumber,
-      orientation: form.orientation,
-      offsetXmm: form.offsetXmm,
-      offsetYmm: form.offsetYmm,
-      status,
-    };
-
-    const parsed = chequeSchema.safeParse(payload);
-    if (!parsed.success) {
-      const firstError = parsed.error.errors[0]?.message ?? "Invalid data";
-      alert(firstError);
-      return;
-    }
-
-    start(async () => {
-      try {
-        const res = await fetch("/api/cheques", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            templateId: "default-template",
-            payeeName: parsed.data.payeeName,
-            chequeDate: new Date(parsed.data.chequeDate).toISOString(),
-            amountNumber: parsed.data.amountFigure,
-            amountWords: parsed.data.amountWords,
-            chequeNumber: parsed.data.chequeNumber || undefined,
-            accountHolder: parsed.data.payeeName,
-            orientation: parsed.data.orientation,
-            offsetXmm: parsed.data.offsetXmm,
-            offsetYmm: parsed.data.offsetYmm,
-          }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          alert(data.error || "Failed to save");
-          return;
-        }
-
-        const data = await res.json();
-        router.push(`/dashboard/cheques/${data.id}`);
-      } catch (err) {
-        alert("An unexpected error occurred");
-      }
-    });
-  }
-
   function handlePrint() {
     document.documentElement.classList.remove("dark");
     window.print();
@@ -108,76 +63,169 @@ export function ChequeComposer() {
   const canPrint = !!form.payeeName && numericAmount > 0;
 
   return (
-    <div className="grid gap-6 p-6 lg:grid-cols-[380px_1fr]">
-      <aside className="no-print space-y-4 rounded-xl border p-5">
-        <h2 className="text-lg font-semibold">{t("formTitle")}</h2>
+    <div className="grid gap-6 p-6 lg:grid-cols-[400px_1fr] bg-slate-50 min-h-screen">
+      <aside className="no-print space-y-5 rounded-xl border bg-white p-5 shadow-sm h-fit">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <span className="text-slate-400 text-sm">01</span> Cheque details
+          </h2>
+          <button
+            className="text-sm text-slate-500 hover:text-slate-800 bg-slate-100 px-3 py-1 rounded-md"
+            onClick={() =>
+              setForm({
+                payeeName: "",
+                chequeDate: new Date().toISOString().slice(0, 10),
+                amountFigure: "",
+                amountWords: "",
+                chequeNumber: "",
+                orientation: "PORTRAIT",
+                language: "en",
+                offsetXmm: 0,
+                offsetYmm: 0,
+                bankTemplate: "Siddhartha Bank Limited — calibrated",
+                printingMethod: "A4 carrier — fallback",
+                feedDirection: "Long edge first (0°)",
+                memo: "",
+                accountPayeeOnly: true,
+              })
+            }
+          >
+            Clear
+          </button>
+        </div>
 
-        <label className="block text-sm">
-          {t("payeeName")}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Bank template</label>
+          <select
+            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 bg-white text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            value={form.bankTemplate}
+            onChange={(e) => update("bankTemplate", e.target.value)}
+          >
+            <option>Siddhartha Bank Limited — calibrated</option>
+            <option>Nabil Bank — standard</option>
+            <option>NIC Asia — custom</option>
+          </select>
+          <p className="text-xs text-slate-500 mt-1">
+            Class A — Commercial Banks · cheque 190.5 × 88.9 mm
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Printing method</label>
+            <select
+              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 bg-white text-sm"
+              value={form.printingMethod}
+              onChange={(e) => update("printingMethod", e.target.value)}
+            >
+              <option>A4 carrier — fallback</option>
+              <option>A4 carrier — direct</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Feed direction</label>
+            <select
+              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 bg-white text-sm"
+              value={form.feedDirection}
+              onChange={(e) => update("feedDirection", e.target.value)}
+            >
+              <option>Long edge first (0°)</option>
+              <option>Short edge first (90°)</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+          <div className="bg-slate-50 rounded-lg p-3 border">
+            <div className="text-slate-500 mb-1">Cheque</div>
+            <div className="font-semibold text-slate-900">190.5 × 88.9 mm</div>
+          </div>
+          <div className="bg-slate-50 rounded-lg p-3 border">
+            <div className="text-slate-500 mb-1">Paper</div>
+            <div className="font-semibold text-slate-900">A4 · 210 × 297 mm</div>
+          </div>
+          <div className="bg-slate-50 rounded-lg p-3 border">
+            <div className="text-slate-500 mb-1">Profile</div>
+            <div className="font-semibold text-slate-900">A4 carrier · horizontal</div>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Payee name</label>
           <input
-            className="mt-1 w-full rounded border px-3 py-2"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 bg-white"
+            placeholder="e.g. Ram Bahadur Thapa"
             value={form.payeeName}
             onChange={(e) => update("payeeName", e.target.value)}
-            placeholder="Rahul Sharma"
             maxLength={100}
           />
-        </label>
+        </div>
 
-        <label className="block text-sm">
-          {t("chequeDate")}
-          <input
-            type="date"
-            className="mt-1 w-full rounded border px-3 py-2"
-            value={form.chequeDate}
-            onChange={(e) => update("chequeDate", e.target.value)}
-          />
-        </label>
-
-        <label className="block text-sm">
-          {t("amountFigure")}
-          <div className="mt-1 flex overflow-hidden rounded border">
-            <span className="flex items-center border-r px-3 py-2 text-sm font-medium text-slate-500">
-              Rs.
-            </span>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Amount (NPR)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">रू</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                className="w-full rounded-lg border border-slate-300 pl-8 pr-3 py-2.5 bg-white"
+                placeholder="0.00"
+                value={form.amountFigure}
+                onChange={(e) => update("amountFigure", e.target.value)}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Cheque date</label>
             <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              className="min-w-0 flex-1 border-0 px-3 py-2 outline-none"
-              value={form.amountFigure}
-              onChange={(e) => update("amountFigure", e.target.value)}
-              placeholder="125000.50"
+              type="date"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 bg-white"
+              value={form.chequeDate}
+              onChange={(e) => update("chequeDate", e.target.value)}
             />
           </div>
-        </label>
+        </div>
 
-        <label className="block text-sm">
-          {t("amountWords")}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Amount in words</label>
           <textarea
-            className="mt-1 w-full rounded border px-3 py-2"
-            rows={3}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 bg-white h-20 resize-none"
+            placeholder="Generated from the amount"
             value={form.amountWords || autoWords}
             onChange={(e) => update("amountWords", e.target.value)}
-            placeholder={autoWords}
           />
-          <button
-            type="button"
-            className="mt-1 text-xs text-blue-600 hover:underline"
-            onClick={() => update("amountWords", autoWords)}
-          >
-            {t("useAuto")}
-          </button>
-        </label>
+          <p className="text-xs text-slate-500 mt-1">
+            Generated from the amount and printed exactly as shown here.
+          </p>
+        </div>
 
-        <label className="block text-sm">
-          {t("chequeNumber")}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Memo / reference (optional)
+          </label>
           <input
-            className="mt-1 w-full rounded border px-3 py-2"
-            value={form.chequeNumber}
-            onChange={(e) => update("chequeNumber", e.target.value)}
-            maxLength={20}
-            placeholder={t("chequeNumberPlaceholder")}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 bg-white"
+            placeholder="Invoice or payment reference"
+            value={form.memo}
+            onChange={(e) => update("memo", e.target.value)}
           />
+        </div>
+
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            checked={form.accountPayeeOnly}
+            onChange={(e) => update("accountPayeeOnly", e.target.checked)}
+          />
+          <div>
+            <div className="text-sm font-semibold text-slate-800">Print A/C PAYEE ONLY</div>
+            <div className="text-xs text-slate-500">
+              Adds the crossing, centred on the cheque width.
+            </div>
+          </div>
         </label>
 
         <div className="grid grid-cols-2 gap-3">
@@ -206,58 +254,38 @@ export function ChequeComposer() {
           </label>
         </div>
 
-        <details className="text-sm">
-          <summary className="cursor-pointer">{t("fineTune")}</summary>
-          <div className="mt-2 grid grid-cols-2 gap-3">
-            <label>
-              X offset (mm)
-              <input
-                type="number"
-                step="0.5"
-                className="mt-1 w-full rounded border px-2 py-1"
-                value={form.offsetXmm}
-                onChange={(e) => update("offsetXmm", Number(e.target.value))}
-              />
-            </label>
-            <label>
-              Y offset (mm)
-              <input
-                type="number"
-                step="0.5"
-                className="mt-1 w-full rounded border px-2 py-1"
-                value={form.offsetYmm}
-                onChange={(e) => update("offsetYmm", Number(e.target.value))}
-              />
-            </label>
-          </div>
-        </details>
-
-        <div className="flex gap-2 pt-2">
+        <div className="flex gap-3 pt-2">
           <button
-            className="flex-1 rounded bg-slate-900 px-3 py-2 text-white disabled:opacity-50"
+            className="flex-1 rounded-lg bg-blue-600 px-4 py-3 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 transition shadow-md"
             onClick={handlePrint}
             disabled={!canPrint}
           >
             {t("print")}
           </button>
           <button
-            className="rounded border px-3 py-2"
-            onClick={() => handleSave("DRAFT")}
-            disabled={pending || !form.payeeName || !numericAmount}
+            className="rounded-lg border border-slate-300 bg-white px-4 py-3 font-semibold text-slate-700 hover:bg-slate-50 transition"
+            disabled={!form.payeeName || !numericAmount}
+            onClick={() => {
+              const payload = {
+                payeeName: form.payeeName,
+                chequeDate: form.chequeDate,
+                amountFigure: form.amountFigure,
+                amountWords: form.amountWords || autoWords,
+                chequeNumber: form.chequeNumber,
+                orientation: form.orientation,
+                offsetXmm: form.offsetXmm,
+                offsetYmm: form.offsetYmm,
+              };
+              alert("Save to history (TODO: implement API)");
+            }}
           >
-            {t("saveDraft")}
+            Save to history
           </button>
         </div>
       </aside>
 
-      <section className="cheque-print-root overflow-auto rounded-xl border bg-slate-100 p-4">
-        <div
-          className="mx-auto"
-          style={{
-            transform: "scale(0.72)",
-            transformOrigin: "top left",
-          }}
-        >
+      <section className="cheque-print-root overflow-auto rounded-xl border bg-slate-200 p-8 flex justify-center items-start">
+        <div className="shadow-2xl">
           <ChequePrintLayout
             ref={printRef}
             payeeName={form.payeeName || "—"}
@@ -269,6 +297,8 @@ export function ChequeComposer() {
             offsetXmm={form.offsetXmm}
             offsetYmm={form.offsetYmm}
             language={form.language}
+            accountPayeeOnly={form.accountPayeeOnly}
+            memo={form.memo}
           />
         </div>
       </section>

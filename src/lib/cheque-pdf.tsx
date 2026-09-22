@@ -1,11 +1,12 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, pdf, Image } from "@react-pdf/renderer";
 import { TemplateFieldConfig } from "@/types";
 
 interface ChequePDFProps {
   bankName: string;
   chequeWidth: number;
   chequeHeight: number;
+  backgroundUrl?: string | null;
   fields: Record<string, string>;
   templateFields: TemplateFieldConfig[];
 }
@@ -13,7 +14,7 @@ interface ChequePDFProps {
 const MM_TO_PT = 1;
 
 export const ChequePDFDocument = (props: ChequePDFProps) => {
-  const { bankName, chequeWidth, chequeHeight, fields, templateFields } = props;
+  const { bankName, chequeWidth, chequeHeight, backgroundUrl, fields, templateFields } = props;
 
   const fieldPositions = templateFields || [];
 
@@ -30,6 +31,20 @@ export const ChequePDFDocument = (props: ChequePDFProps) => {
             padding: 0,
           }}
         >
+          {backgroundUrl && (
+            <Image
+              src={backgroundUrl}
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                zIndex: 1,
+              }}
+            />
+          )}
           {fieldPositions.map((field) => {
             const value = fields[field.field] || "";
             return (
@@ -75,6 +90,7 @@ export async function generateChequePDF(
   const bankName = template?.bank?.name || "Bank Cheque";
   const chequeWidth = template?.chequeWidth || 210;
   const chequeHeight = template?.chequeHeight || 90;
+  const backgroundUrl = template?.backgroundUrl || null;
   const templateFields = (template?.fields || []).map((f: any) => ({
     id: f.id,
     field: f.field,
@@ -96,6 +112,7 @@ export async function generateChequePDF(
     bankName,
     chequeWidth,
     chequeHeight,
+    backgroundUrl,
     fields,
     templateFields,
   } as ChequePDFProps);

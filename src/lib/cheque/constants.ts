@@ -18,6 +18,7 @@ export const FIELD_POSITIONS = {
   payeeName: { x: 14, y: 32, w: 150, align: "left" as const },
   amountWords: { x: 14, y: 50, w: 150, align: "left" as const },
   amountFig: { x: 148, y: 32, w: 38, align: "right" as const },
+  chequeNumber: { x: 4, y: 4, w: 40, align: "left" as const },
 } as const;
 
 export const MM_TO_PX = 96 / 25.4;

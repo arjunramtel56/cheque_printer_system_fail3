@@ -13,6 +13,8 @@ export type ChequePrintProps = {
   offsetXmm?: number;
   offsetYmm?: number;
   language?: "en" | "ne";
+  accountPayeeOnly?: boolean;
+  memo?: string;
 };
 
 const fmt = (d: Date, lang: "en" | "ne") =>
@@ -30,7 +32,14 @@ const money = (n: number, lang: "en" | "ne") =>
 
 export const ChequePrintLayout = forwardRef<HTMLDivElement, ChequePrintProps>(
   function ChequePrintLayout(props, ref) {
-    const { orientation, offsetXmm = 0, offsetYmm = 0, language = "en" } = props;
+    const {
+      orientation,
+      offsetXmm = 0,
+      offsetYmm = 0,
+      language = "en",
+      accountPayeeOnly,
+      memo,
+    } = props;
 
     const placement = DEFAULT_PLACEMENT[orientation];
     const page = A4[orientation];
@@ -54,6 +63,8 @@ export const ChequePrintLayout = forwardRef<HTMLDivElement, ChequePrintProps>(
     return (
       <div ref={ref} className="cheque-page" style={style.page} data-orientation={orientation}>
         <div className="cheque-sheet" style={style.cheque}>
+          {accountPayeeOnly && <div className="cheque-crossing">A/C PAYEE ONLY</div>}
+
           <div
             className="cheque-field"
             style={{
@@ -102,9 +113,27 @@ export const ChequePrintLayout = forwardRef<HTMLDivElement, ChequePrintProps>(
             {money(props.amountFigure, language)}
           </div>
 
-          {props.chequeNumber && <div className="cheque-cheque-number">{props.chequeNumber}</div>}
+          {props.chequeNumber && (
+            <div
+              className="cheque-field cheque-cheque-number"
+              style={{
+                left: `${FIELD_POSITIONS.chequeNumber.x}mm`,
+                top: `${FIELD_POSITIONS.chequeNumber.y}mm`,
+                width: `${FIELD_POSITIONS.chequeNumber.w}mm`,
+                textAlign: FIELD_POSITIONS.chequeNumber.align,
+                fontSize: "9px",
+                color: "#555",
+              }}
+            >
+              {props.chequeNumber}
+            </div>
+          )}
+
+          {memo && <div className="cheque-memo">Memo: {memo}</div>}
         </div>
       </div>
     );
   }
 );
+
+ChequePrintLayout.displayName = "ChequePrintLayout";

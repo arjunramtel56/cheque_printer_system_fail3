@@ -36,6 +36,31 @@
   color: #555;
 }
 
+.cheque-crossing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-15deg);
+  border: 2px solid rgba(0, 0, 0, 0.4);
+  padding: 4px 12px;
+  font-family: "Courier New", monospace;
+  font-weight: bold;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.cheque-memo {
+  position: absolute;
+  bottom: 2mm;
+  left: 4mm;
+  font-size: 9px;
+  color: #555;
+  font-family: "Courier New", monospace;
+}
+
 @media print {
   :root {
     color-scheme: light !important;
@@ -91,6 +116,14 @@
 
   .cheque-cheque-number {
     display: none;
+  }
+
+  .cheque-crossing {
+    display: block;
+  }
+
+  .cheque-memo {
+    display: block;
   }
 
   * {
