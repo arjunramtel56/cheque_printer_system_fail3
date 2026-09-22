@@ -1,4 +1,3 @@
-// @ts-nocheck
 export const runtime = "nodejs";
 
 import { streamText } from "ai";
@@ -10,7 +9,7 @@ import { amountToWords } from "@/lib/amount-to-words";
 import { CHEQUE_AGENT_PROMPT } from "@/lib/ai/prompts";
 import { z } from "zod";
 import { tool } from "ai";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 export const maxDuration = 30;
 

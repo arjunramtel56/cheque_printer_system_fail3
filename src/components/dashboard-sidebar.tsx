@@ -17,6 +17,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Building2,
+  BarChart3,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -29,6 +31,8 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   Users,
   Settings,
   CreditCard,
+  Building2,
+  BarChart3,
 };
 
 interface DashboardSidebarProps {
