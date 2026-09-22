@@ -200,6 +200,104 @@
     "language": "भाषा",
     "fineTune": "मिलान समायोजन",
     "print": "चेक प्रिन्ट गर्नुहोस्",
-    "saveDraft": "ड्राफ्ट सुरक्षित गर्नुहोस्"
+    "saveDraft": "ड्राफ्ट सुरक्षित गर्नुहोस्",
+    "accountHolder": "खाताधनी",
+    "bankTemplate": "बैंक टेम्पलेट",
+    "bankTemplateHelper": "क्लास A - वाणिज्य बैंकहरू · चेक १९०.५ x ८८.९ मिमि",
+    "printingMethod": "प्रिन्टिङ विधि",
+    "feedDirection": "फिड दिशा",
+    "longEdge": "लामो किनारा पहिले (०°)",
+    "shortEdge": "छोटो किनारा पहिले (९०°)",
+    "a4CarrierFallback": "A4 क्यारियर - फ़ॉलब्याक",
+    "a4CarrierDirect": "A4 क्यारियर - सीधा",
+    "preview": "चेक पूर्वावलोकन",
+    "livePreview": "लाइभ पूर्वावलोकन",
+    "previewHint": "तपाईंले पूर्वावलोकनमा हेर्नुभएको झैं तै प्रिन्ट हुनेछ।",
+    "accountPayee": "A/C PAYEE ONLY प्रिन्ट गर्नुहोस्",
+    "accountPayeeHelper": "चेकको चौडाइमा क्रसिङ थपिन्छ।",
+    "advancedCalibration": "उन्नत प्रिन्ट क्यालिब्रेशन",
+    "topOffset": "माथि ओफसेट (मिमी)",
+    "leftOffset": "बायाँ ओफसेट (मिमी)",
+    "scale": "स्केल (%)",
+    "fontSize": "फन्ट आकार (पिक्सेल)",
+    "clear": "खाली गर्नुहोस्",
+    "save": "सुरक्षित गर्नुहोस्",
+    "saveHistory": "इतिहासमा सुरक्षित गर्नुहोस्",
+    "chequeDimensions": "१९०.५ x ८८.९ मिमी",
+    "paperDimensions": "A4 - २१० x २९७ मिमी",
+    "profile": "A4 क्यारियर - क्षैतिज",
+    "noBanksAvailable": "कुनै बैंक उपलब्ध छैन। कृपया समर्थनमा सम्पर्क गर्नुहोस्।",
+    "invalidInput": "कृपया मान्य प्राप्तकर्ता र रकम प्रविष्ट गर्नुहोस्।"
+  },
+  "dashboard_ui": {
+    "welcome": "पुनः स्वागत छ, {name}",
+    "trialActive": "परीक्षण सक्रिय: {count} प्रिन्ट बाँकी",
+    "stats": {
+      "chequesPrinted": "प्रिन्ट गरिएका चेकहरू",
+      "trialDaysLeft": "बाँकी परीक्षण दिनहरू",
+      "activeTemplates": "सक्रिय टेम्पलेटहरू"
+    },
+    "quickActions": "द्रुत कार्यहरू",
+    "createNew": "+ नयाँ चेक सिर्जना गर्नुहोस्",
+    "noHistory": "अझै कुनै सुरक्षित चेक छैन।",
+    "reprint": "पुन: प्रिन्ट",
+    "reprintAction": "पुन: प्रिन्ट कार्यक्षमता यहाँ ट्रिगर हुनेछ।",
+    "amountToPay": "भुक्तानी गर्नुपर्ने रकम:",
+    "merchant": "व्यापारी: {merchant}",
+    "scanQR": "तलको QR कोड स्क्यान गर्नुहोस्।",
+    "payWithFonepay": "फोनपेसँग भुक्तानी गर्नुहोस्",
+    "saveDraftSuccess": "चेक इतिहासमा सुरक्षित गरियो!",
+    "saveDraft": "इतिहासमा सुरक्षित गर्नुहोस् (टोडो: API कार्यान्वयन)"
+  },
+  "subscription": {
+    "title": "बिलिङ र सदस्यता",
+    "currentPlan": "हालको योजना",
+    "freeTrial": "नि:शुल्क परीक्षण",
+    "active": "सक्रिय",
+    "daysRemaining": "{days} दिन बाँकी छ।",
+    "upgradeToPro": "प्रोमा अपग्रेड गर्नुहोस्",
+    "features": {
+      "unlimited": "असीमित चेक प्रिन्टिङ",
+      "customTemplates": "अनुकूलित बैंक टेम्पलेटहरू",
+      "emailSupport": "ईमेल सहयोग",
+      "pdfExport": "PDF निर्यात सुविधा"
+    },
+    "price": "रु १,५०० / महिना",
+    "payWithFonepay": "फोनपेसँग भुक्तानी गर्नुहोस्",
+    "scanQR": "तलको QR कोड स्क्यान गर्नुहोस्।",
+    "amountToPay": "भुक्तानी गर्नुपर्ने रकम:",
+    "merchant": "व्यापारी: रिएक्टिफाई सफ्टवेयर टेक्नोलोजीज",
+    "payAmount": "रु १,५००.००"
+  },
+  "profile": {
+    "title": "प्रोफाइल सेटिङ",
+    "fullName": "पूरा नाम",
+    "email": "इमेल",
+    "company": "कम्पनी",
+    "phone": "फोन",
+    "saveChanges": "परिवर्तनहरू सुरक्षित गर्नुहोस्"
+  },
+  "history": {
+    "title": "प्रिन्ट इतिहास",
+    "table": {
+      "date": "मिति",
+      "payee": "प्राप्तकर्ता",
+      "amount": "रकम",
+      "status": "स्थिति",
+      "action": "कार्य"
+    },
+    "printed": "PRINTED"
+  },
+  "admin_ui": {
+    "totalUsers": "कुल प्रयोगकर्ताहरू",
+    "activeTrials": "सक्रिय परीक्षणहरू",
+    "chequesPrinted": "प्रिन्ट गरिएका चेकहरू",
+    "uptime": "प्रणाली अपटाइम",
+    "recentActivity": "हालको गतिविधि",
+    "table": {
+      "user": "प्रयोगकर्ता",
+      "action": "कार्य",
+      "time": "समय"
+    }
   }
 }

@@ -82,7 +82,10 @@ export default function ChequesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">My Cheques</h2>
-        <Button variant="outline" onClick={() => window.location.assign("/en/dashboard/print")}>
+        <Button
+          variant="outline"
+          onClick={() => window.location.assign("/en/dashboard/cheques/new")}
+        >
           <Printer size={16} className="mr-2" />
           New Cheque
         </Button>
@@ -122,8 +125,8 @@ export default function ChequesPage() {
                             cheque.status === "PRINTED"
                               ? "bg-green-100 text-green-700"
                               : cheque.status === "CANCELLED"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-slate-100 text-slate-700"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-slate-100 text-slate-700"
                           }`}
                         >
                           {cheque.status}
@@ -168,7 +171,7 @@ export default function ChequesPage() {
             <Button
               className="mt-4"
               variant="outline"
-              onClick={() => window.location.assign("/en/dashboard/print")}
+              onClick={() => window.location.assign("/en/dashboard/cheques/new")}
             >
               <Printer size={16} className="mr-2" />
               Create First Cheque

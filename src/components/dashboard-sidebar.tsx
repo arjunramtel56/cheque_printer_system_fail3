@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/lib/config";
 import {
@@ -41,11 +42,12 @@ interface DashboardSidebarProps {
 
 export default function DashboardSidebar({ role }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const locale = useLocale();
   const [collapsed, setCollapsed] = useState(false);
-  const locale = pathname.split("/")[1] || "en";
-  const navItems = role === "ADMIN" || role === "SUPER_ADMIN"
-    ? siteConfig.adminNavItems
-    : siteConfig.dashboardNavItems;
+  const navItems =
+    role === "ADMIN" || role === "SUPER_ADMIN"
+      ? siteConfig.adminNavItems
+      : siteConfig.dashboardNavItems;
 
   return (
     <aside
@@ -55,13 +57,8 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
       )}
     >
       <div className="flex h-14 items-center justify-between border-b px-4">
-        {!collapsed && (
-          <span className="text-lg font-bold text-primary">RCPS</span>
-        )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="rounded-md p-1 hover:bg-accent"
-        >
+        {!collapsed && <span className="text-lg font-bold text-primary">RCPS</span>}
+        <button onClick={() => setCollapsed(!collapsed)} className="rounded-md p-1 hover:bg-accent">
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
       </div>

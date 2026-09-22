@@ -12,7 +12,7 @@ export const siteConfig = {
   ],
   dashboardNavItems: [
     { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
-    { label: "Print Cheque", href: "/dashboard/print", icon: "Printer" },
+    { label: "Print Cheque", href: "/dashboard/cheques/new", icon: "Printer" },
     { label: "My Cheques", href: "/dashboard/cheques", icon: "FileText" },
     { label: "Templates", href: "/dashboard/templates", icon: "LayoutTemplate" },
     { label: "History", href: "/dashboard/history", icon: "Clock" },

@@ -24,6 +24,8 @@ export interface ChequeFieldConfig {
   format?: string;
 }
 
+export type TemplateFieldConfig = ChequeFieldConfig;
+
 export interface ChequeTemplate {
   id: string;
   name: string;
@@ -36,39 +38,3 @@ export interface ChequeTemplate {
 }
 
 export type Locale = "en" | "ne";
-
-export interface TemplateFieldConfig {
-  id?: string;
-  field: string;
-  x: number;
-  y: number;
-  width?: number;
-  height?: number;
-  fontSize: number;
-  fontFamily: string;
-  fontWeight?: string;
-  letterSpacing?: number;
-  lineHeight?: number;
-  align?: "left" | "center" | "right";
-  rotation?: number;
-  color?: string;
-  format?: string;
-}
-
-export interface ChequeFieldConfig {
-  id?: string;
-  field: string;
-  x: number;
-  y: number;
-  width?: number;
-  height?: number;
-  fontSize: number;
-  fontFamily: string;
-  fontWeight?: string;
-  letterSpacing?: number;
-  lineHeight?: number;
-  align?: "left" | "center" | "right";
-  rotation?: number;
-  color?: string;
-  format?: string;
-}

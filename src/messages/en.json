@@ -200,6 +200,104 @@
     "language": "Language",
     "fineTune": "Fine-tune alignment",
     "print": "Print Cheque",
-    "saveDraft": "Save Draft"
+    "saveDraft": "Save Draft",
+    "accountHolder": "Account Holder",
+    "bankTemplate": "Bank Template",
+    "bankTemplateHelper": "Class A - Commercial Banks · cheque 190.5 x 88.9 mm",
+    "printingMethod": "Printing Method",
+    "feedDirection": "Feed Direction",
+    "longEdge": "Long edge first (0 deg)",
+    "shortEdge": "Short edge first (90 deg)",
+    "a4CarrierFallback": "A4 carrier - fallback",
+    "a4CarrierDirect": "A4 carrier - direct",
+    "preview": "Cheque Preview",
+    "livePreview": "Live Preview",
+    "previewHint": "What you see in the preview is what will be printed.",
+    "accountPayee": "Print A/C PAYEE ONLY",
+    "accountPayeeHelper": "Adds the crossing, centred on the cheque width.",
+    "advancedCalibration": "Advanced Print Calibration",
+    "topOffset": "Top Offset (mm)",
+    "leftOffset": "Left Offset (mm)",
+    "scale": "Scale (%)",
+    "fontSize": "Font Size (px)",
+    "clear": "Clear",
+    "save": "Save",
+    "saveHistory": "Save to History",
+    "chequeDimensions": "190.5 x 88.9 mm",
+    "paperDimensions": "A4 - 210 x 297 mm",
+    "profile": "A4 carrier - horizontal",
+    "noBanksAvailable": "No banks available. Please contact support.",
+    "invalidInput": "Please enter a valid payee name and amount."
+  },
+  "dashboard_ui": {
+    "welcome": "Welcome back, {name}",
+    "trialActive": "TRIAL ACTIVE: {count} prints left",
+    "stats": {
+      "chequesPrinted": "Cheques Printed",
+      "trialDaysLeft": "Trial Days Left",
+      "activeTemplates": "Active Templates"
+    },
+    "quickActions": "Quick Actions",
+    "createNew": "+ Create New Cheque",
+    "noHistory": "No saved cheques yet.",
+    "reprint": "Reprint",
+    "reprintAction": "Reprint functionality would trigger here.",
+    "amountToPay": "Amount to Pay:",
+    "merchant": "Merchant: {merchant}",
+    "scanQR": "Scan the QR code below using your Fonepay mobile app.",
+    "payWithFonepay": "Pay with Fonepay",
+    "saveDraftSuccess": "Cheque saved to history!",
+    "saveDraft": "Save to history (TODO: implement API)"
+  },
+  "subscription": {
+    "title": "Billing & Subscription",
+    "currentPlan": "Current Plan",
+    "freeTrial": "Free Trial",
+    "active": "ACTIVE",
+    "daysRemaining": "{days} days remaining. Upgrade to continue using the service.",
+    "upgradeToPro": "Upgrade to Pro",
+    "features": {
+      "unlimited": "Unlimited cheque printing",
+      "customTemplates": "Custom bank templates",
+      "emailSupport": "Email support",
+      "pdfExport": "PDF export feature"
+    },
+    "price": "Rs 1,500 / month",
+    "payWithFonepay": "Pay with Fonepay",
+    "scanQR": "Scan the QR code below using your Fonepay mobile app.",
+    "amountToPay": "Amount to Pay:",
+    "merchant": "Merchant: Reactify Soft Tech",
+    "payAmount": "Rs 1,500.00"
+  },
+  "profile": {
+    "title": "Profile Settings",
+    "fullName": "Full Name",
+    "email": "Email",
+    "company": "Company",
+    "phone": "Phone",
+    "saveChanges": "Save Changes"
+  },
+  "history": {
+    "title": "Print History",
+    "table": {
+      "date": "Date",
+      "payee": "Payee",
+      "amount": "Amount",
+      "status": "Status",
+      "action": "Action"
+    },
+    "printed": "PRINTED"
+  },
+  "admin_ui": {
+    "totalUsers": "Total Users",
+    "activeTrials": "Active Trials",
+    "chequesPrinted": "Cheques Printed",
+    "uptime": "System Uptime",
+    "recentActivity": "Recent Activity",
+    "table": {
+      "user": "User",
+      "action": "Action",
+      "time": "Time"
+    }
   }
 }

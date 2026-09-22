@@ -33,7 +33,7 @@ export default async function DashboardPage() {
 
     if (subscription && user?.role === "TRIAL_USER") {
       const daysLeft = Math.ceil(
-        (new Date(subscription.endDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000),
+        (new Date(subscription.endDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000)
       );
       trialInfo = { daysLeft: daysLeft > 0 ? daysLeft : 0, isTrial: true };
     }
@@ -79,11 +79,10 @@ export default async function DashboardPage() {
             <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600" />
             <div>
               <p className="font-semibold">
-                Your trial period ends in {trialInfo.daysLeft} day{trialInfo.daysLeft !== 1 ? "s" : ""}.
+                Your trial period ends in {trialInfo.daysLeft} day
+                {trialInfo.daysLeft !== 1 ? "s" : ""}.
               </p>
-              <p className="mt-1">
-                Upgrade now to continue creating cheques without interruption.
-              </p>
+              <p className="mt-1">Upgrade now to continue creating cheques without interruption.</p>
               <Link href="/en/dashboard/subscription">
                 <Button size="sm" className="mt-2">
                   Upgrade Now
@@ -116,7 +115,7 @@ export default async function DashboardPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Overview</h2>
         <Link
-          href="/en/dashboard/print"
+          href="/en/dashboard/cheques/new"
           className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           <Printer className="mr-2 h-4 w-4" />
@@ -164,7 +163,9 @@ export default async function DashboardPage() {
                     <p className="font-medium">
                       NPR {Number(cheque.amountNumber).toLocaleString()}
                     </p>
-                    <p className={`text-xs ${cheque.status === "PRINTED" ? "text-green-600" : "text-yellow-600"}`}>
+                    <p
+                      className={`text-xs ${cheque.status === "PRINTED" ? "text-green-600" : "text-yellow-600"}`}
+                    >
                       {cheque.status}
                     </p>
                   </div>
@@ -182,7 +183,7 @@ export default async function DashboardPage() {
               Print your first cheque to get started.
             </p>
             <Link
-              href="/en/dashboard/print"
+              href="/en/dashboard/cheques/new"
               className="mt-4 inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               Print Your First Cheque
