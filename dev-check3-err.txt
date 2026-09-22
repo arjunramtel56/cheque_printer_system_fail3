@@ -1,0 +1,2 @@
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Parsing of E:\Company work\company products\Reactify Cheque Printer System fail 3\node_modules\next-intl\dist\esm\production\extractor\format\index.js for build dependencies failed at 'import(t(c).href)'.
+<w> Build dependencies behind this expression are ignored and might cause incorrect cache invalidation.
