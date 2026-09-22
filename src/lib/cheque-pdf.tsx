@@ -1,80 +1,103 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet, pdf, PDFDownloadLink } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
+import { TemplateFieldConfig } from "@/types";
 
 interface ChequePDFProps {
   bankName: string;
+  chequeWidth: number;
+  chequeHeight: number;
   fields: Record<string, string>;
+  templateFields: TemplateFieldConfig[];
 }
 
-export const ChequePDFDocument = (props: ChequePDFProps) => (
-  <Document>
-    <Page style={styles.page}>
-      <View style={styles.cheque}>
-        <Text style={styles.bankName}>{props.bankName}</Text>
-        <Text style={styles.sectionTitle}>Pay to the order of:</Text>
-        <Text style={styles.payee}>{props.fields.payee || "________________"}</Text>
-        <Text style={styles.amountWords}>{props.fields.amountWords || "________________"}</Text>
-        <Text style={styles.amountNumber}>Rs. {props.fields.amountNumber}</Text>
-        <Text style={styles.date}>Date: {props.fields.date || "__/__/____"}</Text>
-        <Text style={styles.accountHolder}>Account: {props.fields.name || "________________"}</Text>
-      </View>
-    </Page>
-  </Document>
-);
+const MM_TO_PT = 1;
+
+export const ChequePDFDocument = (props: ChequePDFProps) => {
+  const { bankName, chequeWidth, chequeHeight, fields, templateFields } = props;
+
+  const fieldPositions = templateFields || [];
+
+  return (
+    <Document>
+      <Page style={[styles.page, { width: chequeWidth, height: chequeHeight }]} wrap={false}>
+        <View
+          style={{
+            position: "relative",
+            width: chequeWidth,
+            height: chequeHeight,
+            borderWidth: 1,
+            borderColor: "#000000",
+            padding: 0,
+          }}
+        >
+          {fieldPositions.map((field) => {
+            const value = fields[field.field] || "";
+            return (
+              <Text
+                key={field.id || field.field}
+                style={{
+                  position: "absolute",
+                  left: `${field.x}mm`,
+                  top: `${field.y}mm`,
+                  fontSize: field.fontSize || 12,
+                  fontFamily: field.fontFamily || "Helvetica",
+                  fontWeight: field.fontWeight === "bold" ? "bold" : "normal",
+                  color: field.color || "#000000",
+                  textAlign: field.align || "left",
+                  width: field.width ? `${field.width}mm` : "auto",
+                  transform: field.rotation ? `rotate(${field.rotation}deg)` : undefined,
+                }}
+              >
+                {value}
+              </Text>
+            );
+          })}
+        </View>
+      </Page>
+    </Document>
+  );
+};
 
 const styles = StyleSheet.create({
   page: {
     flexDirection: "column",
     backgroundColor: "#ffffff",
-    padding: 20,
+    padding: 0,
+    margin: 0,
   },
-  cheque: {
-    width: "100%",
-    height: "100%",
-    borderWidth: 1,
-    borderColor: "#000000",
-    padding: 30,
-    justifyContent: "space-between",
-  },
-  bankName: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 10,
-    marginBottom: 10,
-  },
-  payee: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-  amountWords: {
-    fontSize: 10,
-    marginBottom: 10,
-  },
-  amountNumber: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-  date: {
-    fontSize: 10,
-    marginTop: "auto",
-  },
-  accountHolder: {
-    fontSize: 10,
-  },
-});
+} as any);
 
 export async function generateChequePDF(
   cheque: any,
   fields: Record<string, string>
 ): Promise<Buffer> {
+  const template = cheque.template;
+  const bankName = template?.bank?.name || "Bank Cheque";
+  const chequeWidth = template?.chequeWidth || 210;
+  const chequeHeight = template?.chequeHeight || 90;
+  const templateFields = (template?.fields || []).map((f: any) => ({
+    id: f.id,
+    field: f.field,
+    x: f.x,
+    y: f.y,
+    width: f.width,
+    height: f.height,
+    fontSize: f.fontSize || 12,
+    fontFamily: f.fontFamily || "Arial",
+    fontWeight: f.fontWeight || "normal",
+    letterSpacing: f.letterSpacing,
+    align: (f.align || "left") as "left" | "center" | "right",
+    rotation: f.rotation,
+    color: f.color || "#000000",
+    format: f.format,
+  }));
+
   const doc = React.createElement(ChequePDFDocument, {
-    bankName: cheque.template.bank.name,
+    bankName,
+    chequeWidth,
+    chequeHeight,
     fields,
+    templateFields,
   } as ChequePDFProps);
 
   const blob = await pdf(doc as any).toBlob();

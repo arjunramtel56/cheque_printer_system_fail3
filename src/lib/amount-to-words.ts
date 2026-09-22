@@ -1,34 +1,153 @@
 const NEPALI_WORDS = [
   "शून्य",
-  "एक", "दुई", "तीन", "चार", "पाँच", "छ", "सात", "आठ", "नौ",
-  "दस", "एघार", "बाह्र", "तेह्र", "चौध", "पन्ध्र", "सोह्र", "सत्र", "अठार", "उन्निस",
-  "बीस", "एक्काइस", "बाइस", "तेइस", "चौबिस", "पच्चीस", "छब्बिस", "सत्ताइस", "अट्ठाइस", "उनतीस",
-  "तीस", "एकतीस", "बतीस", "तेतीस", "चौंतीस", "पैंतीस", "छतीस", "सैंतीस", "अड्तीस", "उन्चालीस",
-  "चालीस", "एकचालीस", "बयालीस", "तैंचालीस", "चवालीस", "पैंतालीस", "छयालीस", "सैंतालीस", "अड्चालीस", "उन्चासी",
-  "पचास", "एकाउन्न", "बाउन्न", "त्रेपन्न", "चौवन्न", "पचपन्न", "छपन्न", "सन्ताउन्न", "अन्ठाउन्न", "उन्नसी",
-  "साठी", "एकसठी", "बासठी", "तीरसठी", "चौंसठी", "पैंसठी", "छियासठी", "सडसठी", "अड्सठी", "उन्हत्तर",
-  "सत्तरी", "एकहत्तर", "बहत्तर", "तिहत्तर", "चौहत्तर", "पचहत्तर", "छहत्तर", "सतहत्तर", "अठहत्तर", "उन्सी",
-  "अस्सी", "एकासी", "बयासी", "तिरासी", "चौरासी", "पचासी", "छियासी", "सतासी", "अटासी", "उन्नब्बे",
-  "नब्बे", "एकानब्बे", "बानब्बे", "तिरानब्बे", "चौरानब्बे", "पंचानब्बे", "छियानब्बे", "सन्तानब्बे", "अन्डानब्बे", "निरानब्बे",
+  "एक",
+  "दुई",
+  "तीन",
+  "चार",
+  "पाँच",
+  "छ",
+  "सात",
+  "आठ",
+  "नौ",
+  "दस",
+  "एघार",
+  "बाह्र",
+  "तेह्र",
+  "चौध",
+  "पन्ध्र",
+  "सोह्र",
+  "सत्र",
+  "अठार",
+  "उन्निस",
+  "बीस",
+  "एक्काइस",
+  "बाइस",
+  "तेइस",
+  "चौबिस",
+  "पच्चीस",
+  "छब्बिस",
+  "सत्ताइस",
+  "अठाइस",
+  "उनतीस",
+  "तीस",
+  "एकतीस",
+  "बतीस",
+  "तेतीस",
+  "चौंतीस",
+  "पैंतीस",
+  "छतीस",
+  "सैंतीस",
+  "अड्तीस",
+  "उन्चालीस",
+  "चालीस",
+  "एकचालीस",
+  "बयालीस",
+  "तैंचालीस",
+  "चवालीस",
+  "पैंतालीस",
+  "छयालीस",
+  "सैंतालीस",
+  "अड्चालीस",
+  "उन्नसी",
+  "पचास",
+  "एकाउन्न",
+  "बाउन्न",
+  "त्रेपन्न",
+  "चौवन्न",
+  "पचपन्न",
+  "छपन्न",
+  "सन्ताउन्न",
+  "अन्ठाउन्न",
+  "उन्नसी",
+  "साठी",
+  "एकसठी",
+  "बासठी",
+  "तीरसठी",
+  "चौंसठी",
+  "पैंसठी",
+  "छियासठी",
+  "सडसठी",
+  "अड्सठी",
+  "उन्हत्तर",
+  "सत्तरी",
+  "एकहत्तर",
+  "बहत्तर",
+  "तिहत्तर",
+  "चौहत्तर",
+  "पचहत्तर",
+  "छहत्तर",
+  "सतहत्तर",
+  "अठहत्तर",
+  "उन्सी",
+  "अस्सी",
+  "एकासी",
+  "बयासी",
+  "तिरासी",
+  "चौरासी",
+  "पचासी",
+  "छियासी",
+  "सतासी",
+  "अटासी",
+  "उन्नब्बे",
+  "नब्बे",
+  "एकानब्बे",
+  "बानब्बे",
+  "तिरानब्बे",
+  "चौरानब्बे",
+  "पंचानब्बे",
+  "छियानब्बे",
+  "सन्तानब्बे",
+  "अन्डानब्बे",
+  "निरानब्बे",
 ];
 
 const ENGLISH_UNITS = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
-const ENGLISH_TEENS = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
-const ENGLISH_TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+const ENGLISH_TEENS = [
+  "Ten",
+  "Eleven",
+  "Twelve",
+  "Thirteen",
+  "Fourteen",
+  "Fifteen",
+  "Sixteen",
+  "Seventeen",
+  "Eighteen",
+  "Nineteen",
+];
+const ENGLISH_TENS = [
+  "",
+  "",
+  "Twenty",
+  "Thirty",
+  "Forty",
+  "Fifty",
+  "Sixty",
+  "Seventy",
+  "Eighty",
+  "Ninety",
+];
 
 function convertEnglish(number: number): string {
   if (number === 0) return "Zero";
 
-  const units = ["", "Thousand", "Million", "Billion"];
+  const units = ["", "Thousand", "Lakh", "Crore", "Arab", "Kharab"];
   let result = "";
   let unitIndex = 0;
+  let remaining = number;
 
-  while (number > 0) {
-    const chunk = number % 1000;
+  const lastThree = remaining % 1000;
+  remaining = Math.floor(remaining / 1000);
+  if (lastThree > 0) {
+    result = convertHundredsEnglish(lastThree);
+  }
+
+  while (remaining > 0) {
+    const chunk = remaining % 100;
     if (chunk > 0) {
-      result = convertHundredsEnglish(chunk) + " " + units[unitIndex] + " " + result;
+      const unitStr = units[unitIndex + 1] || "";
+      result = convertHundredsEnglish(chunk) + " " + unitStr + " " + result;
     }
-    number = Math.floor(number / 1000);
+    remaining = Math.floor(remaining / 100);
     unitIndex++;
   }
 
@@ -37,7 +156,11 @@ function convertEnglish(number: number): string {
 
 function convertHundredsEnglish(n: number): string {
   if (n >= 100) {
-    return ENGLISH_UNITS[Math.floor(n / 100)] + " Hundred" + (n % 100 > 0 ? " " + convertTensEnglish(n % 100) : "");
+    return (
+      ENGLISH_UNITS[Math.floor(n / 100)] +
+      " Hundred" +
+      (n % 100 > 0 ? " " + convertTensEnglish(n % 100) : "")
+    );
   }
   return convertTensEnglish(n);
 }
@@ -127,8 +250,18 @@ export function formatAmount(amount: number | string): string {
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
   if (isNaN(num)) return "0.00";
 
-  return num.toLocaleString("en-NP", {
+  return num.toLocaleString("en-IN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+export function formatDate(date: string | Date): string {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 }

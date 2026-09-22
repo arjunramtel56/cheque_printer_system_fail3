@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/api-helpers";
+import { chequeSchema, chequeUpdateSchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
   const user = await getAuthenticatedUser(request);
@@ -53,14 +54,30 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { templateId, payeeName, chequeDate, amountNumber, amountWords, accountHolder } = body;
 
-    if (!templateId || !chequeDate || amountNumber === undefined) {
-      return NextResponse.json(
-        { error: "Template ID, date, and amount are required" },
-        { status: 400 }
-      );
+    const parsed = chequeSchema.safeParse({
+      templateId: body.templateId,
+      payeeName: body.payeeName,
+      chequeDate: body.chequeDate,
+      amountNumber: body.amountNumber,
+      amountWords: body.amountWords,
+      chequeNumber: body.chequeNumber,
+      accountHolder: body.accountHolder,
+    });
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
+
+    const {
+      templateId,
+      payeeName,
+      chequeDate,
+      amountNumber,
+      amountWords,
+      chequeNumber,
+      accountHolder,
+    } = parsed.data;
 
     const template = await prisma.bankTemplate.findUnique({
       where: { id: templateId },
@@ -84,7 +101,7 @@ export async function POST(request: NextRequest) {
       where: { userId: user.id },
     });
 
-    if (printCount >= subscription.plan.chequeLimit) {
+    if (subscription.plan.chequeLimit > 0 && printCount >= subscription.plan.chequeLimit) {
       return NextResponse.json(
         { error: "Cheque print limit reached. Please upgrade your subscription." },
         { status: 403 }
@@ -100,6 +117,7 @@ export async function POST(request: NextRequest) {
         chequeDate: new Date(chequeDate),
         amountNumber: parseFloat(amountNumber),
         amountWords: amountWords || "",
+        chequeNumber: chequeNumber || null,
         status: "DRAFT",
       },
       include: {
@@ -107,9 +125,29 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: "CHEQUE_CREATED",
+        entity: "ChequeEntry",
+        entityId: cheque.id,
+        details: JSON.stringify({
+          amount: parseFloat(amountNumber),
+          payee: payeeName,
+          chequeNumber: chequeNumber || null,
+        }),
+      },
+    });
+
     return NextResponse.json(cheque, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating cheque:", error);
+    if (error.code === "P2002") {
+      return NextResponse.json(
+        { error: "Cheque number already exists for this user" },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -123,11 +161,22 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { id, payeeName, chequeDate, amountNumber, amountWords, status } = body;
 
-    if (!id) {
-      return NextResponse.json({ error: "Cheque ID is required" }, { status: 400 });
+    const parsed = chequeUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
+
+    const {
+      id,
+      payeeName,
+      chequeDate,
+      amountNumber,
+      amountWords,
+      chequeNumber,
+      accountHolder,
+      status,
+    } = parsed.data;
 
     const existing = await prisma.chequeEntry.findUnique({
       where: { id },
@@ -144,10 +193,12 @@ export async function PUT(request: NextRequest) {
     const updated = await prisma.chequeEntry.update({
       where: { id },
       data: {
-        payeeName: payeeName || null,
+        payeeName: payeeName ?? null,
         chequeDate: chequeDate ? new Date(chequeDate) : existing.chequeDate,
         amountNumber: amountNumber !== undefined ? parseFloat(amountNumber) : existing.amountNumber,
         amountWords: amountWords !== undefined ? amountWords : existing.amountWords,
+        chequeNumber: chequeNumber ?? existing.chequeNumber,
+        accountHolder: accountHolder ?? existing.accountHolder,
         status: status || existing.status,
       },
       include: {
@@ -155,9 +206,25 @@ export async function PUT(request: NextRequest) {
       },
     });
 
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: "CHEQUE_UPDATED",
+        entity: "ChequeEntry",
+        entityId: id,
+        details: JSON.stringify({ status, chequeNumber }),
+      },
+    });
+
     return NextResponse.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating cheque:", error);
+    if (error.code === "P2002") {
+      return NextResponse.json(
+        { error: "Cheque number already exists for this user" },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -190,6 +257,15 @@ export async function DELETE(request: NextRequest) {
     }
 
     await prisma.chequeEntry.delete({ where: { id } });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: "CHEQUE_DELETED",
+        entity: "ChequeEntry",
+        entityId: id,
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

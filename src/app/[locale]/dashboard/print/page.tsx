@@ -10,7 +10,7 @@ import {
   Banknote,
   Save,
 } from "lucide-react";
-import { amountToWords } from "@/lib/amount-to-words";
+import { amountToWords, formatDate } from "@/lib/amount-to-words";
 import { ChequeTemplate } from "@/types";
 import ChequePreview from "@/components/cheque/cheque-preview";
 
@@ -44,10 +44,28 @@ interface Bank {
   }>;
 }
 
-interface PrintHistoryItem {
+interface TemplateOption {
   id: string;
   name: string;
-  lastPrinted: string;
+  chequeWidth: number;
+  chequeHeight: number;
+  isDefault: boolean;
+  fields: Array<{
+    id: string;
+    field: string;
+    x: number;
+    y: number;
+    width?: number;
+    height?: number;
+    fontSize: number;
+    fontFamily: string;
+    fontWeight?: string;
+    letterSpacing?: number;
+    align?: string;
+    rotation?: number;
+    color?: string;
+    format?: string;
+  }>;
 }
 
 export default function PrintPage() {
@@ -59,13 +77,17 @@ export default function PrintPage() {
   const [amount, setAmount] = useState("");
   const [amountWords, setAmountWords] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
+  const [chequeNumber, setChequeNumber] = useState("");
   const [recentPayees, setRecentPayees] = useState<string[]>([]);
   const [autoConvert, setAutoConvert] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savedChequeId, setSavedChequeId] = useState<string | null>(null);
 
   const selectedBank = banks.find((b) => b.id === selectedBankId);
-  const selectedTemplate = selectedBank?.templates.find((t) => t.id === selectedTemplateId);
+  const selectedTemplate: TemplateOption | undefined = selectedBank?.templates.find(
+    (t) => t.id === selectedTemplateId
+  );
 
   const templateForPreview: ChequeTemplate | null = selectedTemplate
     ? {
@@ -98,6 +120,7 @@ export default function PrintPage() {
     payee: payeeName || "",
     amountWords: amountWords || "",
     amountNumber: amount || "",
+    name: accountHolder || "",
   };
 
   useEffect(() => {
@@ -108,7 +131,8 @@ export default function PrintPage() {
 
   useEffect(() => {
     if (selectedBankId && !selectedTemplateId && selectedBank) {
-      const defaultTemplate = selectedBank.templates.find((t) => t.isDefault) || selectedBank.templates[0];
+      const defaultTemplate =
+        selectedBank.templates.find((t) => t.isDefault) || selectedBank.templates[0];
       if (defaultTemplate) {
         setSelectedTemplateId(defaultTemplate.id);
       }
@@ -147,7 +171,7 @@ export default function PrintPage() {
       const data = await res.json();
       setRecentPayees(data.map((p: any) => p.name));
     } catch {
-      return [];
+      return;
     }
   }
 
@@ -162,12 +186,6 @@ export default function PrintPage() {
     }
   }
 
-  function formatDate(date: string) {
-    if (!date) return "DDMMYYYY";
-    const [year, month, day] = date.split("-");
-    return `${day}${month}${year}`;
-  }
-
   function handleAmountChange(value: string) {
     if (/^\d*\.?\d*$/.test(value)) {
       setAmount(value);
@@ -178,54 +196,14 @@ export default function PrintPage() {
     setPayeeName("");
     setAmount("");
     setAmountWords("");
+    setChequeNumber("");
+    setSavedChequeId(null);
   }
 
-  async function handlePrint(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
+  async function saveChequeDraft(): Promise<string | null> {
     if (!selectedTemplateId || !payeeName || !amount || !chequeDate) {
       setError("Please fill in all required fields");
-      return;
-    }
-
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      await fetch("/api/cheques", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          templateId: selectedTemplateId,
-          payeeName,
-          chequeDate: new Date(chequeDate).toISOString(),
-          amountNumber: parseFloat(amount),
-          amountWords: autoConvert ? amountToWords(parseFloat(amount), "en") : amountWords,
-          accountHolder,
-        }),
-      });
-
-      await fetch("/api/print-history", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chequeId: "temp",
-          copies: 1,
-        }),
-      });
-
-      window.print();
-    } catch (err: any) {
-      setError(err.message || "Something went wrong");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function handleSaveDraft() {
-    if (!selectedTemplateId || !payeeName || !amount || !chequeDate) {
-      setError("Please fill in all required fields");
-      return;
+      return null;
     }
 
     try {
@@ -239,20 +217,65 @@ export default function PrintPage() {
           amountNumber: parseFloat(amount),
           amountWords: autoConvert ? amountToWords(parseFloat(amount), "en") : amountWords,
           accountHolder,
+          chequeNumber,
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to save draft");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to save draft");
+      }
+
       const data = await res.json();
-      alert("Draft saved successfully");
+      return data.id;
     } catch (err: any) {
       setError(err.message);
+      return null;
     }
   }
 
+  async function handleSaveDraft() {
+    setError(null);
+    const id = await saveChequeDraft();
+    if (id) {
+      setSavedChequeId(id);
+      alert("Draft saved successfully");
+    }
+  }
+
+  async function handlePrint(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    const id = await saveChequeDraft();
+    if (!id) {
+      setIsLoading(false);
+      return;
+    }
+
+    setSavedChequeId(id);
+
+    try {
+      await fetch("/api/print-history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chequeId: id,
+          copies: 1,
+        }),
+      });
+    } catch {
+      console.error("Failed to record print history");
+    }
+
+    setIsLoading(false);
+    window.print();
+  }
+
   return (
-    <main className="min-h-screen bg-[#f6f8fc] p-4 md:p-8">
-      <div className="mx-auto max-w-7xl">
+    <main className="min-h-screen bg-[#f6f8fc] p-4 md:p-8 print:m-0 print:bg-white print:p-0">
+      <div className="mx-auto max-w-7xl" id="print-area">
         <div className="mb-7 no-print">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
             <FileText size={14} />
@@ -267,9 +290,7 @@ export default function PrintPage() {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
-            {error}
-          </div>
+          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600 no-print">{error}</div>
         )}
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -288,7 +309,11 @@ export default function PrintPage() {
               <ChequePreview
                 template={templateForPreview}
                 fields={previewFields}
-                chequeImage={selectedBank?.code ? `/images/${selectedBank.code.toLowerCase()}-bank-cheque.png` : undefined}
+                chequeImage={
+                  selectedBank?.code
+                    ? `/images/${selectedBank.code.toLowerCase()}-bank-cheque.png`
+                    : undefined
+                }
               />
             </div>
 
@@ -353,7 +378,10 @@ export default function PrintPage() {
               )}
 
               <div>
-                <label htmlFor="accountHolder" className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <label
+                  htmlFor="accountHolder"
+                  className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-700"
+                >
                   <UserRound size={16} className="text-slate-400" />
                   Account Holder
                 </label>
@@ -368,7 +396,10 @@ export default function PrintPage() {
               </div>
 
               <div>
-                <label htmlFor="payeeName" className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <label
+                  htmlFor="payeeName"
+                  className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-700"
+                >
                   <UserRound size={16} className="text-slate-400" />
                   Payee Name
                 </label>
@@ -391,7 +422,29 @@ export default function PrintPage() {
               </div>
 
               <div>
-                <label htmlFor="chequeDate" className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <label
+                  htmlFor="chequeNumber"
+                  className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-700"
+                >
+                  <FileText size={16} className="text-slate-400" />
+                  Cheque Number
+                </label>
+                <p className="mb-2 text-xs text-slate-400">Cheque number from your cheque book</p>
+                <input
+                  id="chequeNumber"
+                  type="text"
+                  value={chequeNumber}
+                  onChange={(e) => setChequeNumber(e.target.value)}
+                  placeholder="e.g. 000123"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="chequeDate"
+                  className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-700"
+                >
                   <CalendarDays size={16} className="text-slate-400" />
                   Cheque Date
                 </label>
@@ -407,7 +460,10 @@ export default function PrintPage() {
               </div>
 
               <div>
-                <label htmlFor="amountInWords" className="mb-1 block text-sm font-semibold text-slate-700">
+                <label
+                  htmlFor="amountInWords"
+                  className="mb-1 block text-sm font-semibold text-slate-700"
+                >
                   Amount in Words
                 </label>
                 <p className="mb-2 text-xs text-slate-400">रकम अक्षरमा</p>

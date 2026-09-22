@@ -6,18 +6,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, LayoutTemplate, ChevronDown } from "lucide-react";
+import { Plus, Edit, Trash2, LayoutTemplate, Save } from "lucide-react";
+import ChequePreview from "@/components/cheque/cheque-preview";
+import { ChequeTemplate } from "@/types";
 
 interface Bank {
   id: string;
   name: string;
   code: string;
+}
+
+interface TemplateField {
+  id: string;
+  field: string;
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  fontSize: number;
+  fontFamily: string;
+  fontWeight?: string;
+  letterSpacing?: number;
+  align?: string;
+  rotation?: number;
+  color?: string;
+  format?: string;
 }
 
 interface Template {
@@ -30,120 +56,195 @@ interface Template {
   isDefault: boolean;
   isActive: boolean;
   version: number;
-  fields: Field[];
   createdAt: string;
+  updatedAt: string;
+  fields: TemplateField[];
 }
 
-interface Field {
-  id: string;
-  templateId: string;
-  field: string;
-  x: number;
-  y: number;
-  width?: number;
-  height?: number;
-  fontSize: number;
-  fontFamily: string;
-  fontWeight?: string;
-  align?: string;
-  rotation?: number;
-  color?: string;
-}
+const FIELD_PRESETS = [
+  { field: "payee", label: "Payee (Amount Words line)" },
+  { field: "date", label: "Date" },
+  { field: "amountNumber", label: "Amount (Number)" },
+  { field: "name", label: "Account Holder Name" },
+  { field: "chequeNumber", label: "Cheque Number" },
+];
 
 export default function AdminTemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [banks, setBanks] = useState<Bank[]>([]);
-  const [, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [formData, setFormData] = useState({
     bankId: "",
     name: "",
     chequeWidth: 210,
     chequeHeight: 90,
     isDefault: false,
-    isFieldDialogOpen: false,
-  });
-
-  const [fields, setFields] = useState<Partial<Field>[]>([]);
-  const [fieldForm, setFieldForm] = useState({
-    field: "",
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-    fontSize: 12,
-    fontFamily: "Arial",
-    fontWeight: "normal",
-    align: "left",
+    isActive: true,
+    fields: [] as any[],
   });
 
   useEffect(() => {
-    fetchData();
+    Promise.all([fetchTemplates(), fetchBanks()]);
   }, []);
 
-  async function fetchData() {
+  async function fetchTemplates() {
     setIsLoading(true);
     try {
-      const [banksRes, templatesRes] = await Promise.all([
-        fetch("/api/banks"),
-        fetch("/api/templates"),
-      ]);
-
-      if (banksRes.ok) {
-        const banksData = await banksRes.json();
-        setBanks(banksData);
-      }
-
-      if (templatesRes.ok) {
-        const templatesData = await templatesRes.json();
-        setTemplates(templatesData);
-      }
+      const res = await fetch("/api/admin/templates");
+      if (!res.ok) throw new Error("Failed to fetch templates");
+      const data = await res.json();
+      setTemplates(data);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching templates:", error);
     } finally {
       setIsLoading(false);
     }
   }
 
-  function handleAddField() {
-    setFields([...fields, { ...fieldForm }]);
-    setFieldForm({
-      field: "",
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
-      fontSize: 12,
-      fontFamily: "Arial",
-      fontWeight: "normal",
-      align: "left",
-    });
+  async function fetchBanks() {
+    try {
+      const res = await fetch("/api/admin/banks");
+      if (!res.ok) throw new Error("Failed to fetch banks");
+      const data = await res.json();
+      setBanks(data);
+    } catch (error) {
+      console.error("Error fetching banks:", error);
+    }
   }
 
-  function handleRemoveField(index: number) {
-    setFields(fields.filter((_, i) => i !== index));
+  function handleAddNew() {
+    setEditingTemplate(null);
+    setFormData({
+      bankId: "",
+      name: "",
+      chequeWidth: 210,
+      chequeHeight: 90,
+      isDefault: false,
+      isActive: true,
+      fields: [],
+    });
+    setIsDialogOpen(true);
+  }
+
+  function handleEdit(template: Template) {
+    setEditingTemplate(template);
+    setFormData({
+      bankId: template.bankId,
+      name: template.name,
+      chequeWidth: template.chequeWidth,
+      chequeHeight: template.chequeHeight,
+      isDefault: template.isDefault,
+      isActive: template.isActive,
+      fields: template.fields,
+    });
+    setIsDialogOpen(true);
+  }
+
+  function handleAddField() {
+    setFormData((prev) => ({
+      ...prev,
+      fields: [
+        ...prev.fields,
+        {
+          field: "payee",
+          x: 25,
+          y: 40,
+          fontSize: 10,
+          fontFamily: "Arial",
+          fontWeight: "normal",
+        },
+      ],
+    }));
+  }
+
+  function updateField(index: number, key: string, value: any) {
+    setFormData((prev) => ({
+      ...prev,
+      fields: prev.fields.map((f, i) => (i === index ? { ...f, [key]: value } : f)),
+    }));
+  }
+
+  function removeField(index: number) {
+    setFormData((prev) => ({
+      ...prev,
+      fields: prev.fields.filter((_, i) => i !== index),
+    }));
   }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
-    if (!formData.bankId || !formData.name) {
-      alert("Bank and name are required");
-      return;
+    try {
+      const url = editingTemplate
+        ? `/api/admin/templates/${editingTemplate.id}`
+        : "/api/admin/templates";
+      const method = editingTemplate ? "PUT" : "POST";
+
+      const body: any = {
+        bankId: formData.bankId,
+        name: formData.name,
+        chequeWidth: formData.chequeWidth,
+        chequeHeight: formData.chequeHeight,
+        isDefault: formData.isDefault,
+        isActive: formData.isActive,
+        fields: formData.fields,
+      };
+
+      if (!editingTemplate) {
+        delete body.isActive;
+        delete body.bankId;
+      }
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to save template");
+      }
+
+      const saved = await res.json();
+      if (editingTemplate) {
+        setTemplates(templates.map((t) => (t.id === saved.id ? saved : t)));
+      } else {
+        setTemplates([saved, ...templates]);
+      }
+      setIsDialogOpen(false);
+    } catch (error: any) {
+      alert(error.message);
     }
+  }
+
+  async function handleDelete(template: Template) {
+    if (!confirm(`Delete "${template.name}"? This cannot be undone.`)) return;
 
     try {
-      const res = await fetch("/api/templates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await fetch(`/api/admin/templates?id=${template.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete template");
+      setTemplates(templates.filter((t) => t.id !== template.id));
+    } catch (error) {
+      alert("Failed to delete template");
+    }
+  }
+
+  const previewTemplate: ChequeTemplate | null =
+    formData.fields.length > 0
+      ? {
+          id: formData.id || "",
+          name: formData.name || "Template",
           bankId: formData.bankId,
-          name: formData.name,
+          bankName: banks.find((b) => b.id === formData.bankId)?.name || "",
           chequeWidth: formData.chequeWidth,
           chequeHeight: formData.chequeHeight,
-          isDefault: formData.isDefault,
-          fields: fields.map((f) => ({
+          fields: formData.fields.map((f) => ({
             field: f.field,
             x: f.x,
             y: f.y,
@@ -152,45 +253,20 @@ export default function AdminTemplatesPage() {
             fontSize: f.fontSize,
             fontFamily: f.fontFamily,
             fontWeight: f.fontWeight,
-            align: f.align,
+            letterSpacing: f.letterSpacing,
+            align: (f.align || "left") as "left" | "center" | "right",
             rotation: f.rotation,
             color: f.color,
             format: f.format,
           })),
-        }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to create template");
-      }
-
-      const created = await res.json();
-      setTemplates([created, ...templates]);
-      setIsDialogOpen(false);
-      resetForm();
-    } catch (error: any) {
-      alert(error.message);
-    }
-  }
-
-  function resetForm() {
-    setFormData({
-      bankId: "",
-      name: "",
-      chequeWidth: 210,
-      chequeHeight: 90,
-      isDefault: false,
-      isFieldDialogOpen: false,
-    });
-    setFields([]);
-  }
+        }
+      : null;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Templates</h2>
-        <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
+        <Button onClick={handleAddNew} className="gap-2">
           <Plus size={16} />
           Add Template
         </Button>
@@ -201,9 +277,19 @@ export default function AdminTemplatesPage() {
           <CardTitle>All Templates</CardTitle>
         </CardHeader>
         <CardContent>
-          {templates.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">
-              No templates found
+          {isLoading ? (
+            <div className="p-8 text-center text-muted-foreground">Loading templates...</div>
+          ) : templates.length === 0 ? (
+            <div className="py-12 text-center">
+              <LayoutTemplate className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">No templates configured</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Add templates to define cheque layouts for bank cheque books.
+              </p>
+              <Button onClick={handleAddNew} className="mt-4 gap-2">
+                <Plus size={16} />
+                Add First Template
+              </Button>
             </div>
           ) : (
             <div className="space-y-3">
@@ -213,13 +299,18 @@ export default function AdminTemplatesPage() {
                   className="flex items-center justify-between rounded-lg border p-4"
                 >
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <LayoutTemplate className="h-5 w-5 text-muted-foreground" />
-                      <p className="font-medium">{template.name}</p>
+                      <div>
+                        <p className="font-medium">{template.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {template.bank.name} · {template.chequeWidth}mm × {template.chequeHeight}
+                          mm · {template.fields.length} field(s)
+                          {template.isDefault && " · Default"}
+                          {" · v" + template.version}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {template.bank?.name} · {template.chequeWidth}mm × {template.chequeHeight}mm · {template.fields?.length || 0} fields
-                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span
@@ -229,7 +320,15 @@ export default function AdminTemplatesPage() {
                     >
                       {template.isActive ? "Active" : "Inactive"}
                     </span>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(template)}>
+                      <Edit size={16} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(template)}
+                      className="text-destructive hover:text-destructive"
+                    >
                       <Trash2 size={16} />
                     </Button>
                   </div>
@@ -240,30 +339,31 @@ export default function AdminTemplatesPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-        <DialogContent className="max-w-3xl">
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Add New Template</DialogTitle>
+            <DialogTitle>{editingTemplate ? "Edit Template" : "Add New Template"}</DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_300px]">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="bankId">Bank *</Label>
-                <select
-                  id="bankId"
+                <Select
                   value={formData.bankId}
-                  onChange={(e) => setFormData({ ...formData, bankId: e.target.value })}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  required
+                  onValueChange={(value) => setFormData({ ...formData, bankId: value })}
                 >
-                  <option value="">Select a bank</option>
-                  {banks.map((bank) => (
-                    <option key={bank.id} value={bank.id}>
-                      {bank.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="bankId">
+                    <SelectValue placeholder="Select a bank" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {banks.map((bank) => (
+                      <SelectItem key={bank.id} value={bank.id}>
+                        {bank.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
@@ -277,119 +377,168 @@ export default function AdminTemplatesPage() {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="chequeWidth">Cheque Width (mm)</Label>
-                <Input
-                  id="chequeWidth"
-                  type="number"
-                  value={formData.chequeWidth}
-                  onChange={(e) => setFormData({ ...formData, chequeWidth: parseFloat(e.target.value) || 0 })}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="chequeWidth">Cheque Width (mm)</Label>
+                  <Input
+                    id="chequeWidth"
+                    type="number"
+                    value={formData.chequeWidth}
+                    onChange={(e) =>
+                      setFormData({ ...formData, chequeWidth: parseInt(e.target.value) || 210 })
+                    }
+                    min="50"
+                    max="210"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="chequeHeight">Cheque Height (mm)</Label>
+                  <Input
+                    id="chequeHeight"
+                    type="number"
+                    value={formData.chequeHeight}
+                    onChange={(e) =>
+                      setFormData({ ...formData, chequeHeight: parseInt(e.target.value) || 90 })
+                    }
+                    min="50"
+                    max="297"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.isDefault}
+                    onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                  />
+                  <Label className="font-normal">Set as default template for this bank</Label>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                  />
+                  <Label className="font-normal">Active</Label>
+                </label>
               </div>
 
               <div>
-                <Label htmlFor="chequeHeight">Cheque Height (mm)</Label>
-                <Input
-                  id="chequeHeight"
-                  type="number"
-                  value={formData.chequeHeight}
-                  onChange={(e) => setFormData({ ...formData, chequeHeight: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isDefault"
-                checked={formData.isDefault}
-                onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-                className="h-4 w-4 rounded border-gray-300"
-              />
-              <Label htmlFor="isDefault" className="font-normal">
-                Set as default template for this bank
-              </Label>
-            </div>
-
-            <div className="border-t pt-4">
-              <div className="mb-2 flex items-center justify-between">
-                <Label>Template Fields</Label>
-                <Button type="button" variant="outline" size="sm" onClick={handleAddField}>
-                  <Plus size={14} className="mr-1" />
+                <Label className="mb-2 block">Template Fields</Label>
+                <div className="space-y-3">
+                  {formData.fields.map((field, index) => (
+                    <div key={index} className="rounded-lg border border-slate-200 p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={field.field}
+                          onValueChange={(value) => updateField(index, "field", value)}
+                        >
+                          <SelectTrigger className="w-64">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FIELD_PRESETS.map((preset) => (
+                              <SelectItem key={preset.field} value={preset.field}>
+                                {preset.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeField(index)}
+                          className="text-destructive"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          type="number"
+                          placeholder="X (mm)"
+                          value={field.x}
+                          onChange={(e) => updateField(index, "x", parseFloat(e.target.value) || 0)}
+                          className="text-sm"
+                        />
+                        <Input
+                          type="number"
+                          placeholder="Y (mm)"
+                          value={field.y}
+                          onChange={(e) => updateField(index, "y", parseFloat(e.target.value) || 0)}
+                          className="text-sm"
+                        />
+                        <Input
+                          type="number"
+                          placeholder="Width (mm)"
+                          value={field.width || ""}
+                          onChange={(e) =>
+                            updateField(
+                              index,
+                              "width",
+                              e.target.value ? parseFloat(e.target.value) : undefined
+                            )
+                          }
+                          className="text-sm"
+                        />
+                        <Input
+                          type="number"
+                          placeholder="Font size"
+                          value={field.fontSize || 12}
+                          onChange={(e) =>
+                            updateField(index, "fontSize", parseFloat(e.target.value) || 12)
+                          }
+                          className="text-sm"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 gap-1"
+                  onClick={handleAddField}
+                >
+                  <Plus size={14} />
                   Add Field
                 </Button>
               </div>
 
-              {fields.length > 0 ? (
-                <div className="space-y-2">
-                  {fields.map((field, index) => (
-                    <div key={index} className="grid grid-cols-5 gap-2 rounded-md border p-2">
-                      <Input
-                        placeholder="Field name"
-                        value={field.field}
-                        onChange={(e) => {
-                          const newFields = [...fields];
-                          newFields[index].field = e.target.value;
-                          setFields(newFields);
-                        }}
-                      />
-                      <Input
-                        type="number"
-                        placeholder="X (%)"
-                        value={field.x || ""}
-                        onChange={(e) => {
-                          const newFields = [...fields];
-                          newFields[index].x = parseFloat(e.target.value) || 0;
-                          setFields(newFields);
-                        }}
-                      />
-                      <Input
-                        type="number"
-                        placeholder="Y (%)"
-                        value={field.y || ""}
-                        onChange={(e) => {
-                          const newFields = [...fields];
-                          newFields[index].y = parseFloat(e.target.value) || 0;
-                          setFields(newFields);
-                        }}
-                      />
-                      <Input
-                        type="number"
-                        placeholder="Font size"
-                        value={field.fontSize || 12}
-                        onChange={(e) => {
-                          const newFields = [...fields];
-                          newFields[index].fontSize = parseFloat(e.target.value) || 12;
-                          setFields(newFields);
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveField(index)}
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No fields added. Add fields to position cheque data.
-                </p>
-              )}
-            </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  <Save size={16} className="mr-2" />
+                  {editingTemplate ? "Update" : "Create"}
+                </Button>
+              </DialogFooter>
+            </form>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!formData.bankId || !formData.name}>
-                Create Template
-              </Button>
-            </DialogFooter>
-          </form>
+            <div className="border border-slate-200 p-4 bg-slate-50">
+              <h3 className="mb-2 font-bold text-slate-700">Preview</h3>
+              <div className="flex min-h-[200px] items-center justify-center overflow-auto">
+                {previewTemplate && (
+                  <ChequePreview
+                    template={previewTemplate}
+                    fields={{
+                      date: "15/01/2024",
+                      payee: "Ram Bahadur",
+                      amountWords: "One Thousand Rupees Only",
+                      amountNumber: "1000.00",
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

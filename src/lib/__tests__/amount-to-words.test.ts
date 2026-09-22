@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { amountToWords, formatAmount } from "../amount-to-words";
+import { amountToWords, formatAmount, formatDate } from "../amount-to-words";
 
 describe("amountToWords — English", () => {
   it("converts zero", () => {
@@ -8,23 +8,53 @@ describe("amountToWords — English", () => {
   });
 
   it("converts the roadmap case 125000", () => {
-    assert.equal(amountToWords(125000, "en"), "One Hundred Twenty Five Thousand Rupees Only");
+    assert.equal(amountToWords(125000, "en"), "One Lakh Twenty Five Thousand Rupees Only");
+  });
+
+  it("converts the roadmap case 125000.50", () => {
+    assert.equal(
+      amountToWords(125000.5, "en"),
+      "One Lakh Twenty Five Thousand Rupees and Fifty Paise Only"
+    );
   });
 
   it("converts thousands", () => {
     assert.equal(amountToWords(1000, "en"), "One Thousand Rupees Only");
   });
 
-  it("converts hundred-thousands", () => {
-    assert.equal(amountToWords(100000, "en"), "One Hundred Thousand Rupees Only");
+  it("converts hundred-thousands as lakh", () => {
+    assert.equal(amountToWords(100000, "en"), "One Lakh Rupees Only");
   });
 
-  it("converts crores as ten-millions", () => {
-    assert.equal(amountToWords(10000000, "en"), "Ten Million Rupees Only");
+  it("converts one crore (10 million)", () => {
+    assert.equal(amountToWords(10000000, "en"), "One Crore Rupees Only");
+  });
+
+  it("converts 999999 (nine lakh ninety-nine thousand nine hundred ninety-nine)", () => {
+    assert.equal(
+      amountToWords(999999, "en"),
+      "Nine Lakh Ninety Nine Thousand Nine Hundred Ninety Nine Rupees Only"
+    );
+  });
+
+  it("converts 1500000 as fifteen lakh", () => {
+    assert.equal(amountToWords(1500000, "en"), "Fifteen Lakh Rupees Only");
+  });
+
+  it("converts 50000000 as five crore", () => {
+    assert.equal(amountToWords(50000000, "en"), "Five Crore Rupees Only");
   });
 
   it("converts hundreds with remainder", () => {
     assert.equal(amountToWords(101, "en"), "One Hundred One Rupees Only");
+  });
+
+  it("converts 99 (no hundred unit)", () => {
+    assert.equal(amountToWords(99, "en"), "Ninety Nine Rupees Only");
+  });
+
+  it("converts 500", () => {
+    assert.equal(amountToWords(500, "en"), "Five Hundred Rupees Only");
   });
 
   it("converts rupees with paise", () => {
@@ -32,6 +62,10 @@ describe("amountToWords — English", () => {
       amountToWords("1234.56", "en"),
       "One Thousand Two Hundred Thirty Four Rupees and Fifty Six Paise Only"
     );
+  });
+
+  it("converts mixed lakh / thousand", () => {
+    assert.equal(amountToWords(125000, "en"), "One Lakh Twenty Five Thousand Rupees Only");
   });
 
   it("carries paise rounding into rupees", () => {
@@ -46,8 +80,27 @@ describe("amountToWords — English", () => {
     assert.equal(amountToWords("abc", "en"), "Invalid amount");
   });
 
+  it("rejects NaN", () => {
+    assert.equal(amountToWords(NaN, "en"), "Invalid amount");
+  });
+
   it("defaults to English", () => {
     assert.equal(amountToWords(500), "Five Hundred Rupees Only");
+  });
+
+  it("accepts string amounts", () => {
+    assert.equal(amountToWords("1000", "en"), "One Thousand Rupees Only");
+  });
+
+  it("converts 3525.75 with paise", () => {
+    assert.equal(
+      amountToWords(3525.75, "en"),
+      "Three Thousand Five Hundred Twenty Five Rupees and Seventy Five Paise Only"
+    );
+  });
+
+  it("converts 10 with single-digit paise", () => {
+    assert.equal(amountToWords(10.05, "en"), "Ten Rupees and Five Paise Only");
   });
 });
 
@@ -87,10 +140,7 @@ describe("amountToWords — Nepali", () => {
   });
 
   it("converts rupees with paise", () => {
-    assert.equal(
-      amountToWords("1250.50", "ne"),
-      "एक हजार दुई सय पचास रुपैयाँ र पचास पैसा मात्र"
-    );
+    assert.equal(amountToWords("1250.50", "ne"), "एक हजार दुई सय पचास रुपैयाँ र पचास पैसा मात्र");
   });
 
   it("carries paise rounding into rupees", () => {
@@ -124,7 +174,37 @@ describe("formatAmount", () => {
     assert.equal(formatAmount(500), "500.00");
   });
 
+  it("formats large amounts with Indian grouping", () => {
+    assert.equal(formatAmount(125000.5), "1,25,000.50");
+  });
+
+  it("formats one lakh with Indian grouping", () => {
+    assert.equal(formatAmount(100000), "1,00,000.00");
+  });
+
   it("falls back to 0.00 for invalid input", () => {
     assert.equal(formatAmount("abc"), "0.00");
+  });
+
+  it("falls back to 0.00 for NaN", () => {
+    assert.equal(formatAmount(NaN), "0.00");
+  });
+});
+
+describe("formatDate", () => {
+  it("formats an ISO date string", () => {
+    assert.equal(formatDate("2024-01-15"), "15/01/2024");
+  });
+
+  it("formats a Date object", () => {
+    assert.equal(formatDate(new Date("2024-12-25")), "25/12/2024");
+  });
+
+  it("returns empty string for invalid date", () => {
+    assert.equal(formatDate("invalid"), "");
+  });
+
+  it("returns empty string for empty input", () => {
+    assert.equal(formatDate(""), "");
   });
 });

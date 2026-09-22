@@ -30,14 +30,16 @@ export const validateChequeTool = tool({
 });
 
 export const getMyChequesTool = tool({
-  description: "List recent cheques for the current user.",
+  description:
+    "List recent cheques for the current user. Provide the userId to look up their cheques.",
   parameters: z.object({
+    userId: z.string(),
     limit: z.number().min(1).max(20).default(5),
   }),
-  execute: async (params, { userId }) => {
+  execute: async ({ userId, limit }) => {
     const cheques = await prisma.chequeEntry.findMany({
-      where: { userId: userId as string },
-      take: params.limit,
+      where: { userId },
+      take: limit,
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -54,8 +56,10 @@ export const getMyChequesTool = tool({
 });
 
 export const createChequeDraftTool = tool({
-  description: "Create a cheque draft for the current user.",
+  description:
+    "Create a cheque draft for the current user. Provide the userId to associate with the draft.",
   parameters: z.object({
+    userId: z.string(),
     payeeName: z.string().min(1),
     amount: z.number().positive(),
     date: z.string(),
@@ -63,10 +67,10 @@ export const createChequeDraftTool = tool({
     chequeNumber: z.string().optional(),
     accountHolder: z.string().optional(),
   }),
-  execute: async (params, { userId }) => {
+  execute: async (params) => {
     const cheque = await prisma.chequeEntry.create({
       data: {
-        userId: userId as string,
+        userId: params.userId,
         payeeName: params.payeeName,
         amountNumber: params.amount,
         amountWords: amountToWords(params.amount),
@@ -80,7 +84,7 @@ export const createChequeDraftTool = tool({
 
     await prisma.auditLog.create({
       data: {
-        userId: userId as string,
+        userId: params.userId,
         action: "CHEQUE_DRAFT_CREATED_BY_AGENT",
         entity: "ChequeEntry",
         entityId: cheque.id,

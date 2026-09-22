@@ -5,6 +5,7 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/api-helpers";
 import { generateChequePDF } from "@/lib/cheque-pdf";
+import { amountToWords, formatDate } from "@/lib/amount-to-words";
 
 export async function POST(request: NextRequest) {
   const user = await getAuthenticatedUser(request);
@@ -40,11 +41,21 @@ export async function POST(request: NextRequest) {
       date: formatDate(cheque.chequeDate.toISOString().split("T")[0]),
       payee: cheque.payeeName || "",
       amountWords: cheque.amountWords,
-      amountNumber: `Rs. ${Number(cheque.amountNumber).toFixed(2)}`,
+      amountNumber: Number(cheque.amountNumber).toFixed(2),
       name: cheque.accountHolder || "",
     };
 
     const pdfBytes = await generateChequePDF(cheque, fields);
+
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: "EXPORT_PDF",
+        entity: "ChequeEntry",
+        entityId: chequeId,
+        details: JSON.stringify({ format: "pdf" }),
+      },
+    });
 
     return new NextResponse(pdfBytes as any, {
       headers: {
@@ -57,10 +68,4 @@ export async function POST(request: NextRequest) {
     console.error("Error generating PDF:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
-
-function formatDate(date: string) {
-  if (!date) return "DDMMYYYY";
-  const [year, month, day] = date.split("-");
-  return `${day}${month}${year}`;
 }

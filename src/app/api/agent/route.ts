@@ -2,26 +2,24 @@ export const runtime = "nodejs";
 
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 import { amountToWords } from "@/lib/amount-to-words";
 import { CHEQUE_AGENT_PROMPT } from "@/lib/ai/prompts";
 import { z } from "zod";
 import { tool } from "ai";
 import { NextRequest } from "next/server";
-
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+  if (!token) {
     return new Response("Unauthorized", { status: 401 });
   }
 
   const { messages } = await req.json();
-  const userId = (session.user as any).id;
-  const role = (session.user as any).role;
+  const userId = token.id as string;
+  const role = token.role as string;
 
   const result = streamText({
     model: openai("gpt-4o-mini"),
