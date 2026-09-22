@@ -7,6 +7,7 @@ export interface UserSession {
 }
 
 export interface ChequeFieldConfig {
+  id?: string;
   field: string;
   x: number;
   y: number;

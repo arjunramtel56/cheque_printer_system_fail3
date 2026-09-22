@@ -17,6 +17,7 @@ export const siteConfig = {
     { label: "Templates", href: "/dashboard/templates", icon: "LayoutTemplate" },
     { label: "History", href: "/dashboard/history", icon: "Clock" },
     { label: "Payees", href: "/dashboard/payees", icon: "Users" },
+    { label: "Assistant", href: "/dashboard/assistant", icon: "Bot" },
     { label: "Settings", href: "/dashboard/settings", icon: "Settings" },
     { label: "Subscription", href: "/dashboard/subscription", icon: "CreditCard" },
   ],
