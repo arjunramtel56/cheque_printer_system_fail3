@@ -31,6 +31,25 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/en", request.url));
   }
 
+  // Bare /dev/calibration (no locale) -> canonical locale-prefixed path
+  if (pathname === "/dev/calibration") {
+    return NextResponse.redirect(new URL("/en/dev/calibration", request.url));
+  }
+
+  // Calibration tool: open in development; 404 in production unless
+  // ENABLE_CALIBRATION=true (then normal auth applies).
+  if (pathWithoutLocale === "/dev/calibration") {
+    const enabled =
+      process.env.NODE_ENV !== "production" ||
+      process.env.ENABLE_CALIBRATION === "true";
+    if (!enabled) {
+      return new NextResponse(null, { status: 404 });
+    }
+    if (process.env.NODE_ENV !== "production") {
+      return NextResponse.next();
+    }
+  }
+
   // If user is on auth page but already logged in, redirect to dashboard
   if (token && authRoutes.some((route) => pathWithoutLocale.startsWith(route))) {
     const dashboardPath = token.role === "ADMIN" || token.role === "SUPER_ADMIN"
