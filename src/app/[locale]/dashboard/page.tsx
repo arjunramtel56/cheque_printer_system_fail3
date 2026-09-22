@@ -12,7 +12,11 @@ export default async function DashboardPage() {
   let chequeCount = 0;
   let recentCheques: any[] = [];
   let subscription: any = null;
-  let trialInfo: { daysLeft: number; isTrial: boolean } = { daysLeft: 0, isTrial: false };
+  let trialInfo: { daysLeft: number; printsLeft: number; isTrial: boolean } = {
+    daysLeft: 0,
+    printsLeft: 0,
+    isTrial: false,
+  };
 
   try {
     chequeCount = await prisma.chequeEntry.count({
@@ -35,7 +39,11 @@ export default async function DashboardPage() {
       const daysLeft = Math.ceil(
         (new Date(subscription.endDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000)
       );
-      trialInfo = { daysLeft: daysLeft > 0 ? daysLeft : 0, isTrial: true };
+      trialInfo = {
+        daysLeft: daysLeft > 0 ? daysLeft : 0,
+        printsLeft: Math.max(0, 10 - (chequeCount || 0)),
+        isTrial: true,
+      };
     }
   } catch {
     // Database not available, show placeholder data
@@ -43,31 +51,24 @@ export default async function DashboardPage() {
 
   const stats = [
     {
-      title: "Total Cheques",
+      title: "Cheques Printed",
       value: chequeCount.toString(),
       icon: FileText,
-      description: "Printed to date",
     },
     {
-      title: "Recent Prints",
-      value: recentCheques.length.toString(),
-      icon: Printer,
-      description: "Last 5 prints",
+      title: "Trial Days Left",
+      value: trialInfo.isTrial ? trialInfo.daysLeft.toString() : "—",
+      icon: AlertTriangle,
     },
     {
-      title: "Plan",
-      value: subscription?.plan?.name || "Trial",
+      title: "Active Templates",
+      value: "3",
       icon: CreditCard,
-      description: subscription?.plan
-        ? `Valid till ${new Date(subscription.endDate).toLocaleDateString()}`
-        : "14-day free trial",
     },
     {
-      title: "History",
-      value: "View all",
-      icon: Clock,
-      description: "Print history",
-      href: "/dashboard/history",
+      title: "Prints Left (Trial)",
+      value: trialInfo.isTrial ? trialInfo.printsLeft.toString() : "—",
+      icon: Printer,
     },
   ];
 
@@ -134,7 +135,6 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">{stat.description}</p>
             </CardContent>
           </Card>
         ))}

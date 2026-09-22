@@ -15,6 +15,7 @@ export type ChequePrintProps = {
   language?: "en" | "ne";
   accountPayeeOnly?: boolean;
   memo?: string;
+  isTrial?: boolean;
 };
 
 const fmt = (d: Date, lang: "en" | "ne") =>
@@ -39,6 +40,7 @@ export const ChequePrintLayout = forwardRef<HTMLDivElement, ChequePrintProps>(
       language = "en",
       accountPayeeOnly,
       memo,
+      isTrial = false,
     } = props;
 
     const placement = DEFAULT_PLACEMENT[orientation];
@@ -62,6 +64,7 @@ export const ChequePrintLayout = forwardRef<HTMLDivElement, ChequePrintProps>(
 
     return (
       <div ref={ref} className="cheque-page" style={style.page} data-orientation={orientation}>
+        {isTrial && <div className="trial-watermark">TRIAL VERSION</div>}
         <div className="cheque-sheet" style={style.cheque}>
           {accountPayeeOnly && <div className="cheque-crossing">A/C PAYEE ONLY</div>}
 

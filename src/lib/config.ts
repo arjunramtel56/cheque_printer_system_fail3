@@ -18,8 +18,9 @@ export const siteConfig = {
     { label: "History", href: "/dashboard/history", icon: "Clock" },
     { label: "Payees", href: "/dashboard/payees", icon: "Users" },
     { label: "Assistant", href: "/dashboard/assistant", icon: "Bot" },
-    { label: "Settings", href: "/dashboard/settings", icon: "Settings" },
+    { label: "Profile", href: "/dashboard/profile", icon: "User" },
     { label: "Subscription", href: "/dashboard/subscription", icon: "CreditCard" },
+    { label: "Settings", href: "/dashboard/settings", icon: "Settings" },
   ],
   adminNavItems: [
     { label: "Dashboard", href: "/admin", icon: "LayoutDashboard" },

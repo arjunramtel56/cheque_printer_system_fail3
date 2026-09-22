@@ -61,6 +61,19 @@
   font-family: "Courier New", monospace;
 }
 
+.trial-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-30deg);
+  font-size: 60px;
+  font-weight: bold;
+  color: rgba(239, 68, 68, 0.15);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+}
+
 @media print {
   :root {
     color-scheme: light !important;
