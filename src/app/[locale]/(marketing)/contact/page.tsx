@@ -53,7 +53,7 @@ export default function ContactPage() {
       {/* Contact Info */}
       <section className="py-20">
         <div className="mx-auto max-w-7xl px-4">
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-4">
             {contactInfo.map((info) => (
               <Card key={info.titleKey} className="border-0 shadow-sm">
                 <CardContent className="pt-6 text-center">

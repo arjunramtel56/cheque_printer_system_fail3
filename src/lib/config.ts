@@ -6,7 +6,7 @@ export const siteConfig = {
   company: "Reactify Software Technologies Pvt. Ltd.",
   contact: {
     phone: "+977-9743836026",
-    email: "support@reactifysoftwaretechnologies.com.np",
+    email: "info@reactifysoftwaretechnologies.com.np",
     address: "Kathmandu, Nepal",
     website: "https://www.reactifysoftwaretechnologies.com.np/",
   },

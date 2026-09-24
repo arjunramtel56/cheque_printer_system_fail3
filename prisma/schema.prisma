@@ -30,6 +30,19 @@ enum ChequeStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  PENDING_VERIFICATION
+  APPROVED
+  REJECTED
+}
+
+enum PaymentMethod {
+  FONEPAY
+  BANK_TRANSFER
+  CASH
+  OTHER
+}
+
 enum Orientation {
   PORTRAIT
   LANDSCAPE
@@ -53,12 +66,13 @@ model User {
   updatedAt     DateTime      @updatedAt
 
    subscription   Subscription?
-  chequeEntries  ChequeEntry[]
-  payees         Payee[]
-  printHistories PrintHistory[]
-  settings       UserSettings?
-  sessions       Session[]
-  auditLogs      AuditLog[]
+   chequeEntries  ChequeEntry[]
+   payees         Payee[]
+   printHistories PrintHistory[]
+   settings       UserSettings?
+   sessions       Session[]
+   auditLogs      AuditLog[]
+   payments       Payment[]
 
   @@index([email])
   @@index([role])
@@ -91,9 +105,10 @@ model Plan {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  subscriptions Subscription[]
+   subscriptions Subscription[]
+   payments       Payment[]
 
-  @@index([name])
+   @@index([name])
 }
 
 model Subscription {
@@ -108,6 +123,34 @@ model Subscription {
 
   @@index([userId])
   @@index([planId])
+}
+
+// ─── Payments ─────────────────────────────────────────────────────────────
+
+model Payment {
+  id              String       @id @default(cuid())
+  userId          String
+  planId          String
+  amount          Decimal      @db.Decimal(10, 2)
+  currency        String       @default("NPR")
+  paymentMethod   PaymentMethod @default(FONEPAY)
+  durationMonths  Int          @default(1)
+  proofUrl        String?
+  reference       String?
+  notes           String?
+  status          PaymentStatus @default(PENDING_VERIFICATION)
+  submittedAt     DateTime     @default(now())
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  rejectionReason String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+  @@index([submittedAt])
 }
 
 // ─── Banks & Templates ────────────────────────────────────────────────

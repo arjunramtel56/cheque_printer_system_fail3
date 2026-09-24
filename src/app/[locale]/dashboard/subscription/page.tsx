@@ -4,9 +4,12 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Upload, Check, AlertTriangle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CreditCard, Upload, Check, AlertTriangle, Clock, X, FileText } from "lucide-react";
 import { siteConfig } from "@/lib/config";
 import { useToast } from "@/providers/toast-provider";
+import Link from "next/link";
 
 const DURATION_OPTIONS = [
   { value: "1", labelKey: "duration1Month" },
@@ -32,19 +35,48 @@ interface TrialInfo {
   subscriptionActive: boolean;
 }
 
+type PaymentStatus = "PENDING_VERIFICATION" | "APPROVED" | "REJECTED";
+
+interface Payment {
+  id: string;
+  userId: string;
+  planId: string;
+  amount: string;
+  currency: string;
+  paymentMethod: string;
+  durationMonths: number;
+  proofUrl: string | null;
+  reference: string | null;
+  notes: string | null;
+  status: PaymentStatus;
+  submittedAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  rejectionReason: string | null;
+  plan: {
+    name: string;
+    description: string | null;
+    price: string;
+    chequeLimit: number;
+  };
+}
+
 export default function SubscriptionPage() {
   const t = useTranslations("subscription");
-  const tDashboard = useTranslations("dashboard_ui");
   const { showToast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<"standard" | "business" | null>(null);
   const [selectedDuration, setSelectedDuration] = useState("1");
-  const [paymentStatus, setPaymentStatus] = useState<"idle" | "submitting" | "pending">("idle");
+  const [paymentStatus, setPaymentStatus] = useState<"idle" | "submitting" | "submitted">("idle");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [reference, setReference] = useState("");
+  const [notes, setNotes] = useState("");
   const [trialInfo, setTrialInfo] = useState<TrialInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [myPayments, setMyPayments] = useState<Payment[]>([]);
 
   useEffect(() => {
     fetchTrialInfo();
+    fetchMyPayments();
   }, []);
 
   async function fetchTrialInfo() {
@@ -61,10 +93,25 @@ export default function SubscriptionPage() {
     }
   }
 
+  async function fetchMyPayments() {
+    try {
+      const res = await fetch("/api/payments");
+      if (!res.ok) throw new Error("Failed to fetch payments");
+      const data = await res.json();
+      setMyPayments(data);
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+    }
+  }
+
   const pricing = siteConfig.pricing;
 
   function handleSelectPlan(plan: "standard" | "business") {
     setSelectedPlan(plan);
+    setPaymentStatus("idle");
+    setUploadedFile(null);
+    setReference("");
+    setNotes("");
   }
 
   function getPayAmount(plan: "standard" | "business"): string {
@@ -89,13 +136,23 @@ export default function SubscriptionPage() {
       return;
     }
 
+    if (!reference.trim()) {
+      showToast("Please provide a transaction reference or details.", "error");
+      return;
+    }
+
     setPaymentStatus("submitting");
 
     try {
       const formData = new FormData();
-      formData.append("file", uploadedFile);
+      formData.append("proof", uploadedFile);
       formData.append("plan", selectedPlan);
       formData.append("duration", selectedDuration);
+      formData.append("paymentMethod", "FONEPAY");
+      formData.append("reference", reference);
+      formData.append("notes", notes);
+      formData.append("amount", getPayAmount(selectedPlan).replace("NPR ", ""));
+      formData.append("currency", "NPR");
 
       const res = await fetch("/api/payments", {
         method: "POST",
@@ -104,17 +161,13 @@ export default function SubscriptionPage() {
 
       if (!res.ok) throw new Error("Submission failed");
 
-      setPaymentStatus("pending");
+      setPaymentStatus("submitted");
       showToast("Payment proof submitted. Waiting for admin approval.", "success");
-      localStorage.setItem(
-        "pendingPayment",
-        JSON.stringify({
-          plan: selectedPlan,
-          duration: selectedDuration,
-          date: new Date().toISOString(),
-        })
-      );
-    } catch {
+      setUploadedFile(null);
+      setReference("");
+      setNotes("");
+      fetchMyPayments();
+    } catch (err) {
       showToast("Failed to submit payment. Try again.", "error");
     } finally {
       setPaymentStatus("idle");
@@ -122,6 +175,37 @@ export default function SubscriptionPage() {
   }
 
   const payAmount = selectedPlan ? getPayAmount(selectedPlan) : "";
+
+  const getStatusDisplay = (payment: Payment) => {
+    const statusMap: Record<PaymentStatus, { label: string; color: string; icon: any }> = {
+      PENDING_VERIFICATION: {
+        label: "Pending Verification",
+        color: "bg-yellow-100 text-yellow-800",
+        icon: Clock,
+      },
+      APPROVED: {
+        label: "Approved",
+        color: "bg-green-100 text-green-800",
+        icon: Check,
+      },
+      REJECTED: {
+        label: "Rejected",
+        color: "bg-red-100 text-red-800",
+        icon: X,
+      },
+    };
+
+    const info = statusMap[payment.status];
+    const Icon = info.icon;
+    return (
+      <span
+        className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${info.color}`}
+      >
+        <Icon size={12} />
+        {info.label}
+      </span>
+    );
+  };
 
   if (loading) {
     return (
@@ -133,11 +217,20 @@ export default function SubscriptionPage() {
   }
 
   const isTrial = trialInfo?.isExpired === false;
+  const latestPendingPayment = myPayments.find((p) => p.status === "PENDING_VERIFICATION");
+  const latestApprovedPayment = myPayments.find((p) => p.status === "APPROVED");
+  const latestRejectedPayment = myPayments.find((p) => p.status === "REJECTED");
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">{t("title")}</h2>
+        <Link href="/en/dashboard/subscription/payments">
+          <Button variant="outline" size="sm">
+            <FileText size={16} className="mr-2" />
+            View My Payments
+          </Button>
+        </Link>
       </div>
 
       <Card>
@@ -182,11 +275,11 @@ export default function SubscriptionPage() {
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
             <div className="rounded-md border p-4 text-center">
               <p className="text-2xl font-bold">{pricing.trial.features[0].split(" ")[0]}</p>
-              <p className="text-sm text-muted-foreground">{tDashboard("stats.chequesPrinted")}</p>
+              <p className="text-sm text-muted-foreground">{t("chequesPrinted")}</p>
             </div>
             <div className="rounded-md border p-4 text-center">
               <p className="text-2xl font-bold">{trialInfo?.daysLeft ?? 0}</p>
-              <p className="text-sm text-muted-foreground">{tDashboard("stats.trialDaysLeft")}</p>
+              <p className="text-sm text-muted-foreground">{t("trialDaysLeft", { days: 0 })}</p>
             </div>
             <div className="rounded-md border p-4 text-center">
               <p className="text-2xl font-bold">{trialInfo?.printsLeft ?? 0}</p>
@@ -227,11 +320,12 @@ export default function SubscriptionPage() {
                 </div>
                 <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                   <p className="font-medium text-blue-700 dark:text-blue-300">
-                    Introductory offer: {pricing.standard.firstMonth} for first month
+                    {pricing.standard.firstMonth} {t("firstMonth")}
                   </p>
-                  <p className="mt-1 text-slate-500 dark:text-slate-400">
-                    Regular pricing: {pricing.standard.threeMonths} (3 months),{" "}
-                    {pricing.standard.sixMonths} (6 months), {pricing.standard.annual} (12 months)
+                  <p className="mt-1">
+                    {t("regularPricing")} {pricing.standard.threeMonths} (3 {t("duration3Months")}),{" "}
+                    {pricing.standard.sixMonths} (6 {t("duration6Months")}),{" "}
+                    {pricing.standard.annual} (12 {t("duration12Months")})
                   </p>
                   <div className="mt-1 space-y-1">
                     {pricing.standard.features.map((f) => (
@@ -251,7 +345,7 @@ export default function SubscriptionPage() {
               >
                 {pricing.business.bestValue && (
                   <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-yellow-400 text-xs font-bold px-2 py-0.5 rounded">
-                    BEST VALUE
+                    {t("bestValue")}
                   </span>
                 )}
                 <div className="flex items-center justify-between">
@@ -260,11 +354,12 @@ export default function SubscriptionPage() {
                 </div>
                 <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                   <p className="font-medium text-yellow-700 dark:text-yellow-300">
-                    Introductory offer: {pricing.business.firstMonth} for first month
+                    {pricing.business.firstMonth} {t("firstMonth")}
                   </p>
-                  <p className="mt-1 text-slate-500 dark:text-slate-400">
-                    Regular pricing: {pricing.business.threeMonths} (3 months),{" "}
-                    {pricing.business.sixMonths} (6 months), {pricing.business.annual} (12 months)
+                  <p className="mt-1">
+                    {t("regularPricing")} {pricing.business.threeMonths} (3 {t("duration3Months")}),{" "}
+                    {pricing.business.sixMonths} (6 {t("duration6Months")}),{" "}
+                    {pricing.business.annual} (12 {t("duration12Months")})
                   </p>
                   <div className="mt-1 space-y-1">
                     {pricing.business.features.map((f) => (
@@ -283,6 +378,19 @@ export default function SubscriptionPage() {
           <CardTitle>{t("payWithFonepay")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center text-center">
+          {latestPendingPayment && (
+            <div className="mb-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 p-4 text-sm text-yellow-700 dark:text-yellow-300 w-full">
+              <div className="flex items-center justify-center gap-2">
+                <Clock className="h-4 w-4 text-yellow-600" />
+                <span>{t("paymentSubmitted")}</span>
+              </div>
+              <p className="mt-1">
+                Submitted on {new Date(latestPendingPayment.submittedAt).toLocaleString()} -
+                awaiting admin review.
+              </p>
+            </div>
+          )}
+
           {selectedPlan ? (
             <>
               <h4 className="font-semibold mb-3">{t("duration")}</h4>
@@ -326,35 +434,76 @@ export default function SubscriptionPage() {
               </p>
 
               <div className="w-full mt-6">
-                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                  {t("uploadPaymentProof")}
-                </label>
+                <Label
+                  htmlFor="reference"
+                  className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1"
+                >
+                  {t("transactionReference")} *
+                </Label>
+                <Input
+                  id="reference"
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value)}
+                  placeholder={t("transactionReferencePlaceholder")}
+                  disabled={paymentStatus === "submitting" || !!latestPendingPayment}
+                />
+              </div>
+
+              <div className="w-full mt-4">
+                <Label
+                  htmlFor="notes"
+                  className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1"
+                >
+                  {t("additionalNotes")}
+                </Label>
+                <textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder={t("notesPlaceholder")}
+                  disabled={paymentStatus === "submitting" || !!latestPendingPayment}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  rows={3}
+                />
+              </div>
+
+              <div className="w-full mt-4">
+                <Label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  {t("uploadPaymentProof")} *
+                </Label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
+                  disabled={paymentStatus === "submitting" || !!latestPendingPayment}
                   className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-slate-700 dark:file:text-blue-300"
                 />
               </div>
 
-              {paymentStatus === "pending" && (
-                <div className="w-full mt-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 text-sm text-yellow-700 dark:text-yellow-300">
-                  {t("paymentSubmitted")}
+              {latestRejectedPayment && (
+                <div className="mt-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-3 text-sm text-red-700 dark:text-red-300">
+                  <p className="font-semibold">Your last payment was rejected.</p>
+                  {latestRejectedPayment.rejectionReason && (
+                    <p>Reason: {latestRejectedPayment.rejectionReason}</p>
+                  )}
                 </div>
               )}
 
               <Button
                 className="w-full mt-4"
                 onClick={handleFonepaySubmit}
-                disabled={paymentStatus === "submitting" || !uploadedFile}
+                disabled={
+                  paymentStatus === "submitting" ||
+                  !uploadedFile ||
+                  !reference.trim() ||
+                  !!latestPendingPayment
+                }
               >
                 {paymentStatus === "submitting" ? "Submitting..." : t("submitPayment")}
               </Button>
             </>
           ) : (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {t("selectPlan")} {t("freeTrial").toLowerCase()} to unlock payment options.
-            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t("selectPlanUnlock")}</p>
           )}
         </CardContent>
       </Card>

@@ -25,7 +25,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <header className="flex h-14 items-center border-b px-6">
           <div className="flex flex-1 items-center justify-between">
             <div className="flex items-center gap-4">
-              <img src={siteConfig.logo} alt={siteConfig.company} className="h-7 w-auto" />
+              <img
+                src={siteConfig.logo}
+                alt={siteConfig.company}
+                className="logo-image h-7 w-auto"
+              />
               <div>
                 <h1 className="text-lg font-semibold">Admin Panel</h1>
                 <p className="text-sm text-muted-foreground">Welcome, {user.name}</p>
