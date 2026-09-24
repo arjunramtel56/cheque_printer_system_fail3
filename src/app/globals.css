@@ -31,6 +31,69 @@
   }
 }
 
+:root.dark {
+  --color-background: hsl(222.2 84% 4.9%);
+  --color-foreground: hsl(0 0% 97%);
+  --color-card: hsl(223 47% 11%);
+  --color-card-foreground: hsl(0 0% 97%);
+  --color-primary: hsl(217.2 92.2% 59.2%);
+  --color-primary-foreground: hsl(210 40% 98%);
+  --color-secondary: hsl(217.2 32.6% 17.5%);
+  --color-secondary-foreground: hsl(210 40% 98%);
+  --color-muted: hsl(217.2 32.6% 17.5%);
+  --color-muted-foreground: hsl(215.4 16.3% 71.1%);
+  --color-accent: hsl(217.2 32.6% 17.5%);
+  --color-accent-foreground: hsl(210 40% 98%);
+  --color-destructive: hsl(0 62.8% 50%);
+  --color-destructive-foreground: hsl(210 40% 98%);
+  --color-border: hsl(215.4 16.3% 24.9%);
+  --color-input: hsl(215.4 16.3% 24.9%);
+  --color-ring: hsl(217.2 92.2% 59.2%);
+  --color-slate-50: hsl(210 40% 96.1%);
+  --color-slate-100: hsl(210 40% 90.2%);
+  --color-slate-200: hsl(210 40% 80.4%);
+  --color-slate-300: hsl(210 40% 66.7%);
+  --color-slate-400: hsl(210 40% 52.2%);
+  --color-slate-500: hsl(210 40% 44.9%);
+  --color-slate-600: hsl(210 40% 36.1%);
+  --color-slate-700: hsl(210 40% 27.5%);
+  --color-slate-800: hsl(210 40% 18.9%);
+  --color-slate-900: hsl(210 40% 10.2%);
+  --color-slate-950: hsl(210 40% 4.9%);
+  --color-blue-50: hsl(217.2 92.2% 96.3%);
+  --color-blue-100: hsl(217.2 92.2% 89.8%);
+  --color-blue-200: hsl(217.2 92.2% 77.3%);
+  --color-blue-300: hsl(217.2 92.2% 64.7%);
+  --color-blue-400: hsl(217.2 92.2% 52.2%);
+  --color-blue-500: hsl(217.2 92.2% 39.8%);
+  --color-blue-600: hsl(217.2 92.2% 31.6%);
+  --color-blue-700: hsl(217.2 92.2% 23.5%);
+  --color-blue-800: hsl(217.2 92.2% 15.3%);
+  --color-blue-900: hsl(217.2 92.2% 7.1%);
+  --color-green-50: hsl(142.1 76.6% 96.7%);
+  --color-green-100: hsl(142.1 76.6% 90.4%);
+  --color-green-700: hsl(142.1 76.6% 33.3%);
+  --color-green-900: hsl(142.1 76.6% 20.6%);
+  --color-amber-50: hsl(38.7 92.1% 96.5%);
+  --color-amber-100: hsl(38.7 92.1% 90.2%);
+  --color-amber-200: hsl(38.7 92.1% 76.9%);
+  --color-amber-300: hsl(38.7 92.1% 63.7%);
+  --color-amber-500: hsl(38.7 92.1% 49.8%);
+  --color-amber-600: hsl(38.7 92.1% 41.6%);
+  --color-amber-700: hsl(38.7 92.1% 33.3%);
+  --color-amber-800: hsl(38.7 92.1% 25.1%);
+  --color-amber-900: hsl(38.7 92.1% 16.9%);
+  --color-red-50: hsl(0 84.2% 98%);
+  --color-red-500: hsl(0 84.2% 50.2%);
+  --color-red-600: hsl(0 84.2% 41.2%);
+  --color-red-700: hsl(0 84.2% 33.3%);
+  --color-yellow-50: hsl(48 91.6% 96.5%);
+  --color-yellow-100: hsl(48 91.6% 90.2%);
+  --color-yellow-400: hsl(48 91.6% 64.7%);
+  --color-yellow-600: hsl(48 91.6% 41.2%);
+  --color-yellow-700: hsl(48 91.6% 33.3%);
+}
+
 @media print {
   @page {
     size: A4;
