@@ -3,6 +3,11 @@ export const siteConfig = {
   description: "Prepare and print Nepalese bank cheques with precise alignment.",
   url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   company: "Reactify Software Technologies Pvt. Ltd.",
+  contact: {
+    phone: "+977-1-XXXXXXX",
+    email: "info@reactifysoftwaretechnologies.com.np",
+    address: "Kathmandu, Nepal",
+  },
   navItems: [
     { label: "Home", href: "/" },
     { label: "Features", href: "/features" },
@@ -24,6 +29,7 @@ export const siteConfig = {
   ],
   adminNavItems: [
     { label: "Dashboard", href: "/admin", icon: "LayoutDashboard" },
+    { label: "Pending Payments", href: "/admin/payments", icon: "CreditCard" },
     { label: "Users", href: "/admin/users", icon: "Users" },
     { label: "Banks", href: "/admin/banks", icon: "Building2" },
     { label: "Templates", href: "/admin/templates", icon: "LayoutTemplate" },
@@ -32,4 +38,50 @@ export const siteConfig = {
     { label: "Plans", href: "/admin/plans", icon: "CreditCard" },
     { label: "Reports", href: "/admin/reports", icon: "BarChart3" },
   ],
+  pricing: {
+    trial: {
+      label: "Free Trial",
+      price: "Free",
+      duration: "14 days",
+      features: ["10 cheque prints", "Basic bank templates", "Print history"],
+    },
+    standard: {
+      label: "Standard Plan",
+      firstMonth: "NPR 39",
+      threeMonths: "NPR 99",
+      sixMonths: "NPR 179",
+      annual: "NPR 299",
+      features: ["100 cheque prints/month", "All bank templates", "Export to PDF", "Email support"],
+      bestValue: false,
+    },
+    business: {
+      label: "Business Plan",
+      firstMonth: "NPR 59",
+      threeMonths: "NPR 149",
+      sixMonths: "NPR 269",
+      annual: "NPR 499",
+      features: [
+        "Unlimited prints",
+        "All bank templates",
+        "Bulk printing",
+        "Priority support",
+        "Custom templates",
+      ],
+      bestValue: true,
+    },
+    fonepay: {
+      merchantName: "Reactify Software Technologies Pvt. Ltd.",
+      qrCodeUrl: "/logos/fonepay-qr-placeholder.svg",
+    },
+  },
+  cheque: {
+    widthMm: 190.5,
+    heightMm: 88.9,
+    a4WidthMm: 210,
+    a4HeightMm: 297,
+  },
+  trialConfig: {
+    maxPrints: 10,
+    daysDuration: 14,
+  },
 };

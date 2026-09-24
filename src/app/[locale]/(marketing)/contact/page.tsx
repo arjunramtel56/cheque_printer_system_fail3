@@ -4,21 +4,29 @@ import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mail, Phone, MapPin } from "lucide-react";
 
-const contactInfo = [
+type IconData = {
+  icon: React.ElementType;
+  titleKey: string;
+  value: string;
+  extra?: string;
+};
+
+const contactInfo: IconData[] = [
   {
     icon: Mail,
     titleKey: "email",
-    value: "support@reactify.com.np",
+    value: "info@reactifysoftwaretechnologies.com.np",
   },
   {
     icon: Phone,
     titleKey: "phone",
-    value: "+977-1-4XXXXXX",
+    value: "+977-1-XXXXXXX",
   },
   {
     icon: MapPin,
     titleKey: "address",
     value: "Kathmandu, Nepal",
+    extra: "Reactify Software Technologies Pvt. Ltd.",
   },
 ];
 
@@ -30,12 +38,8 @@ export default function ContactPage() {
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-primary/5 to-background py-20">
         <div className="mx-auto max-w-7xl px-4 text-center">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            {t("title")}
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-            {t("description")}
-          </p>
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">{t("title")}</h1>
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">{t("description")}</p>
         </div>
       </section>
 
@@ -48,9 +52,10 @@ export default function ContactPage() {
                 <CardContent className="pt-6 text-center">
                   <info.icon className="mx-auto h-10 w-10 text-primary" />
                   <h3 className="mt-4 text-lg font-semibold">{t(info.titleKey)}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {info.value}
-                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">{info.value}</p>
+                  {info.extra && (
+                    <p className="mt-1 text-xs text-muted-foreground/70">{info.extra}</p>
+                  )}
                 </CardContent>
               </Card>
             ))}

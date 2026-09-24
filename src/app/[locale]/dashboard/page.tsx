@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Printer, FileText, Clock, CreditCard, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { ChequePrintLayout } from "@/components/cheque/ChequePrintLayout";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -71,6 +72,8 @@ export default async function DashboardPage() {
       icon: Printer,
     },
   ];
+
+  const isTrial = user?.role === "TRIAL_USER";
 
   return (
     <div className="space-y-6">
@@ -140,57 +143,79 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {recentCheques.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Cheques</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {recentCheques.map((cheque) => (
-                <div
-                  key={cheque.id}
-                  className="flex items-center justify-between rounded-md border p-3"
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+          <h3 className="font-bold text-slate-900 dark:text-slate-100">Recent Activity</h3>
+        </div>
+        <table className="w-full text-left text-sm text-slate-800 dark:text-slate-200">
+          <thead className="bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-medium">
+            <tr>
+              <th className="px-6 py-3">User</th>
+              <th className="px-6 py-3">Action</th>
+              <th className="px-6 py-3">Time</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+            {recentCheques.length > 0 ? (
+              recentCheques.map((cheque) => (
+                <tr key={cheque.id}>
+                  <td className="px-6 py-4 font-medium text-sm">
+                    {cheque.payeeName || cheque.accountHolder || "—"}
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                    <span className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-1 rounded text-xs font-bold">
+                      CHEQUE_CREATED
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                    {new Date(cheque.createdAt).toLocaleString()}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan={3}
+                  className="px-6 py-8 text-center text-slate-500 dark:text-slate-400"
                 >
-                  <div>
-                    <p className="font-medium">{cheque.payeeName || cheque.accountHolder}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {cheque.template.bank.name} &middot;{" "}
-                      {new Date(cheque.chequeDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">
-                      NPR {Number(cheque.amountNumber).toLocaleString()}
-                    </p>
-                    <p
-                      className={`text-xs ${cheque.status === "PRINTED" ? "text-green-600" : "text-yellow-600"}`}
-                    >
-                      {cheque.status}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Printer className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">No cheques yet</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Print your first cheque to get started.
-            </p>
+                  No recent activity.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
             <Link
               href="/en/dashboard/cheques/new"
-              className="mt-4 inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 w-full"
             >
-              Print Your First Cheque
+              <Printer className="mr-2 h-4 w-4" />
+              Create New Cheque
             </Link>
-          </CardContent>
-        </Card>
-      )}
+            <Link
+              href="/en/dashboard/templates"
+              className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-3 text-sm font-medium shadow-sm hover:bg-accent w-full"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              View Templates
+            </Link>
+            <Link
+              href="/en/dashboard/history"
+              className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-3 text-sm font-medium shadow-sm hover:bg-accent w-full"
+            >
+              <Clock className="mr-2 h-4 w-4" />
+              Print History
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

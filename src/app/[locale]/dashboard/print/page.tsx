@@ -9,11 +9,13 @@ import {
   UserRound,
   Banknote,
   Save,
+  Settings,
 } from "lucide-react";
 import { useLocale } from "next-intl";
 import { amountToWords, formatDate } from "@/lib/amount-to-words";
 import { ChequeTemplate } from "@/types";
 import ChequePreview from "@/components/cheque/cheque-preview";
+import { useToast } from "@/providers/toast-provider";
 
 interface Bank {
   id: string;
@@ -71,6 +73,7 @@ interface TemplateOption {
 
 export default function PrintPage() {
   const locale = useLocale();
+  const { showToast } = useToast();
   const [banks, setBanks] = useState<Bank[]>([]);
   const [selectedBankId, setSelectedBankId] = useState<string>("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
@@ -85,6 +88,9 @@ export default function PrintPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedChequeId, setSavedChequeId] = useState<string | null>(null);
+  const [printingMethod, setPrintingMethod] = useState("A4 carrier — fallback");
+  const [feedDirection, setFeedDirection] = useState("Long edge first (0°)");
+  const [orientation, setOrientation] = useState<"PORTRAIT" | "LANDSCAPE">("PORTRAIT");
 
   const lang = locale as "en" | "ne";
 
@@ -102,7 +108,7 @@ export default function PrintPage() {
         chequeWidth: selectedTemplate.chequeWidth,
         chequeHeight: selectedTemplate.chequeHeight,
         backgroundUrl: selectedBank?.code
-          ? `/images/${selectedBank.code.toLowerCase()}-bank-cheque.png`
+          ? `/images/${selectedBank?.code.toLowerCase()}-bank-cheque.png`
           : undefined,
         fields: selectedTemplate.fields.map((f) => ({
           field: f.field,
@@ -247,7 +253,7 @@ export default function PrintPage() {
     const id = await saveChequeDraft();
     if (id) {
       setSavedChequeId(id);
-      alert("Draft saved successfully");
+      showToast("Draft saved successfully!", "success");
     }
   }
 
@@ -278,6 +284,7 @@ export default function PrintPage() {
     }
 
     setIsLoading(false);
+    showToast("Printing your cheque...", "info");
     window.print();
   }
 
@@ -356,6 +363,7 @@ export default function PrintPage() {
                     </option>
                   ))}
                 </select>
+                {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
               </div>
 
               {selectedBank && selectedBank.templates.length > 1 && (
@@ -376,6 +384,38 @@ export default function PrintPage() {
                   </select>
                 </div>
               )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">
+                    <span className="flex items-center gap-2">
+                      <Settings size={16} className="text-slate-400" />
+                      {t_feedDirection}
+                    </span>
+                  </label>
+                  <select
+                    value={feedDirection}
+                    onChange={(e) => setFeedDirection(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                  >
+                    <option>Long edge first (0°)</option>
+                    <option>Short edge first (90°)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">
+                    {t_printingMethod}
+                  </label>
+                  <select
+                    value={printingMethod}
+                    onChange={(e) => setPrintingMethod(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                  >
+                    <option>A4 carrier — fallback</option>
+                    <option>A4 carrier — direct</option>
+                  </select>
+                </div>
+              </div>
 
               <div>
                 <label
@@ -548,3 +588,6 @@ export default function PrintPage() {
     </main>
   );
 }
+
+const t_feedDirection = "Feed Direction";
+const t_printingMethod = "Printing Method";

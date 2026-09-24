@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { ChequePrintLayout } from "./ChequePrintLayout";
 import { amountToWords, formatAmount } from "@/lib/amount-to-words";
 import { useToast } from "@/providers/toast-provider";
-import { Printer, Save } from "lucide-react";
+import { Printer, Save, Banknote, FileCog } from "lucide-react";
 
 type FormState = {
   payeeName: string;
@@ -22,6 +22,8 @@ type FormState = {
   feedDirection: string;
   memo: string;
   accountPayeeOnly: boolean;
+  fontSize: number;
+  scale: number;
 };
 
 interface ChequeComposerProps {
@@ -45,9 +47,11 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
     offsetYmm: 0,
     bankTemplate: "Siddhartha Bank Limited — calibrated",
     printingMethod: "A4 carrier — fallback",
-    feedDirection: "Long edge first (0°)",
+    feedDirection: "Long Edge First (0°)",
     memo: "",
     accountPayeeOnly: true,
+    fontSize: 12,
+    scale: 100,
   });
 
   const isTrial = userRole === "TRIAL_USER";
@@ -82,6 +86,46 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
     showToast("Cheque saved to history!", "success");
   };
 
+  function saveCalibration() {
+    const templateKey = form.bankTemplate;
+    const calib = {
+      x: form.offsetXmm,
+      y: form.offsetYmm,
+      scale: form.scale,
+      font: form.fontSize,
+    };
+    localStorage.setItem(`calib_${templateKey}`, JSON.stringify(calib));
+    showToast("Calibration profile saved!", "success");
+  }
+
+  function loadTemplate(templateId: string) {
+    const saved = localStorage.getItem(`calib_${templateId}`);
+    if (saved) {
+      const calib = JSON.parse(saved);
+      setForm((f) => ({
+        ...f,
+        offsetXmm: Number(calib.x) || 0,
+        offsetYmm: Number(calib.y) || 0,
+        scale: Number(calib.scale) || 100,
+        fontSize: Number(calib.font) || 12,
+      }));
+    } else {
+      setForm((f) => ({
+        ...f,
+        offsetXmm: 0,
+        offsetYmm: 0,
+        scale: 100,
+        fontSize: 12,
+      }));
+    }
+  }
+
+  const handleBankChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    update("bankTemplate", val);
+    loadTemplate(val);
+  };
+
   return (
     <div className="grid gap-6 p-6 lg:grid-cols-[400px_1fr] bg-slate-50 dark:bg-slate-900 min-h-screen">
       <aside className="no-print space-y-5 rounded-xl border bg-white dark:bg-slate-800 p-5 shadow-sm h-fit">
@@ -104,9 +148,11 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
                 offsetYmm: 0,
                 bankTemplate: "Siddhartha Bank Limited — calibrated",
                 printingMethod: "A4 carrier — fallback",
-                feedDirection: "Long edge first (0°)",
+                feedDirection: "Long Edge First (0°)",
                 memo: "",
                 accountPayeeOnly: true,
+                fontSize: 12,
+                scale: 100,
               })
             }
           >
@@ -121,11 +167,13 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
           <select
             className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2.5 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             value={form.bankTemplate}
-            onChange={(e) => update("bankTemplate", e.target.value)}
+            onChange={handleBankChange}
           >
-            <option>Siddhartha Bank Limited — calibrated</option>
-            <option>Nabil Bank — standard</option>
-            <option>NIC Asia — custom</option>
+            <option value="Siddhartha Bank Limited — calibrated">
+              Siddhartha Bank Limited — calibrated
+            </option>
+            <option value="Nabil Bank — standard">Nabil Bank — standard</option>
+            <option value="NIC Asia — custom">NIC Asia — custom</option>
           </select>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             {t("bankTemplateHelper")}
@@ -138,7 +186,7 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
               {t("printingMethod")}
             </label>
             <select
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2.5 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-white"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2.5 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               value={form.printingMethod}
               onChange={(e) => update("printingMethod", e.target.value)}
             >
@@ -151,7 +199,7 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
               {t("feedDirection")}
             </label>
             <select
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2.5 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-white"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2.5 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               value={form.feedDirection}
               onChange={(e) => update("feedDirection", e.target.value)}
             >
@@ -231,14 +279,12 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
             {t("amountWords")}
           </label>
           <textarea
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-slate-900 dark:text-white h-20 resize-none"
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-slate-900 dark:text-white h-20 resize-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             placeholder="Generated from the amount"
             value={form.amountWords || autoWords}
             onChange={(e) => update("amountWords", e.target.value)}
           />
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Generated from the amount and printed exactly as shown here.
-          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t("previewHint")}</p>
         </div>
 
         <div>
@@ -308,22 +354,132 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
           </label>
         </div>
 
-        <div className="flex gap-3 pt-2">
+        <details
+          className="bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600 p-3"
+          open
+        >
+          <summary className="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer flex justify-between items-center">
+            <span className="flex items-center gap-2">
+              <FileCog size={14} />
+              {t("advancedCalibration")}
+            </span>
+            <button
+              onClick={saveCalibration}
+              className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+            >
+              {t("save")}
+            </button>
+          </summary>
+          <div className="mt-3 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+                  {t("topOffset")}
+                </label>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() =>
+                      update("offsetYmm", Math.round((form.offsetYmm - 0.5) * 10) / 10)
+                    }
+                    className="bg-slate-200 dark:bg-slate-600 px-2 rounded hover:bg-slate-300 dark:hover:bg-slate-500"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={form.offsetYmm}
+                    onChange={(e) => update("offsetYmm", parseFloat(e.target.value) || 0)}
+                    className="w-full rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1 text-sm text-center text-slate-900 dark:text-white"
+                  />
+                  <button
+                    onClick={() =>
+                      update("offsetYmm", Math.round((form.offsetYmm + 0.5) * 10) / 10)
+                    }
+                    className="bg-slate-200 dark:bg-slate-600 px-2 rounded hover:bg-slate-300 dark:hover:bg-slate-500"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+                  {t("leftOffset")}
+                </label>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() =>
+                      update("offsetXmm", Math.round((form.offsetXmm - 0.5) * 10) / 10)
+                    }
+                    className="bg-slate-200 dark:bg-slate-600 px-2 rounded hover:bg-slate-300 dark:hover:bg-slate-500"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={form.offsetXmm}
+                    onChange={(e) => update("offsetXmm", parseFloat(e.target.value) || 0)}
+                    className="w-full rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1 text-sm text-center text-slate-900 dark:text-white"
+                  />
+                  <button
+                    onClick={() =>
+                      update("offsetXmm", Math.round((form.offsetXmm + 0.5) * 10) / 10)
+                    }
+                    className="bg-slate-200 dark:bg-slate-600 px-2 rounded hover:bg-slate-300 dark:hover:bg-slate-500"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+                  {t("fontSize")}
+                </label>
+                <input
+                  type="number"
+                  min="8"
+                  max="20"
+                  value={form.fontSize}
+                  onChange={(e) => update("fontSize", parseInt(e.target.value) || 12)}
+                  className="w-full rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1 text-sm text-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+                  {t("scale")}
+                </label>
+                <input
+                  type="number"
+                  min="80"
+                  max="120"
+                  value={form.scale}
+                  onChange={(e) => update("scale", parseInt(e.target.value) || 100)}
+                  className="w-full rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1 text-sm text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div className="flex gap-3">
           <button
-            className="flex-1 rounded-lg bg-blue-600 px-4 py-3 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 transition shadow-md flex items-center justify-center gap-2"
-            onClick={handlePrint}
-            disabled={!canPrint}
-          >
-            <Printer size={16} />
-            {t("print")}
-          </button>
-          <button
-            className="flex-1 rounded-lg border border-slate-300 bg-white dark:bg-slate-700 px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition flex items-center justify-center gap-2"
-            disabled={!form.payeeName || !numericAmount || isTrial}
             onClick={handleSaveToHistory}
+            disabled={!form.payeeName || !numericAmount || isTrial}
+            className="flex-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-bold py-3 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <Save size={16} />
             {t("saveHistory")}
+          </button>
+          <button
+            onClick={handlePrint}
+            disabled={!canPrint}
+            className="flex-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <Printer size={16} />
+            {t("print")}
           </button>
         </div>
         {isTrial && (
@@ -334,7 +490,7 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
       </aside>
 
       <section className="cheque-print-root overflow-auto rounded-xl border bg-slate-200 dark:bg-slate-800 p-8 flex justify-center items-start">
-        <div className="relative shadow-2xl">
+        <div className="relative shadow-2xl" style={{ transform: `scale(${form.scale / 100})` }}>
           <ChequePrintLayout
             ref={printRef}
             payeeName={form.payeeName || "—"}

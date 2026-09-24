@@ -66,15 +66,27 @@ const plans = [
   },
   {
     nameKey: "standard",
-    priceKey: "standardPrice",
-    durationKey: "standardDuration",
+    priceFirstMonthKey: "standardPriceFirstMonth",
+    durationFirstMonthKey: "standardDurationFirstMonth",
+    price3MonthsKey: "standardPrice3Months",
+    duration3MonthsKey: "standardDuration3Months",
+    price6MonthsKey: "standardPrice6Months",
+    duration6MonthsKey: "standardDuration6Months",
+    price12MonthsKey: "standardPrice12Months",
+    duration12MonthsKey: "standardDuration12Months",
     featuresKeys: ["standardF1", "standardF2", "standardF3", "standardF4"],
     popular: true,
   },
   {
     nameKey: "business",
-    priceKey: "businessPrice",
-    durationKey: "businessDuration",
+    priceFirstMonthKey: "businessPriceFirstMonth",
+    durationFirstMonthKey: "businessDurationFirstMonth",
+    price3MonthsKey: "businessPrice3Months",
+    duration3MonthsKey: "businessDuration3Months",
+    price6MonthsKey: "businessPrice6Months",
+    duration6MonthsKey: "businessDuration6Months",
+    price12MonthsKey: "businessPrice12Months",
+    duration12MonthsKey: "businessDuration12Months",
     featuresKeys: ["businessF1", "businessF2", "businessF3", "businessF4", "businessF5"],
   },
 ];
@@ -212,10 +224,47 @@ export default function HomePage() {
                 )}
                 <CardContent className="pt-6">
                   <h3 className="text-xl font-bold">{t(plan.nameKey)}</h3>
-                  <div className="mt-2">
-                    <span className="text-3xl font-bold">{t(plan.priceKey)}</span>
-                    <span className="text-muted-foreground">{t(plan.durationKey)}</span>
-                  </div>
+                  {plan.priceKey ? (
+                    <div className="mt-2">
+                      <span className="text-3xl font-bold">{t(plan.priceKey)}</span>
+                      <span className="text-muted-foreground">{t(plan.durationKey)}</span>
+                    </div>
+                  ) : (
+                    <div className="mt-2">
+                      <p className="text-sm text-muted-foreground">
+                        {t(plan.durationFirstMonthKey!)}
+                      </p>
+                      <span className="text-3xl font-bold">{t(plan.priceFirstMonthKey!)}</span>
+                      <table className="w-full text-sm mt-4">
+                        <tbody>
+                          <tr>
+                            <td className="py-1 text-muted-foreground">
+                              {t(plan.duration3MonthsKey!)}
+                            </td>
+                            <td className="py-1 text-right font-medium">
+                              {t(plan.price3MonthsKey!)}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-1 text-muted-foreground">
+                              {t(plan.duration6MonthsKey!)}
+                            </td>
+                            <td className="py-1 text-right font-medium">
+                              {t(plan.price6MonthsKey!)}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-1 text-muted-foreground">
+                              {t(plan.duration12MonthsKey!)}
+                            </td>
+                            <td className="py-1 text-right font-medium">
+                              {t(plan.price12MonthsKey!)}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                   <ul className="mt-6 space-y-3">
                     {plan.featuresKeys.map((featureKey) => (
                       <li key={featureKey} className="flex items-center gap-2 text-sm">
