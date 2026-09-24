@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/api-helpers";
+import { canTransition } from "@/modules/payments/validations";
 
 async function checkAdmin(request: NextRequest) {
   const user = await getAuthenticatedUser(request);
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
       include: {
         plan: true,
         user: { select: { id: true, name: true, email: true, role: true, status: true } },
+        reviewer: { select: { id: true, name: true, email: true } },
       },
       orderBy: { submittedAt: "desc" },
       take: limit,
@@ -82,7 +84,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Prevent re-processing an already finalized payment (duplicate approval prevention)
-    if (payment.status !== "PENDING_VERIFICATION") {
+    if (!canTransition(payment.status, status)) {
       return NextResponse.json(
         { error: `Payment is already ${payment.status}. Cannot change status again.` },
         { status: 409 }
@@ -95,26 +97,22 @@ export async function PUT(request: NextRequest) {
     }
 
     if (status === "APPROVED") {
-      // Activate subscription server-side.
-      // Use a transaction to ensure atomicity and prevent duplicate activation.
+      const subStartDate = new Date();
+      const subEndDate = new Date(subStartDate);
+      subEndDate.setMonth(subEndDate.getMonth() + payment.durationMonths);
+
       const result = await prisma.$transaction(async (tx) => {
-        // Update the payment status and record reviewer
         const updatedPayment = await tx.payment.update({
           where: { id },
           data: {
             status: "APPROVED",
-            reviewedAt: new Date(),
+            reviewedAt: subStartDate,
             reviewedBy: user.id,
             rejectionReason: null,
           },
         });
 
-        // Compute subscription dates based on the selected duration
-        const startDate = new Date();
-        const endDate = new Date(startDate);
-        endDate.setMonth(endDate.getMonth() + payment.durationMonths);
-
-        // Upsert the user's subscription
+        // Upsert the user's subscription — activate/renew server-side
         const existingSubscription = await tx.subscription.findUnique({
           where: { userId: payment.userId },
         });
@@ -124,8 +122,8 @@ export async function PUT(request: NextRequest) {
             where: { userId: payment.userId },
             data: {
               planId: payment.planId,
-              startDate,
-              endDate,
+              startDate: subStartDate,
+              endDate: subEndDate,
               isActive: true,
             },
           });
@@ -134,8 +132,8 @@ export async function PUT(request: NextRequest) {
             data: {
               userId: payment.userId,
               planId: payment.planId,
-              startDate,
-              endDate,
+              startDate: subStartDate,
+              endDate: subEndDate,
               isActive: true,
             },
           });
@@ -149,60 +147,66 @@ export async function PUT(request: NextRequest) {
           });
         }
 
-        return updatedPayment;
-      });
+        await tx.auditLog.create({
+          data: {
+            userId: user.id,
+            action: "PAYMENT_APPROVED",
+            entity: "Payment",
+            entityId: payment.id,
+            details: JSON.stringify({
+              paymentId: payment.id,
+              planId: payment.planId,
+              amount: Number(payment.amount),
+              durationMonths: payment.durationMonths,
+              subStartDate: subStartDate.toISOString(),
+              subEndDate: subEndDate.toISOString(),
+            }),
+          },
+        });
 
-      await prisma.auditLog.create({
-        data: {
-          userId: user.id,
-          action: "PAYMENT_APPROVED",
-          entity: "Payment",
-          entityId: payment.id,
-          details: JSON.stringify({
-            paymentId: payment.id,
-            planId: payment.planId,
-            amount: Number(payment.amount),
-            durationMonths: payment.durationMonths,
-            subStartDate: new Date().toISOString(),
-            subEndDate: new Date(
-              new Date().getTime() + payment.durationMonths * 30 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-          }),
-        },
+        return updatedPayment;
       });
 
       return NextResponse.json({
         message: "Payment approved and subscription activated.",
         payment: result,
+        reviewer: { id: user.id, name: user.name },
       });
     }
 
     if (status === "REJECTED") {
-      const updatedPayment = await prisma.payment.update({
-        where: { id },
-        data: {
-          status: "REJECTED",
-          reviewedAt: new Date(),
-          reviewedBy: user.id,
-          rejectionReason: rejectionReason || null,
-        },
-      });
+      const rejectedReason = rejectionReason?.trim() || null;
 
-      await prisma.auditLog.create({
-        data: {
-          userId: user.id,
-          action: "PAYMENT_REJECTED",
-          entity: "Payment",
-          entityId: payment.id,
-          details: JSON.stringify({
-            rejectionReason: rejectionReason || null,
-          }),
-        },
+      const updatedPayment = await prisma.$transaction(async (tx) => {
+        const upd = await tx.payment.update({
+          where: { id },
+          data: {
+            status: "REJECTED",
+            reviewedAt: new Date(),
+            reviewedBy: user.id,
+            rejectionReason: rejectedReason,
+          },
+        });
+
+        await tx.auditLog.create({
+          data: {
+            userId: user.id,
+            action: "PAYMENT_REJECTED",
+            entity: "Payment",
+            entityId: payment.id,
+            details: JSON.stringify({
+              rejectionReason: rejectedReason,
+            }),
+          },
+        });
+
+        return upd;
       });
 
       return NextResponse.json({
         message: "Payment rejected.",
         payment: updatedPayment,
+        reviewer: { id: user.id, name: user.name },
       });
     }
 

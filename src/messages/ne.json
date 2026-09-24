@@ -730,10 +730,14 @@
     "title": "भुक्तानीहरू",
     "pendingPayments": "बाँकी भुक्तानीहरू",
     "allPayments": "सबै भुक्तानीहरू",
+    "all": "सबै",
     "user": "प्रयोगकर्ता",
     "amount": "रकम",
     "plan": "योजना",
     "status": "स्थिति",
+    "pending_verification": "प्रमाणिकरणको प्रतीक्षा",
+    "approved": "अनुमोदित",
+    "rejected": "अस्वीकृत",
     "date": "मिति",
     "actions": "कार्यहरू",
     "method": "विधि",
@@ -761,7 +765,12 @@
     "notes": "टिप्पणीहरू",
     "paymentProof": "भुक्तानी प्रमाणपत्र",
     "submitted": "पठाइएको",
-    "reviewed": "समीक्षा गरिएको"
+    "reviewed": "समीक्षा गरिएको",
+    "role": "भूमिका",
+    "noDescription": "कुनै विवरण छैन",
+    "months": "महिना",
+    "cancel": "रद्द गर्नुहोस्",
+    "total": "कुल"
   },
   "admin_plans": {
     "title": "योजनाहरू",

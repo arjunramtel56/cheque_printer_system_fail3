@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,7 @@ interface Payment {
   reviewedAt: string | null;
   reviewedBy: string | null;
   rejectionReason: string | null;
+  reviewer: { id: string; name: string; email: string } | null;
   plan: {
     name: string;
     description: string | null;
@@ -63,6 +64,7 @@ interface Payment {
 
 export default function SubscriptionPage() {
   const t = useTranslations("subscription");
+  const locale = useLocale();
   const { showToast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<"standard" | "business" | null>(null);
   const [selectedDuration, setSelectedDuration] = useState("1");
@@ -225,10 +227,10 @@ export default function SubscriptionPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">{t("title")}</h2>
-        <Link href="/en/dashboard/subscription/payments">
+        <Link href={`/${locale}/dashboard/subscription/payments`}>
           <Button variant="outline" size="sm">
             <FileText size={16} className="mr-2" />
-            View My Payments
+            {t("viewMyPayments")}
           </Button>
         </Link>
       </div>

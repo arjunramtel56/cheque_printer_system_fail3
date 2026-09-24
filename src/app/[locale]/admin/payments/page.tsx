@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +42,11 @@ interface Payment {
     role: string;
     status: string;
   };
+  reviewer: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
   plan: {
     name: string;
     description: string | null;
@@ -49,10 +56,10 @@ interface Payment {
 }
 
 const STATUS_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "PENDING_VERIFICATION", label: "Pending" },
-  { value: "APPROVED", label: "Approved" },
-  { value: "REJECTED", label: "Rejected" },
+  { value: "", labelKey: "all" },
+  { value: "PENDING_VERIFICATION", labelKey: "pending" },
+  { value: "APPROVED", labelKey: "approved" },
+  { value: "REJECTED", labelKey: "rejected" },
 ];
 
 const getStatusColor = (status: PaymentStatus) => {
@@ -69,6 +76,8 @@ const getStatusColor = (status: PaymentStatus) => {
 };
 
 export default function AdminPaymentsPage() {
+  const t = useTranslations("admin_payments");
+  const locale = useLocale();
   const { showToast } = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [total, setTotal] = useState(0);
@@ -81,6 +90,7 @@ export default function AdminPaymentsPage() {
 
   useEffect(() => {
     fetchPayments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterStatus]);
 
   async function fetchPayments() {
@@ -187,24 +197,33 @@ export default function AdminPaymentsPage() {
       )
     : payments;
 
+  const getHeaderTitle = () => {
+    if (filterStatus === "PENDING_VERIFICATION") return t("pendingPayments");
+    if (filterStatus === "APPROVED") return t("allPayments");
+    if (filterStatus === "REJECTED") return t("allPayments");
+    return t("allPayments");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Payments ({total} total)</h2>
+        <h2 className="text-2xl font-bold">
+          {t("title")} ({total} {t("total")})
+        </h2>
         <Button variant="outline" size="sm" onClick={fetchPayments}>
           <RefreshCw size={16} className="mr-2" />
-          Refresh
+          {t("refresh")}
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
+          <CardTitle>{t("filters")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <Label htmlFor="statusFilter">Status</Label>
+              <Label htmlFor="statusFilter">{t("status")}</Label>
               <select
                 id="statusFilter"
                 value={filterStatus}
@@ -213,13 +232,15 @@ export default function AdminPaymentsPage() {
               >
                 {STATUS_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {opt.value === "" ? t("all") : t(opt.labelKey)}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <Label htmlFor="search">Search</Label>
+              <Label htmlFor="search">
+                {t("search") !== t("searchPlaceholder") ? t("search") : t("search")}
+              </Label>
               <div className="relative mt-1">
                 <Search
                   size={16}
@@ -229,7 +250,7 @@ export default function AdminPaymentsPage() {
                   id="search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by user or reference..."
+                  placeholder={t("search")}
                   className="pl-10"
                 />
               </div>
@@ -237,7 +258,7 @@ export default function AdminPaymentsPage() {
             <div className="flex items-end">
               <Button variant="outline" size="sm" onClick={() => setSearchQuery("")}>
                 <Filter size={16} className="mr-2" />
-                Clear Search
+                {t("clearSearch")}
               </Button>
             </div>
           </div>
@@ -246,38 +267,30 @@ export default function AdminPaymentsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            {filterStatus === "PENDING_VERIFICATION"
-              ? "Pending Payments"
-              : filterStatus === "APPROVED"
-                ? "Approved Payments"
-                : filterStatus === "REJECTED"
-                  ? "Rejected Payments"
-                  : "All Payments"}
-          </CardTitle>
+          <CardTitle>{getHeaderTitle()}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground">Loading payments...</div>
+            <div className="p-8 text-center text-muted-foreground">{t("loading")}</div>
           ) : filteredPayments.length === 0 ? (
             <div className="py-12 text-center">
               <Eye className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">No payments found</h3>
-              <p className="mt-2 text-sm text-muted-foreground">No payments match your filters.</p>
+              <h3 className="mt-4 text-lg font-semibold">{t("noPayments")}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{t("noPaymentsDesc")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium">User</th>
-                    <th className="px-4 py-3 text-left font-medium">Plan</th>
-                    <th className="px-4 py-3 text-right font-medium">Amount</th>
-                    <th className="px-4 py-3 text-left font-medium">Method</th>
-                    <th className="px-4 py-3 text-center font-medium">Duration</th>
-                    <th className="px-4 py-3 text-center font-medium">Status</th>
-                    <th className="px-4 py-3 text-left font-medium">Date</th>
-                    <th className="px-4 py-3 text-center font-medium">Actions</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("user")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("plan")}</th>
+                    <th className="px-4 py-3 text-right font-medium">{t("amount")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("method")}</th>
+                    <th className="px-4 py-3 text-center font-medium">{t("duration")}</th>
+                    <th className="px-4 py-3 text-center font-medium">{t("status")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("date")}</th>
+                    <th className="px-4 py-3 text-center font-medium">{t("actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -294,12 +307,17 @@ export default function AdminPaymentsPage() {
                         {Number(payment.amount).toLocaleString()} {payment.currency}
                       </td>
                       <td className="px-4 py-3">{payment.paymentMethod}</td>
-                      <td className="px-4 py-3 text-center">{payment.durationMonths} mo</td>
+                      <td className="px-4 py-3 text-center">
+                        {payment.durationMonths} {t("months")}
+                      </td>
                       <td className="px-4 py-3 text-center">
                         <span
                           className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(payment.status)}`}
                         >
-                          {payment.status.replace("_", " ")}
+                          {t(
+                            payment.status.toLowerCase() as
+                              "pending_verification" | "approved" | "rejected"
+                          )}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
@@ -324,44 +342,48 @@ export default function AdminPaymentsPage() {
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Review Payment</DialogTitle>
+            <DialogTitle>{t("reviewPayment")}</DialogTitle>
           </DialogHeader>
 
           {selectedPayment && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>User</Label>
+                  <Label>{t("user")}</Label>
                   <p className="font-medium">{selectedPayment.user.name}</p>
                   <p className="text-sm text-muted-foreground">{selectedPayment.user.email}</p>
-                  <p className="text-xs text-muted-foreground">Role: {selectedPayment.user.role}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("role")}: {selectedPayment.user.role}
+                  </p>
                 </div>
                 <div>
-                  <Label>Plan</Label>
+                  <Label>{t("plan")}</Label>
                   <p className="font-medium">{selectedPayment.plan.name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {selectedPayment.plan.description || "No description"}
+                    {selectedPayment.plan.description || t("noDescription")}
                   </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Amount</Label>
+                  <Label>{t("amount")}</Label>
                   <p className="font-medium">
                     {Number(selectedPayment.amount).toLocaleString()} {selectedPayment.currency}
                   </p>
                 </div>
                 <div>
-                  <Label>Payment Method</Label>
+                  <Label>{t("method")}</Label>
                   <p className="font-medium">{selectedPayment.paymentMethod}</p>
                 </div>
                 <div>
-                  <Label>Duration</Label>
-                  <p className="font-medium">{selectedPayment.durationMonths} months</p>
+                  <Label>{t("duration")}</Label>
+                  <p className="font-medium">
+                    {selectedPayment.durationMonths} {t("months")}
+                  </p>
                 </div>
                 <div>
-                  <Label>Submitted</Label>
+                  <Label>{t("submitted")}</Label>
                   <p className="font-medium text-sm">
                     {new Date(selectedPayment.submittedAt).toLocaleString()}
                   </p>
@@ -370,25 +392,25 @@ export default function AdminPaymentsPage() {
 
               {selectedPayment.reference && (
                 <div>
-                  <Label>Reference / Details</Label>
+                  <Label>{t("reference")}</Label>
                   <p className="text-sm">{selectedPayment.reference}</p>
                 </div>
               )}
 
               {selectedPayment.notes && (
                 <div>
-                  <Label>Notes</Label>
+                  <Label>{t("notes")}</Label>
                   <p className="text-sm">{selectedPayment.notes}</p>
                 </div>
               )}
 
               {selectedPayment.proofUrl && (
                 <div>
-                  <Label>Payment Proof</Label>
+                  <Label>{t("paymentProof")}</Label>
                   <div className="mt-2">
                     <img
                       src={selectedPayment.proofUrl}
-                      alt="Payment proof"
+                      alt={t("paymentProof")}
                       className="max-w-full rounded-lg border"
                       style={{ maxHeight: "300px", objectFit: "contain" }}
                     />
@@ -396,14 +418,23 @@ export default function AdminPaymentsPage() {
                 </div>
               )}
 
+              {selectedPayment.reviewer && (
+                <div>
+                  <Label>{t("reviewed")}</Label>
+                  <p className="text-sm">
+                    {selectedPayment.reviewer.name} ({selectedPayment.reviewer.email})
+                  </p>
+                </div>
+              )}
+
               {selectedPayment.status === "PENDING_VERIFICATION" && (
                 <div>
-                  <Label htmlFor="rejectionReason">Rejection Reason (if rejecting)</Label>
+                  <Label htmlFor="rejectionReason">{t("rejectionReason")}</Label>
                   <textarea
                     id="rejectionReason"
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
-                    placeholder="Enter reason for rejection..."
+                    placeholder={t("enterReason")}
                     className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     rows={3}
                   />
@@ -413,18 +444,20 @@ export default function AdminPaymentsPage() {
           )}
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setReviewDialogOpen(false)}>
-              Cancel
-            </Button>
+            <Link href={`/${locale}/admin/payments`}>
+              <Button variant="outline" onClick={() => setReviewDialogOpen(false)}>
+                {t("cancel")}
+              </Button>
+            </Link>
             {selectedPayment?.status === "PENDING_VERIFICATION" && (
               <>
                 <Button variant="destructive" onClick={handleReject}>
                   <X size={16} className="mr-2" />
-                  Reject
+                  {t("reject")}
                 </Button>
                 <Button onClick={handleApprove}>
                   <Check size={16} className="mr-2" />
-                  Approve
+                  {t("approve")}
                 </Button>
               </>
             )}

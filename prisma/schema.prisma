@@ -73,6 +73,7 @@ model User {
    sessions       Session[]
    auditLogs      AuditLog[]
    payments       Payment[]
+   reviews        Payment[] @relation("PaymentReviewer")
 
   @@index([email])
   @@index([role])
@@ -144,8 +145,9 @@ model Payment {
   reviewedBy      String?
   rejectionReason String?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan Plan @relation(fields: [planId], references: [id])
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan     Plan @relation(fields: [planId], references: [id])
+  reviewer User? @relation("PaymentReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([planId])

@@ -1,31 +1,67 @@
-import { describe, it, beforeEach, afterEach, mock } from "node:test";
+import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import {
+  VALID_PAYMENT_STATUSES,
+  VALID_PAYMENT_METHODS,
+  canTransition,
+  computeSubscriptionDates,
+  isOwnPayment,
+  validatePaymentAmount,
+} from "../validations";
 
-const VALID_PAYMENT_STATUSES = ["PENDING_VERIFICATION", "APPROVED", "REJECTED"];
-const VALID_PAYMENT_METHODS = ["FONEPAY", "BANK_TRANSFER", "CASH", "OTHER"];
+const ADMIN_UPDATE_STATUSES = ["APPROVED", "REJECTED"];
 
-function validatePaymentInput(body: any): { valid: boolean; error?: string } {
+// Mirror of the server-side validation in src/app/api/payments/route.ts
+function validatePaymentInput(
+  body: any,
+  planPrice: number = 500
+): { valid: boolean; error?: string } {
   if (!body.plan) {
     return { valid: false, error: "Plan is required" };
   }
 
-  const duration = parseInt(body.duration || "1");
+  let duration: number;
+  if (body.duration === undefined || body.duration === null || body.duration === "") {
+    duration = 1;
+  } else {
+    duration = parseInt(body.duration);
+  }
   if (isNaN(duration) || duration < 1 || duration > 12) {
     return { valid: false, error: "Invalid duration" };
   }
 
+  // Server-side: amount from client must match plan price * duration
+  const expectedAmount = planPrice * (duration <= 1 ? 1 : duration);
   const amount = body.amount ? parseFloat(body.amount) : undefined;
-  if (amount !== undefined && (isNaN(amount) || amount <= 0)) {
-    return { valid: false, error: "Invalid amount" };
+  if (amount !== undefined) {
+    if (isNaN(amount) || amount <= 0) {
+      return { valid: false, error: "Invalid amount" };
+    }
+    if (!validatePaymentAmount(amount, planPrice, duration)) {
+      return { valid: false, error: "Amount does not match selected plan and duration" };
+    }
   }
 
-  const method = body.paymentMethod || "FONEPAY";
-  if (!VALID_PAYMENT_METHODS.includes(method)) {
+  const method = (body.paymentMethod || "FONEPAY").toUpperCase();
+  if (!VALID_PAYMENT_METHODS.includes(method as any)) {
     return { valid: false, error: "Invalid payment method" };
   }
 
-  if (!body.reference || !body.reference.trim()) {
+  if (!body.reference || !String(body.reference).trim()) {
     return { valid: false, error: "Transaction reference is required" };
+  }
+
+  if (String(body.reference).length > 200) {
+    return { valid: false, error: "Transaction reference too long" };
+  }
+
+  if (body.notes && String(body.notes).length > 1000) {
+    return { valid: false, error: "Notes too long" };
+  }
+
+  // proof is required for all manual payment methods
+  if (!body.proof) {
+    return { valid: false, error: "Payment proof is required" };
   }
 
   return { valid: true };
@@ -36,7 +72,7 @@ function validateAdminUpdate(body: any): { valid: boolean; error?: string } {
     return { valid: false, error: "Payment ID is required" };
   }
 
-  if (!body.status || !VALID_PAYMENT_STATUSES.includes(body.status)) {
+  if (!body.status || !ADMIN_UPDATE_STATUSES.includes(body.status)) {
     return { valid: false, error: "Invalid status. Must be APPROVED or REJECTED" };
   }
 
@@ -47,72 +83,102 @@ function validateAdminUpdate(body: any): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-function isOwnPayment(paymentUserId: string, adminUserId: string): boolean {
-  return paymentUserId === adminUserId;
-}
-
-function canTransition(oldStatus: string, newStatus: string): boolean {
-  if (oldStatus === newStatus) return false;
-  if (oldStatus === "PENDING_VERIFICATION")
-    return newStatus === "APPROVED" || newStatus === "REJECTED";
-  return false;
-}
-
-function computeSubscriptionDates(durationMonths: number, from = new Date()) {
-  const startDate = new Date(from);
-  const endDate = new Date(startDate);
-  endDate.setMonth(endDate.getMonth() + durationMonths);
-  return { startDate, endDate };
-}
-
 describe("Payment validation logic", () => {
   describe("validatePaymentInput", () => {
-    it("accepts a valid FONEPAY payment", () => {
+    it("accepts a valid FONEPAY payment with correct amount", () => {
       const result = validatePaymentInput({
         plan: "standard",
-        duration: "3",
-        amount: "99",
+        duration: "1",
+        amount: "500",
         currency: "NPR",
         paymentMethod: "FONEPAY",
         reference: "TXN-12345",
+        proof: true,
+      });
+      assert.equal(result.valid, true);
+    });
+
+    it("accepts a valid FONEPAY payment with 3-month duration", () => {
+      const result = validatePaymentInput({
+        plan: "standard",
+        duration: "3",
+        amount: "500",
+        currency: "NPR",
+        paymentMethod: "FONEPAY",
+        reference: "TXN-12345",
+        proof: true,
       });
       assert.equal(result.valid, true);
     });
 
     it("rejects missing plan", () => {
-      const result = validatePaymentInput({ duration: "1" });
+      const result = validatePaymentInput({ duration: "1", reference: "TXN-1", proof: true });
       assert.equal(result.valid, false);
       assert.equal(result.error, "Plan is required");
     });
 
     it("rejects duration less than 1", () => {
-      const result = validatePaymentInput({ plan: "standard", duration: 0 });
+      const result = validatePaymentInput({
+        plan: "standard",
+        duration: 0,
+        reference: "TXN-1",
+        proof: true,
+      });
       assert.equal(result.valid, false);
       assert.equal(result.error, "Invalid duration");
     });
 
     it("rejects duration greater than 12", () => {
-      const result = validatePaymentInput({ plan: "standard", duration: 13 });
+      const result = validatePaymentInput({
+        plan: "standard",
+        duration: 13,
+        reference: "TXN-1",
+        proof: true,
+      });
       assert.equal(result.valid, false);
       assert.equal(result.error, "Invalid duration");
     });
 
     it("rejects negative amount", () => {
-      const result = validatePaymentInput({ plan: "standard", amount: "-5" });
+      const result = validatePaymentInput({
+        plan: "standard",
+        amount: "-5",
+        reference: "TXN-1",
+        proof: true,
+      });
       assert.equal(result.valid, false);
       assert.equal(result.error, "Invalid amount");
     });
 
     it("rejects zero amount", () => {
-      const result = validatePaymentInput({ plan: "standard", amount: "0" });
+      const result = validatePaymentInput({
+        plan: "standard",
+        amount: "0",
+        reference: "TXN-1",
+        proof: true,
+      });
       assert.equal(result.valid, false);
       assert.equal(result.error, "Invalid amount");
+    });
+
+    it("rejects amount that does not match plan price", () => {
+      const result = validatePaymentInput({
+        plan: "standard",
+        duration: "1",
+        amount: "99",
+        reference: "TXN-1",
+        proof: true,
+      });
+      assert.equal(result.valid, false);
+      assert.equal(result.error, "Amount does not match selected plan and duration");
     });
 
     it("rejects invalid payment method", () => {
       const result = validatePaymentInput({
         plan: "standard",
         paymentMethod: "BITCOIN",
+        reference: "TXN-12345",
+        proof: true,
       });
       assert.equal(result.valid, false);
       assert.equal(result.error, "Invalid payment method");
@@ -124,19 +190,81 @@ describe("Payment validation logic", () => {
           plan: "standard",
           paymentMethod: method,
           reference: "TXN-1",
+          proof: true,
+          amount: "500",
         });
         assert.equal(result.valid, true, `Method ${method} should be valid`);
       }
     });
 
     it("rejects empty reference", () => {
-      const result = validatePaymentInput({ plan: "standard", reference: "" });
+      const result = validatePaymentInput({
+        plan: "standard",
+        reference: "",
+        proof: true,
+      });
+      assert.equal(result.valid, false);
+      assert.equal(result.error, "Transaction reference is required");
+    });
+
+    it("rejects whitespace-only reference", () => {
+      const result = validatePaymentInput({
+        plan: "standard",
+        reference: "   ",
+        proof: true,
+      });
       assert.equal(result.valid, false);
       assert.equal(result.error, "Transaction reference is required");
     });
 
     it("defaults to FONEPAY when no method given", () => {
-      const result = validatePaymentInput({ plan: "standard", reference: "TXN-1" });
+      const result = validatePaymentInput({
+        plan: "standard",
+        reference: "TXN-1",
+        proof: true,
+      });
+      assert.equal(result.valid, true);
+    });
+
+    it("rejects missing proof (payment proof required)", () => {
+      const result = validatePaymentInput({
+        plan: "standard",
+        reference: "TXN-1",
+        proof: false,
+      });
+      assert.equal(result.valid, false);
+      assert.equal(result.error, "Payment proof is required");
+    });
+
+    it("rejects reference longer than 200 characters", () => {
+      const result = validatePaymentInput({
+        plan: "standard",
+        reference: "X".repeat(201),
+        proof: true,
+      });
+      assert.equal(result.valid, false);
+      assert.equal(result.error, "Transaction reference too long");
+    });
+
+    it("rejects notes longer than 1000 characters", () => {
+      const result = validatePaymentInput({
+        plan: "standard",
+        reference: "TXN-1",
+        notes: "X".repeat(1001),
+        proof: true,
+      });
+      assert.equal(result.valid, false);
+      assert.equal(result.error, "Notes too long");
+    });
+
+    it("accepts payment method with lowercase input (case-insensitive)", () => {
+      const result = validatePaymentInput({
+        plan: "standard",
+        paymentMethod: "fonepay",
+        reference: "TXN-1",
+        proof: true,
+        amount: "3000",
+      });
       assert.equal(result.valid, true);
     });
   });
@@ -249,6 +377,20 @@ describe("Payment validation logic", () => {
       const after = Date.now();
       assert.ok(startDate.getTime() >= before);
       assert.ok(startDate.getTime() <= after);
+    });
+  });
+
+  describe("Payment status lifecycle", () => {
+    it("PENDING_VERIFICATION is the initial status", () => {
+      assert.ok(VALID_PAYMENT_STATUSES.includes("PENDING_VERIFICATION"));
+    });
+
+    it("APPROVED is a valid final status", () => {
+      assert.ok(VALID_PAYMENT_STATUSES.includes("APPROVED"));
+    });
+
+    it("REJECTED is a valid final status", () => {
+      assert.ok(VALID_PAYMENT_STATUSES.includes("REJECTED"));
     });
   });
 });

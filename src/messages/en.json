@@ -725,10 +725,14 @@
     "title": "Payments",
     "pendingPayments": "Pending Payments",
     "allPayments": "All Payments",
+    "all": "All",
     "user": "User",
     "amount": "Amount",
     "plan": "Plan",
     "status": "Status",
+    "pending_verification": "Pending Verification",
+    "approved": "Approved",
+    "rejected": "Rejected",
     "date": "Date",
     "actions": "Actions",
     "method": "Method",
@@ -756,7 +760,12 @@
     "notes": "Notes",
     "paymentProof": "Payment Proof",
     "submitted": "Submitted",
-    "reviewed": "Reviewed"
+    "reviewed": "Reviewed",
+    "role": "Role",
+    "noDescription": "No description",
+    "months": "month(s)",
+    "cancel": "Cancel",
+    "total": "total"
   },
   "admin_plans": {
     "title": "Plans",

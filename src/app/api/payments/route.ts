@@ -7,6 +7,7 @@ import { getAuthenticatedUser } from "@/lib/api-helpers";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
 import { randomUUID } from "crypto";
+import { VALID_PAYMENT_METHODS, validatePaymentAmount } from "@/modules/payments/validations";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"];
@@ -41,6 +42,7 @@ export async function GET(request: NextRequest) {
       include: {
         plan: true,
         user: { select: { id: true, name: true, email: true, role: true } },
+        reviewer: { select: { id: true, name: true, email: true } },
       },
       orderBy: { submittedAt: "desc" },
       take: limit,
@@ -67,9 +69,9 @@ export async function POST(request: NextRequest) {
     const planName = formData.get("plan") as string;
     const durationStr = formData.get("duration") as string;
     const paymentMethod = formData.get("paymentMethod") as string;
-    const reference = formData.get("reference") as string;
-    const notes = formData.get("notes") as string;
-    const amountStr = formData.get("amount") as string;
+    const reference = (formData.get("reference") as string) || "";
+    const notes = (formData.get("notes") as string) || "";
+    const amountStr = (formData.get("amount") as string) || "";
     const currency = formData.get("currency") as string;
     const proofFile = formData.get("proof") as File | null;
 
@@ -82,27 +84,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid duration" }, { status: 400 });
     }
 
-    // Resolve plan
-    const plan = await prisma.plan.findUnique({ where: { name: planName } });
+    // Resolve plan (must be an active plan)
+    const plan = await prisma.plan.findFirst({
+      where: { name: planName, isActive: true },
+    });
     if (!plan) {
-      return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+      return NextResponse.json({ error: "Plan not found or inactive" }, { status: 404 });
     }
 
-    // Calculate amount. If client provides a custom amount, validate it.
+    // Validate payment method
+    const rawMethod = (paymentMethod || "FONEPAY").toUpperCase();
+    if (!VALID_PAYMENT_METHODS.includes(rawMethod as any)) {
+      return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
+    }
+    const paymentMethodEnum: "FONEPAY" | "BANK_TRANSFER" | "CASH" | "OTHER" = rawMethod as any;
+
+    // Validate reference is provided and non-empty
+    if (!reference.trim()) {
+      return NextResponse.json({ error: "Transaction reference is required" }, { status: 400 });
+    }
+
+    if (reference.length > 200) {
+      return NextResponse.json({ error: "Transaction reference too long" }, { status: 400 });
+    }
+
+    // Validate notes length if provided
+    if (notes.length > 1000) {
+      return NextResponse.json({ error: "Notes too long" }, { status: 400 });
+    }
+
+    // Calculate amount. If client provides a custom amount, validate it against plan price.
+    const expectedAmount = Number(plan.price) * (duration <= 1 ? 1 : duration);
     let amount: number;
     if (amountStr) {
       amount = parseFloat(amountStr);
       if (isNaN(amount) || amount <= 0) {
         return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
       }
+      // Amount from client must match the expected amount for the plan/duration
+      if (!validatePaymentAmount(amount, Number(plan.price), duration)) {
+        return NextResponse.json(
+          { error: "Amount does not match selected plan and duration" },
+          { status: 400 }
+        );
+      }
     } else {
-      amount = Number(plan.price) * (duration <= 1 ? 1 : duration);
-    }
-
-    const paymentMethodEnum = (paymentMethod as any) || "FONEPAY";
-    const validMethods = ["FONEPAY", "BANK_TRANSFER", "CASH", "OTHER"];
-    if (!validMethods.includes(paymentMethodEnum)) {
-      return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
+      amount = expectedAmount;
     }
 
     let proofUrl: string | null = null;
@@ -132,6 +159,9 @@ export async function POST(request: NextRequest) {
       writeFileSync(filepath, buffer);
 
       proofUrl = `/uploads/payments/${filename}`;
+    } else {
+      // Payment proof is required for all manual payment methods
+      return NextResponse.json({ error: "Payment proof is required" }, { status: 400 });
     }
 
     const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
@@ -139,35 +169,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const payment = await prisma.payment.create({
-      data: {
-        userId: user.id,
-        planId: plan.id,
-        amount: amount,
-        currency: currency || plan.currency || "NPR",
-        paymentMethod: paymentMethodEnum,
-        durationMonths: duration,
-        proofUrl: proofUrl,
-        reference: reference || null,
-        notes: notes || null,
-        status: "PENDING_VERIFICATION",
-      },
-    });
-
-    await prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: "PAYMENT_SUBMITTED",
-        entity: "Payment",
-        entityId: payment.id,
-        details: JSON.stringify({
+    const payment = await prisma.$transaction(async (tx) => {
+      const created = await tx.payment.create({
+        data: {
+          userId: user.id,
           planId: plan.id,
           amount: amount,
-          durationMonths: duration,
+          currency: currency || plan.currency || "NPR",
           paymentMethod: paymentMethodEnum,
-          hasProof: !!proofUrl,
-        }),
-      },
+          durationMonths: duration,
+          proofUrl: proofUrl,
+          reference: reference.trim() || null,
+          notes: notes.trim() || null,
+          status: "PENDING_VERIFICATION",
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: "PAYMENT_SUBMITTED",
+          entity: "Payment",
+          entityId: created.id,
+          details: JSON.stringify({
+            planId: plan.id,
+            amount: amount,
+            durationMonths: duration,
+            paymentMethod: paymentMethodEnum,
+            hasProof: !!proofUrl,
+          }),
+        },
+      });
+
+      return created;
     });
 
     return NextResponse.json(payment, { status: 201 });

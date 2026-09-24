@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Check, X, FileText, AlertCircle } from "lucide-react";
@@ -25,6 +25,11 @@ interface Payment {
   reviewedAt: string | null;
   reviewedBy: string | null;
   rejectionReason: string | null;
+  reviewer: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
   plan: {
     name: string;
     description: string | null;
@@ -59,6 +64,7 @@ const statusInfo: Record<
 
 export default function UserPaymentsPage() {
   const t = useTranslations("paymentStatus");
+  const locale = useLocale();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -92,9 +98,9 @@ export default function UserPaymentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">{t("title")}</h2>
-        <Link href="/en/dashboard/subscription">
+        <Link href={`/${locale}/dashboard/subscription`}>
           <Button variant="outline" size="sm">
-            Back to Subscription
+            {t("backToSubscription")}
           </Button>
         </Link>
       </div>
@@ -206,6 +212,7 @@ export default function UserPaymentsPage() {
                       {payment.reviewedAt && (
                         <p className="text-xs text-muted-foreground mt-1">
                           Reviewed on {new Date(payment.reviewedAt).toLocaleString()}
+                          {payment.reviewer && ` by ${payment.reviewer.name}`}
                         </p>
                       )}
                     </div>
