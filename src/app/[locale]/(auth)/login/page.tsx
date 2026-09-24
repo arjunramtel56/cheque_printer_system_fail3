@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { siteConfig } from "@/lib/config";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,7 +32,9 @@ export default function LoginPage() {
       ? "Your account has been suspended."
       : errorParam === "account_expired"
         ? "Your account has expired."
-        : ""
+        : errorParam === "OAuthAccountNotLinked"
+          ? "OAuth account not linked."
+          : ""
   );
   const [loading, setLoading] = useState(false);
 
@@ -69,6 +72,13 @@ export default function LoginPage() {
       </div>
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-4">
+            <img
+              src={siteConfig.logo}
+              alt={siteConfig.company}
+              className="logo-image h-10 w-auto"
+            />
+          </div>
           <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
           <CardDescription>Sign in to your Cheque Printer account</CardDescription>
         </CardHeader>

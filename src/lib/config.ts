@@ -2,11 +2,13 @@ export const siteConfig = {
   name: "Reactify Cheque Printer System",
   description: "Prepare and print Nepalese bank cheques with precise alignment.",
   url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  logo: "/logos/reactify-logo.svg",
   company: "Reactify Software Technologies Pvt. Ltd.",
   contact: {
-    phone: "+977-1-XXXXXXX",
-    email: "info@reactifysoftwaretechnologies.com.np",
+    phone: "+977-9743836026",
+    email: "support@reactifysoftwaretechnologies.com.np",
     address: "Kathmandu, Nepal",
+    website: "https://www.reactifysoftwaretechnologies.com.np/",
   },
   navItems: [
     { label: "Home", href: "/" },

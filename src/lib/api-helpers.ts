@@ -17,6 +17,7 @@ export async function getAuthenticatedUser(request: NextRequest) {
     name: token.name as string,
     role: token.role as string,
     status: token.status as string,
+    trialExpired: (token.trialExpired as boolean) ?? false,
   };
 }
 

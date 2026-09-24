@@ -3,8 +3,7 @@ export const runtime = "nodejs";
 
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { amountToWords } from "@/lib/amount-to-words";
 import { CHEQUE_AGENT_PROMPT } from "@/lib/ai/prompts";
@@ -36,7 +35,7 @@ function isRateLimited(userId: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user) {
     return new Response("Unauthorized", { status: 401 });
   }
@@ -59,7 +58,7 @@ export async function POST(req: NextRequest) {
         error: "Your account is inactive. Please contact support.",
         requiresUpgrade: true,
       }),
-      { status: 403, headers: { "Content-Type": "application/json" } },
+      { status: 403, headers: { "Content-Type": "application/json" } }
     );
   }
 
@@ -155,10 +154,7 @@ export async function POST(req: NextRequest) {
             where: { userId },
           });
 
-          if (
-            subscription.plan.chequeLimit > 0 &&
-            printCount >= subscription.plan.chequeLimit
-          ) {
+          if (subscription.plan.chequeLimit > 0 && printCount >= subscription.plan.chequeLimit) {
             return {
               error: `You have reached your plan limit of ${subscription.plan.chequeLimit} prints. Please upgrade your subscription.`,
               requiresUpgrade: true,
@@ -250,7 +246,7 @@ export async function POST(req: NextRequest) {
               rotation: z.number().optional(),
               color: z.string().default("#000000"),
               format: z.string().optional(),
-            }),
+            })
           ),
         }),
         execute: async ({ bankId, name, chequeWidth, chequeHeight, isDefault, fields }) => {

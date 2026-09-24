@@ -9,7 +9,7 @@ const posts = [
     titleKey: "post1Title",
     descKey: "post1Desc",
     date: "Sep 22, 2026",
-    author: "RCPS Team",
+    author: "Reactify Team",
     categoryKey: "category1",
     categoryColor: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
   },
@@ -17,7 +17,7 @@ const posts = [
     titleKey: "post2Title",
     descKey: "post2Desc",
     date: "Sep 20, 2026",
-    author: "RCPS Team",
+    author: "Reactify Team",
     categoryKey: "category2",
     categoryColor: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
   },
@@ -25,7 +25,7 @@ const posts = [
     titleKey: "post3Title",
     descKey: "post3Desc",
     date: "Sep 15, 2026",
-    author: "RCPS Team",
+    author: "Reactify Team",
     categoryKey: "category3",
     categoryColor: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
   },
@@ -69,7 +69,7 @@ export default function BlogPage() {
                 </div>
                 <div className="flex items-center gap-1">
                   <User className="h-4 w-4" />
-                  RCPS Team
+                  Reactify Team
                 </div>
               </div>
             </CardContent>

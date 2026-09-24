@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { siteConfig } from "@/lib/config";
 
 export default function PricingPage() {
   const t = useTranslations("home");
   const locale = useLocale();
+  const pricing = siteConfig.pricing;
 
   return (
     <div className="flex flex-col">
@@ -28,24 +30,18 @@ export default function PricingPage() {
             {/* Trial Plan */}
             <Card className="border-0 shadow-sm">
               <CardContent className="pt-6">
-                <h3 className="text-xl font-bold">{t("trial")}</h3>
+                <h3 className="text-xl font-bold">{pricing.trial.label}</h3>
                 <div className="mt-2">
-                  <span className="text-3xl font-bold">{t("trialPrice")}</span>
-                  <span className="text-muted-foreground">{t("trialDuration")}</span>
+                  <span className="text-3xl font-bold">{pricing.trial.price}</span>
+                  <span className="text-muted-foreground">{pricing.trial.duration}</span>
                 </div>
                 <ul className="mt-6 space-y-3">
-                  <li className="flex items-center gap-2 text-sm">
-                    <span className="text-primary">&#10003;</span>
-                    {t("trialF1")}
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <span className="text-primary">&#10003;</span>
-                    {t("trialF2")}
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <span className="text-primary">&#10003;</span>
-                    {t("trialF3")}
-                  </li>
+                  {pricing.trial.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-center gap-2 text-sm">
+                      <span className="text-primary">&#10003;</span>
+                      {feature}
+                    </li>
+                  ))}
                 </ul>
                 <Link href={`/${locale}/register`} className="mt-6 block">
                   <Button variant="outline" className="w-full">
@@ -61,46 +57,38 @@ export default function PricingPage() {
                 {t("popular")}
               </div>
               <CardContent className="pt-6">
-                <h3 className="text-xl font-bold">{t("standard")}</h3>
+                <h3 className="text-xl font-bold">{pricing.standard.label}</h3>
                 <div className="mt-2">
-                  <p className="text-sm text-muted-foreground">{t("standardDurationFirstMonth")}</p>
-                  <span className="text-3xl font-bold">{t("standardPriceFirstMonth")}</span>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Introductory offer - first month only
+                  </p>
+                  <span className="text-3xl font-bold">{pricing.standard.firstMonth}</span>
                 </div>
                 <table className="w-full text-sm mt-4">
                   <tbody>
                     <tr>
-                      <td className="py-2 text-muted-foreground">{t("standardDuration3Months")}</td>
-                      <td className="py-2 text-right font-medium">{t("standardPrice3Months")}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 text-muted-foreground">{t("standardDuration6Months")}</td>
-                      <td className="py-2 text-right font-medium">{t("standardPrice6Months")}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 text-muted-foreground">
-                        {t("standardDuration12Months")}
+                      <td className="py-2 text-muted-foreground">3 Months</td>
+                      <td className="py-2 text-right font-medium">
+                        {pricing.standard.threeMonths}
                       </td>
-                      <td className="py-2 text-right font-medium">{t("standardPrice12Months")}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 text-muted-foreground">6 Months</td>
+                      <td className="py-2 text-right font-medium">{pricing.standard.sixMonths}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 text-muted-foreground">12 Months</td>
+                      <td className="py-2 text-right font-medium">{pricing.standard.annual}</td>
                     </tr>
                   </tbody>
                 </table>
                 <ul className="mt-6 space-y-3">
-                  <li className="flex items-center gap-2 text-sm">
-                    <span className="text-primary">&#10003;</span>
-                    {t("standardF1")}
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <span className="text-primary">&#10003;</span>
-                    {t("standardF2")}
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <span className="text-primary">&#10003;</span>
-                    {t("standardF3")}
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <span className="text-primary">&#10003;</span>
-                    {t("standardF4")}
-                  </li>
+                  {pricing.standard.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-center gap-2 text-sm">
+                      <span className="text-primary">&#10003;</span>
+                      {feature}
+                    </li>
+                  ))}
                 </ul>
                 <Link href={`/${locale}/register`} className="mt-6 block">
                   <Button className="w-full">{t("getStarted")}</Button>
@@ -114,50 +102,38 @@ export default function PricingPage() {
                 BEST VALUE
               </div>
               <CardContent className="pt-6">
-                <h3 className="text-xl font-bold">{t("business")}</h3>
+                <h3 className="text-xl font-bold">{pricing.business.label}</h3>
                 <div className="mt-2">
-                  <p className="text-sm text-muted-foreground">{t("businessDurationFirstMonth")}</p>
-                  <span className="text-3xl font-bold">{t("businessPriceFirstMonth")}</span>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Introductory offer - first month only
+                  </p>
+                  <span className="text-3xl font-bold">{pricing.business.firstMonth}</span>
                 </div>
                 <table className="w-full text-sm mt-4">
                   <tbody>
                     <tr>
-                      <td className="py-2 text-muted-foreground">{t("businessDuration3Months")}</td>
-                      <td className="py-2 text-right font-medium">{t("businessPrice3Months")}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 text-muted-foreground">{t("businessDuration6Months")}</td>
-                      <td className="py-2 text-right font-medium">{t("businessPrice6Months")}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 text-muted-foreground">
-                        {t("businessDuration12Months")}
+                      <td className="py-2 text-muted-foreground">3 Months</td>
+                      <td className="py-2 text-right font-medium">
+                        {pricing.business.threeMonths}
                       </td>
-                      <td className="py-2 text-right font-medium">{t("businessPrice12Months")}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 text-muted-foreground">6 Months</td>
+                      <td className="py-2 text-right font-medium">{pricing.business.sixMonths}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 text-muted-foreground">12 Months</td>
+                      <td className="py-2 text-right font-medium">{pricing.business.annual}</td>
                     </tr>
                   </tbody>
                 </table>
                 <ul className="mt-6 space-y-3">
-                  <li className="flex items-center gap-2 text-sm">
-                    <span className="text-primary">&#10003;</span>
-                    {t("businessF1")}
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <span className="text-primary">&#10003;</span>
-                    {t("businessF2")}
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <span className="text-primary">&#10003;</span>
-                    {t("businessF3")}
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <span className="text-primary">&#10003;</span>
-                    {t("businessF4")}
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <span className="text-primary">&#10003;</span>
-                    {t("businessF5")}
-                  </li>
+                  {pricing.business.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-center gap-2 text-sm">
+                      <span className="text-primary">&#10003;</span>
+                      {feature}
+                    </li>
+                  ))}
                 </ul>
                 <Link href={`/${locale}/register`} className="mt-6 block">
                   <Button

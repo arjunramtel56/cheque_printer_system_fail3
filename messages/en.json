@@ -385,7 +385,7 @@
     "saveChanges": "Save Changes",
     "personalInfo": "Personal Information",
     "companyName": "Your company name",
-    "phonePlaceholder": "+977 98XXXXXXXX"
+    "phonePlaceholder": "+977 9743836026"
   },
   "settings": {
     "title": "Settings",
@@ -471,7 +471,7 @@
     "addFirstPayee": "Add Your First Payee",
     "namePlaceholder": "e.g. Ram Bahadur",
     "accountPlaceholder": "Account number",
-    "phonePlaceholder": "+977-XXXXXXXXXX",
+    "phonePlaceholder": "+977-9743836026",
     "emailPlaceholder": "name@example.com",
     "addressPlaceholder": "Full address",
     "chequeLimitPlaceholder": "e.g. 100000",

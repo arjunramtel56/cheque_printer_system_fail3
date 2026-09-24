@@ -92,7 +92,7 @@
     "businessF5": "Custom templates",
     "getStarted": "Get Started",
     "ctaTitle": "Ready to Get Started?",
-    "ctaDescription": "Join businesses across Nepal who trust RCPS for their cheque printing needs.",
+    "ctaDescription": "Join businesses across Nepal who trust Reactify Cheque Printer System for their cheque printing needs.",
     "quickAccess": "Quick Access",
     "quickAccessDesc": "Choose your panel to get started.",
     "userLogin": "User Login",
@@ -190,8 +190,8 @@
     "title": "About Reactify Cheque Printer System",
     "description": "We are dedicated to simplifying cheque printing for Nepalese businesses.",
     "storyTitle": "Our Story",
-    "storyP1": "Reactify Cheque Printer System was born from a simple observation: Nepalese businesses spend too much time and effort on cheque printing. Traditional methods are often inaccurate, time-consuming, and frustrating.",
-    "storyP2": "We set out to create a solution that would make cheque printing as simple as filling out a form. With pre-configured templates for all major Nepalese banks and precise alignment technology, we've helped hundreds of businesses streamline their payment processes.",
+    "storyP1": "Reactify Software Technologies crafts efficient software solutions that scale. We noticed Nepalese businesses spend too much time and effort on cheque printing, so we set out to create a solution that would make cheque printing as simple as filling out a form.",
+    "storyP2": "With pre-configured templates for all major Nepalese banks and precise alignment technology, we've helped hundreds of businesses streamline their payment processes.",
     "valuesTitle": "Our Values",
     "mission": "Our Mission",
     "missionDesc": "To simplify cheque printing for every Nepalese business, making financial transactions faster and more accurate.",
@@ -206,7 +206,7 @@
   },
   "features": {
     "title": "Features",
-    "description": "Discover all the features that make RCPS the best choice for cheque printing.",
+    "description": "Discover all the features that make Reactify Cheque Printer System the best choice for cheque printing.",
     "preciseAlignment": "Precise Print Alignment",
     "preciseAlignmentDesc": "Our templates are carefully calibrated to ensure your cheque details print exactly where they should, eliminating misalignment issues.",
     "multipleBanks": "Multiple Bank Templates",
@@ -224,7 +224,7 @@
     "multiUser": "Multi-User Support",
     "multiUserDesc": "Allow multiple team members to access and print cheques with role-based permissions.",
     "ctaTitle": "Ready to Get Started?",
-    "ctaDescription": "Start your free trial today and experience the ease of RCPS."
+    "ctaDescription": "Start your free trial today and experience the ease of Reactify Cheque Printer System."
   },
   "pricing": {
     "title": "Pricing",
@@ -232,7 +232,7 @@
   },
   "faq": {
     "title": "Frequently Asked Questions",
-    "description": "Find answers to common questions about RCPS.",
+    "description": "Find answers to common questions about Reactify Cheque Printer System.",
     "q1": "What banks are supported?",
     "a1": "We support all major Nepalese banks including Nabil Bank, Global IME Bank, Siddhartha Bank, NIC Asia, Prabhu Bank, and many more. We're constantly adding new bank templates.",
     "q2": "How accurate is the cheque printing?",
@@ -244,7 +244,7 @@
     "q5": "Is my data secure?",
     "a5": "Absolutely. We use industry-standard encryption to protect your data. Your cheque information is stored securely and is never shared with third parties.",
     "q6": "How do I get support?",
-    "a6": "We offer email support for all plans, with priority support for Business plan users. You can reach us at support@reactify.com.np."
+    "a6": "We offer email support for all plans, with priority support for Business plan users. You can reach us at support@reactifysoftwaretechnologies.com.np."
   },
   "contact": {
     "title": "Contact Us",
@@ -252,6 +252,7 @@
     "email": "Email Us",
     "phone": "Call Us",
     "address": "Visit Us",
+    "website": "Website",
     "formTitle": "Send us a Message",
     "formName": "Your Name",
     "formNamePlaceholder": "Ram Bahadur",
@@ -265,7 +266,7 @@
   },
   "blog": {
     "title": "Blog",
-    "description": "Latest news and updates from RCPS.",
+    "description": "Latest news and updates from Reactify Cheque Printer System.",
     "category1": "Product Update",
     "category2": "Banking Tips",
     "category3": "Banking Tips",
@@ -274,7 +275,7 @@
     "post2Title": "How to Maintain Cheque Book Accuracy",
     "post2Desc": "Handwriting errors on cheques are one of the leading causes of bank rejections. Here are 5 tips to ensure your cheques are always accepted.",
     "post3Title": "Supported Banks: Complete List for 2024",
-    "post3Desc": "See the full list of Nepalese banks supported by RCPS and what each template offers.",
+    "post3Desc": "See the full list of Nepalese banks supported by Reactify Cheque Printer System and what each template offers.",
     "allArticles": "All Articles"
   },
   "cheque": {
@@ -374,7 +375,9 @@
     "selectPlanUnlock": "Select a free trial to unlock payment options.",
     "submitting": "Submitting...",
     "firstMonth": "First Month",
-    "bestValue": "BEST VALUE"
+    "bestValue": "BEST VALUE",
+    "introductoryOffer": "Introductory offer - first month only",
+    "regularPricing": "Regular pricing:"
   },
   "profile": {
     "title": "Profile Settings",
@@ -385,7 +388,7 @@
     "saveChanges": "Save Changes",
     "personalInfo": "Personal Information",
     "companyName": "Your company name",
-    "phonePlaceholder": "+977 98XXXXXXXX"
+    "phonePlaceholder": "+977 9743836026"
   },
   "settings": {
     "title": "Settings",
@@ -471,7 +474,7 @@
     "addFirstPayee": "Add Your First Payee",
     "namePlaceholder": "e.g. Ram Bahadur",
     "accountPlaceholder": "Account number",
-    "phonePlaceholder": "+977-XXXXXXXXXX",
+    "phonePlaceholder": "+977-9743836026",
     "emailPlaceholder": "name@example.com",
     "addressPlaceholder": "Full address",
     "chequeLimitPlaceholder": "e.g. 100000",

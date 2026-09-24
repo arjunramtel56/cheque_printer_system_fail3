@@ -2,7 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin, Globe } from "lucide-react";
+import { siteConfig } from "@/lib/config";
 
 type IconData = {
   icon: React.ElementType;
@@ -15,18 +16,24 @@ const contactInfo: IconData[] = [
   {
     icon: Mail,
     titleKey: "email",
-    value: "info@reactifysoftwaretechnologies.com.np",
+    value: siteConfig.contact.email,
   },
   {
     icon: Phone,
     titleKey: "phone",
-    value: "+977-1-XXXXXXX",
+    value: siteConfig.contact.phone,
   },
   {
     icon: MapPin,
     titleKey: "address",
-    value: "Kathmandu, Nepal",
-    extra: "Reactify Software Technologies Pvt. Ltd.",
+    value: siteConfig.contact.address,
+    extra: siteConfig.company,
+  },
+  {
+    icon: Globe,
+    titleKey: "website",
+    value: siteConfig.contact.website,
+    extra: "Official Website",
   },
 ];
 

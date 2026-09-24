@@ -40,9 +40,14 @@ export default async function DashboardPage() {
       const daysLeft = Math.ceil(
         (new Date(subscription.endDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000)
       );
+      const printsUsed = await prisma.printHistory.count({
+        where: { userId: user?.id },
+      });
+      const limit = subscription.plan.chequeLimit > 0 ? subscription.plan.chequeLimit : 0;
+      const printsLeft = limit > 0 ? Math.max(0, limit - printsUsed) : 0;
       trialInfo = {
         daysLeft: daysLeft > 0 ? daysLeft : 0,
-        printsLeft: Math.max(0, 10 - (chequeCount || 0)),
+        printsLeft,
         isTrial: true,
       };
     }

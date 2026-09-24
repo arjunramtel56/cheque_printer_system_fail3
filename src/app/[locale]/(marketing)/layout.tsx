@@ -15,7 +15,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
           <Link href={`/${locale}`} className="flex items-center space-x-2">
-            <span className="text-xl font-bold text-primary">RCPS</span>
+            <img src={siteConfig.logo} alt={siteConfig.company} className="logo-image h-8 w-auto" />
             <span className="hidden text-sm font-medium sm:inline-block">{siteConfig.name}</span>
           </Link>
           <div className="flex items-center gap-2">
@@ -52,10 +52,19 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <main className="flex-1">{children}</main>
       <footer className="border-t bg-card">
         <div className="mx-auto max-w-7xl px-4 py-8">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div>
-              <p className="text-sm font-medium">{siteConfig.name}</p>
-              <p className="text-xs text-muted-foreground">{siteConfig.company}</p>
+          <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
+            <div className="flex flex-col items-center gap-2 md:items-start">
+              <img
+                src={siteConfig.logo}
+                alt={siteConfig.company}
+                className="logo-image h-8 w-auto"
+              />
+              <div className="text-center md:text-left">
+                <p className="text-sm font-medium">{siteConfig.name}</p>
+                <p className="text-xs text-muted-foreground">{siteConfig.company}</p>
+                <p className="text-xs text-muted-foreground">{siteConfig.contact.phone}</p>
+                <p className="text-xs text-muted-foreground">{siteConfig.contact.email}</p>
+              </div>
             </div>
             <p className="text-xs text-muted-foreground">
               &copy; {new Date().getFullYear()} {siteConfig.company}. All rights reserved.

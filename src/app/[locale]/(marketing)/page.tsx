@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Printer, FileText, Shield, Clock, CreditCard, User, LayoutDashboard } from "lucide-react";
+import { siteConfig } from "@/lib/config";
 
 const features = [
   {
@@ -54,40 +55,6 @@ const steps = [
     step: "4",
     titleKey: "print",
     descKey: "printDesc",
-  },
-];
-
-const plans = [
-  {
-    nameKey: "trial",
-    priceKey: "trialPrice",
-    durationKey: "trialDuration",
-    featuresKeys: ["trialF1", "trialF2", "trialF3"],
-  },
-  {
-    nameKey: "standard",
-    priceFirstMonthKey: "standardPriceFirstMonth",
-    durationFirstMonthKey: "standardDurationFirstMonth",
-    price3MonthsKey: "standardPrice3Months",
-    duration3MonthsKey: "standardDuration3Months",
-    price6MonthsKey: "standardPrice6Months",
-    duration6MonthsKey: "standardDuration6Months",
-    price12MonthsKey: "standardPrice12Months",
-    duration12MonthsKey: "standardDuration12Months",
-    featuresKeys: ["standardF1", "standardF2", "standardF3", "standardF4"],
-    popular: true,
-  },
-  {
-    nameKey: "business",
-    priceFirstMonthKey: "businessPriceFirstMonth",
-    durationFirstMonthKey: "businessDurationFirstMonth",
-    price3MonthsKey: "businessPrice3Months",
-    duration3MonthsKey: "businessDuration3Months",
-    price6MonthsKey: "businessPrice6Months",
-    duration6MonthsKey: "businessDuration6Months",
-    price12MonthsKey: "businessPrice12Months",
-    duration12MonthsKey: "businessDuration12Months",
-    featuresKeys: ["businessF1", "businessF2", "businessF3", "businessF4", "businessF5"],
   },
 ];
 
@@ -212,75 +179,139 @@ export default function HomePage() {
             {t("pricingSubtitle")}
           </p>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {plans.map((plan) => (
-              <Card
-                key={plan.nameKey}
-                className={`relative ${plan.popular ? "border-primary shadow-md" : ""}`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
-                    {t("popular")}
-                  </div>
-                )}
-                <CardContent className="pt-6">
-                  <h3 className="text-xl font-bold">{t(plan.nameKey)}</h3>
-                  {plan.priceKey ? (
-                    <div className="mt-2">
-                      <span className="text-3xl font-bold">{t(plan.priceKey)}</span>
-                      <span className="text-muted-foreground">{t(plan.durationKey)}</span>
-                    </div>
-                  ) : (
-                    <div className="mt-2">
-                      <p className="text-sm text-muted-foreground">
-                        {t(plan.durationFirstMonthKey!)}
-                      </p>
-                      <span className="text-3xl font-bold">{t(plan.priceFirstMonthKey!)}</span>
-                      <table className="w-full text-sm mt-4">
-                        <tbody>
-                          <tr>
-                            <td className="py-1 text-muted-foreground">
-                              {t(plan.duration3MonthsKey!)}
-                            </td>
-                            <td className="py-1 text-right font-medium">
-                              {t(plan.price3MonthsKey!)}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="py-1 text-muted-foreground">
-                              {t(plan.duration6MonthsKey!)}
-                            </td>
-                            <td className="py-1 text-right font-medium">
-                              {t(plan.price6MonthsKey!)}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="py-1 text-muted-foreground">
-                              {t(plan.duration12MonthsKey!)}
-                            </td>
-                            <td className="py-1 text-right font-medium">
-                              {t(plan.price12MonthsKey!)}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                  <ul className="mt-6 space-y-3">
-                    {plan.featuresKeys.map((featureKey) => (
-                      <li key={featureKey} className="flex items-center gap-2 text-sm">
-                        <span className="text-primary">&#10003;</span>
-                        {t(featureKey)}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link href={`/${locale}/register`} className="mt-6 block">
-                    <Button variant={plan.popular ? "default" : "outline"} className="w-full">
-                      {t("getStarted")}
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
+            {/* Trial Plan */}
+            <Card className="border-0 shadow-sm">
+              <CardContent className="pt-6">
+                <h3 className="text-xl font-bold">{siteConfig.pricing.trial.label}</h3>
+                <div className="mt-2">
+                  <span className="text-3xl font-bold">{siteConfig.pricing.trial.price}</span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    {siteConfig.pricing.trial.duration}
+                  </span>
+                </div>
+                <ul className="mt-6 space-y-3">
+                  {siteConfig.pricing.trial.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-center gap-2 text-sm">
+                      <span className="text-primary">&#10003;</span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Link href={`/${locale}/register`} className="mt-6 block">
+                  <Button variant="outline" className="w-full">
+                    {t("getStarted")}
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Standard Plan */}
+            <Card className="relative border-primary shadow-md">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
+                {t("popular")}
+              </div>
+              <CardContent className="pt-6">
+                <h3 className="text-xl font-bold">{siteConfig.pricing.standard.label}</h3>
+                <div className="mt-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Introductory offer - first month only
+                  </p>
+                  <span className="text-3xl font-bold">
+                    {siteConfig.pricing.standard.firstMonth}
+                  </span>
+                </div>
+                <table className="w-full text-sm mt-4">
+                  <tbody>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">3 Months</td>
+                      <td className="py-1 text-right font-medium">
+                        {siteConfig.pricing.standard.threeMonths}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">6 Months</td>
+                      <td className="py-1 text-right font-medium">
+                        {siteConfig.pricing.standard.sixMonths}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">12 Months</td>
+                      <td className="py-1 text-right font-medium">
+                        {siteConfig.pricing.standard.annual}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <ul className="mt-6 space-y-3">
+                  {siteConfig.pricing.standard.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-center gap-2 text-sm">
+                      <span className="text-primary">&#10003;</span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Link href={`/${locale}/register`} className="mt-6 block">
+                  <Button className="w-full">{t("getStarted")}</Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Business Plan */}
+            <Card className="relative border-2 border-yellow-400">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold">
+                BEST VALUE
+              </div>
+              <CardContent className="pt-6">
+                <h3 className="text-xl font-bold">{siteConfig.pricing.business.label}</h3>
+                <div className="mt-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Introductory offer - first month only
+                  </p>
+                  <span className="text-3xl font-bold">
+                    {siteConfig.pricing.business.firstMonth}
+                  </span>
+                </div>
+                <table className="w-full text-sm mt-4">
+                  <tbody>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">3 Months</td>
+                      <td className="py-1 text-right font-medium">
+                        {siteConfig.pricing.business.threeMonths}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">6 Months</td>
+                      <td className="py-1 text-right font-medium">
+                        {siteConfig.pricing.business.sixMonths}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-muted-foreground">12 Months</td>
+                      <td className="py-1 text-right font-medium">
+                        {siteConfig.pricing.business.annual}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <ul className="mt-6 space-y-3">
+                  {siteConfig.pricing.business.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-center gap-2 text-sm">
+                      <span className="text-primary">&#10003;</span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Link href={`/${locale}/register`} className="mt-6 block">
+                  <Button
+                    variant="outline"
+                    className="w-full border-yellow-600 text-yellow-600 hover:bg-yellow-50"
+                  >
+                    {t("getStarted")}
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>

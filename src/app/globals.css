@@ -29,6 +29,11 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+  .logo-image {
+    max-width: 200px;
+    height: auto;
+    width: auto;
+  }
 }
 
 :root.dark {

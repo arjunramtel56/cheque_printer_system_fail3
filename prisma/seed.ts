@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -81,10 +80,39 @@ async function main() {
         isDefault: true,
         fields: {
           create: [
-            { field: "name", x: 25, y: 15, fontSize: 11, fontFamily: "Arial", fontWeight: "normal" },
-            { field: "date", x: 140, y: 10, fontSize: 10, fontFamily: "Arial", fontWeight: "normal" },
-            { field: "amountWords", x: 25, y: 40, width: 150, fontSize: 10, fontFamily: "Arial", fontWeight: "normal" },
-            { field: "amountNumber", x: 145, y: 55, fontSize: 12, fontFamily: "Arial", fontWeight: "bold" },
+            {
+              field: "name",
+              x: 25,
+              y: 15,
+              fontSize: 11,
+              fontFamily: "Arial",
+              fontWeight: "normal",
+            },
+            {
+              field: "date",
+              x: 140,
+              y: 10,
+              fontSize: 10,
+              fontFamily: "Arial",
+              fontWeight: "normal",
+            },
+            {
+              field: "amountWords",
+              x: 25,
+              y: 40,
+              width: 150,
+              fontSize: 10,
+              fontFamily: "Arial",
+              fontWeight: "normal",
+            },
+            {
+              field: "amountNumber",
+              x: 145,
+              y: 55,
+              fontSize: 12,
+              fontFamily: "Arial",
+              fontWeight: "bold",
+            },
           ],
         },
       },
@@ -93,51 +121,16 @@ async function main() {
 
   console.log("Banks and templates created");
 
-  // Create admin user
-  const adminPassword = await bcrypt.hash("admin123", 12);
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@reactify.com" },
-    update: {},
-    create: {
-      name: "Admin",
-      email: "admin@reactify.com",
-      passwordHash: adminPassword,
-      role: "SUPER_ADMIN",
-      status: "ACTIVE",
-    },
-  });
+  // System settings are now managed via admin panel
+  // Admin account is bootstrapped via /api/admin/bootstrap endpoint using ADMIN_BOOTSTRAP_SECRET
 
-  // Create trial user
-  const userPassword = await bcrypt.hash("user123", 12);
-  const trialUser = await prisma.user.upsert({
-    where: { email: "user@reactify.com" },
-    update: {},
-    create: {
-      name: "Demo User",
-      email: "user@reactify.com",
-      passwordHash: userPassword,
-      role: "TRIAL_USER",
-      status: "ACTIVE",
-      subscription: {
-        create: {
-          planId: trialPlan.id,
-          startDate: new Date(),
-          endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-          isActive: true,
-        },
-      },
-      settings: {
-        create: {},
-      },
-    },
-  });
-
-  console.log("Users created:", { admin, trialUser });
-
-  // Create system settings
   const settings = [
     { key: "app.name", value: "Reactify Cheque Printer System", description: "Application name" },
-    { key: "app.company", value: "Reactify Software Technologies Pvt. Ltd.", description: "Company name" },
+    {
+      key: "app.company",
+      value: "Reactify Software Technologies Pvt. Ltd.",
+      description: "Company name",
+    },
     { key: "trial.durationDays", value: 14, description: "Default trial duration in days" },
     { key: "trial.chequeLimit", value: 10, description: "Default trial cheque limit" },
   ];

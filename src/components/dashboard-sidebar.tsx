@@ -57,7 +57,9 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
       )}
     >
       <div className="flex h-14 items-center justify-between border-b px-4">
-        {!collapsed && <span className="text-lg font-bold text-primary">RCPS</span>}
+        {!collapsed && (
+          <img src={siteConfig.logo} alt={siteConfig.company} className="logo-image h-8 w-auto" />
+        )}
         <button onClick={() => setCollapsed(!collapsed)} className="rounded-md p-1 hover:bg-accent">
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>

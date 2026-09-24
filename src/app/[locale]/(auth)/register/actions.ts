@@ -2,15 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { z } from "zod";
-
-const registerSchema = z.object({
-  fullName: z.string().min(2),
-  email: z.string().email(),
-  company: z.string().optional(),
-  phone: z.string().optional(),
-  password: z.string().min(6),
-});
+import { registerSchema } from "@/lib/validations";
 
 export async function registerUser(prevState: any, formData: FormData) {
   try {
@@ -21,14 +13,14 @@ export async function registerUser(prevState: any, formData: FormData) {
       return { error: validated.error.errors[0].message };
     }
 
-    const { fullName, email, company, phone, password } = validated.data;
+    const { name: fullName, email, company, phone, password } = validated.data;
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return { error: "Email already registered." };
+      return { error: "Email already registered. Try logging in." };
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     const trialExpires = new Date();
     trialExpires.setDate(trialExpires.getDate() + 14);
@@ -74,9 +66,12 @@ export async function registerUser(prevState: any, formData: FormData) {
       },
     });
 
-    return { success: true };
-  } catch (error) {
+    return { success: true, message: "Account created! Please log in." };
+  } catch (error: any) {
     console.error("[REGISTER_ERROR]", error);
-    return { error: "Internal server error. Please check server logs." };
+    if (error.code === "P2002") {
+      return { error: "Email already registered. Try logging in." };
+    }
+    return { error: "An unexpected error occurred. Please try again." };
   }
 }

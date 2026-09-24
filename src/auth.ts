@@ -22,12 +22,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!user) return null;
         if (user.status === "SUSPENDED" || user.status === "EXPIRED") return null;
 
-        const isValid = await bcrypt.compare(
-          credentials.password as string,
-          user.passwordHash
-        );
+        const isValid = await bcrypt.compare(credentials.password as string, user.passwordHash);
 
         if (!isValid) return null;
+
+        // Check trial expiry for TRIAL_USER role
+        let trialExpired = false;
+        if (user.role === "TRIAL_USER" && user.trialExpires) {
+          if (new Date(user.trialExpires) < new Date()) {
+            trialExpired = true;
+          }
+        }
 
         return {
           id: user.id,
@@ -35,6 +40,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           role: user.role,
           status: user.status,
+          trialExpired,
         };
       },
     }),
@@ -49,6 +55,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = (user as any).role;
         token.status = (user as any).status;
         token.id = user.id;
+        token.trialExpired = (user as any).trialExpired ?? false;
       }
       return token;
     },
@@ -57,6 +64,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         (session.user as any).role = token.role;
         (session.user as any).status = token.status;
         (session.user as any).id = token.id;
+        (session.user as any).trialExpired = token.trialExpired ?? false;
       }
       return session;
     },

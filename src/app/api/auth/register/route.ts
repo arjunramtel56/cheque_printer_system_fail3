@@ -8,7 +8,18 @@ import { registerSchema } from "@/lib/validations";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const result = registerSchema.safeParse(body);
+
+    // Normalize: accept either name or fullName from the client
+    const normalized = {
+      name: body.name || body.fullName || "",
+      email: body.email,
+      password: body.password,
+      confirmPassword: body.confirmPassword || body.password,
+      company: body.company,
+      phone: body.phone,
+    };
+
+    const result = registerSchema.safeParse(normalized);
 
     if (!result.success) {
       return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
@@ -72,10 +83,13 @@ export async function POST(request: Request) {
       { message: "Account created successfully", userId: user.id },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("[REGISTER_ERROR]", error);
+    if (error.code === "P2002") {
+      return NextResponse.json({ error: "Email already registered" }, { status: 409 });
+    }
     return NextResponse.json(
-      { error: "Internal server error. Please check server logs." },
+      { error: "Internal server error. Please try again." },
       { status: 500 }
     );
   }

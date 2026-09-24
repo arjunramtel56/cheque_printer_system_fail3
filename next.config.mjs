@@ -7,6 +7,7 @@ const nextConfig = {
   transpilePackages: [],
   webpack: (config, { isServer }) => {
     if (!isServer) {
+      config.resolve = config.resolve || {};
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
