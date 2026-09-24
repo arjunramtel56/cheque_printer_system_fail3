@@ -102,7 +102,7 @@ describe("Payment validation logic", () => {
       const result = validatePaymentInput({
         plan: "standard",
         duration: "3",
-        amount: "500",
+        amount: "1500",
         currency: "NPR",
         paymentMethod: "FONEPAY",
         reference: "TXN-12345",
@@ -263,7 +263,7 @@ describe("Payment validation logic", () => {
         paymentMethod: "fonepay",
         reference: "TXN-1",
         proof: true,
-        amount: "3000",
+        amount: "500",
       });
       assert.equal(result.valid, true);
     });
