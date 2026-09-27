@@ -19,7 +19,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <span className="hidden text-sm font-medium sm:inline-block">{siteConfig.name}</span>
           </Link>
           <div className="flex items-center gap-2">
-            <nav className="flex items-center gap-1">
+            {/* Desktop nav links — hidden on mobile to prevent overflow */}
+            <nav className="hidden items-center gap-1 md:flex">
               {siteConfig.navItems.map((item) => (
                 <Link
                   key={item.href}
@@ -30,18 +31,20 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 </Link>
               ))}
             </nav>
-            <div className="ml-2 flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <ThemeToggle />
-              <LanguageSwitcher />
+              <span className="hidden sm:inline-flex">
+                <LanguageSwitcher />
+              </span>
               <Link
                 href={`/${locale}/login`}
-                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent"
+                className="hidden rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent sm:inline-block"
               >
                 {tNav("login")}
               </Link>
               <Link
                 href={`/${locale}/register`}
-                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 sm:px-4 sm:py-2"
               >
                 {tNav("register")}
               </Link>
