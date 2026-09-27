@@ -4,58 +4,52 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Printer, FileText, Shield, Clock, CreditCard, User, LayoutDashboard } from "lucide-react";
+import {
+  Printer,
+  FileText,
+  Shield,
+  Clock,
+  CreditCard,
+  Zap,
+  Eye,
+  LayoutTemplate,
+  Building2,
+  Ruler,
+  Lock,
+  UserPlus,
+  LogIn,
+  Phone,
+  Mail,
+  MapPin,
+  CheckCircle2,
+} from "lucide-react";
 import { siteConfig } from "@/lib/config";
 
+const benefits = [
+  { icon: Zap, titleKey: "benefit1Title", descKey: "benefit1Desc" },
+  { icon: LayoutTemplate, titleKey: "benefit2Title", descKey: "benefit2Desc" },
+  { icon: Eye, titleKey: "benefit3Title", descKey: "benefit3Desc" },
+  { icon: Ruler, titleKey: "benefit4Title", descKey: "benefit4Desc" },
+  { icon: Building2, titleKey: "benefit5Title", descKey: "benefit5Desc" },
+  { icon: Lock, titleKey: "benefit6Title", descKey: "benefit6Desc" },
+];
+
 const features = [
-  {
-    icon: Printer,
-    titleKey: "preciseAlignment",
-    descKey: "preciseAlignmentDesc",
-  },
-  {
-    icon: FileText,
-    titleKey: "multipleBanks",
-    descKey: "multipleBanksDesc",
-  },
-  {
-    icon: Shield,
-    titleKey: "secure",
-    descKey: "secureDesc",
-  },
-  {
-    icon: Clock,
-    titleKey: "history",
-    descKey: "historyDesc",
-  },
-  {
-    icon: CreditCard,
-    titleKey: "amountInWords",
-    descKey: "amountInWordsDesc",
-  },
+  { icon: Printer, titleKey: "preciseAlignment", descKey: "preciseAlignmentDesc" },
+  { icon: FileText, titleKey: "multipleBanks", descKey: "multipleBanksDesc" },
+  { icon: Shield, titleKey: "secure", descKey: "secureDesc" },
+  { icon: Clock, titleKey: "history", descKey: "historyDesc" },
+  { icon: CreditCard, titleKey: "amountInWords", descKey: "amountInWordsDesc" },
 ];
 
 const steps = [
-  {
-    step: "1",
-    titleKey: "createAccount",
-    descKey: "createAccountDesc",
-  },
-  {
-    step: "2",
-    titleKey: "selectBank",
-    descKey: "selectBankDesc",
-  },
-  {
-    step: "3",
-    titleKey: "fillDetails",
-    descKey: "fillDetailsDesc",
-  },
-  {
-    step: "4",
-    titleKey: "print",
-    descKey: "printDesc",
-  },
+  { step: "1", titleKey: "createAccount", descKey: "createAccountDesc" },
+  { step: "2", titleKey: "stepLogin", descKey: "stepLoginDesc" },
+  { step: "3", titleKey: "selectBank", descKey: "selectBankDesc" },
+  { step: "4", titleKey: "fillDetails", descKey: "fillDetailsDesc" },
+  { step: "5", titleKey: "stepPreview", descKey: "stepPreviewDesc" },
+  { step: "6", titleKey: "stepCalibrate", descKey: "stepCalibrateDesc" },
+  { step: "7", titleKey: "print", descKey: "printDesc" },
 ];
 
 export default function HomePage() {
@@ -65,76 +59,103 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 to-background py-20 md:py-32">
+      {/* 1. Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 to-background py-20 md:py-28">
         <div className="mx-auto max-w-7xl px-4 text-center">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+          <p className="text-sm font-semibold uppercase tracking-widest text-primary">
+            {siteConfig.company}
+          </p>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
             {t("heroTitle")}
             <span className="text-primary"> {t("heroTitleHighlight")}</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
             {t("heroDescription")}
           </p>
-          <div className="mt-8 flex items-center justify-center gap-4">
+          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link href={`/${locale}/register`}>
-              <Button size="lg" className="text-base">
-                {t("startTrial")}
-              </Button>
-            </Link>
-            <Link href={`/${locale}/features`}>
-              <Button variant="outline" size="lg" className="text-base">
-                {t("learnMore")}
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Quick Access Panel */}
-      <section className="py-12 bg-card">
-        <div className="mx-auto max-w-7xl px-4">
-          <h2 className="text-center text-3xl font-bold">{t("quickAccess")}</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">
-            {t("quickAccessDesc")}
-          </p>
-          <div className="mt-10 flex flex-wrap justify-center gap-4">
-            <Link href={`/${locale}/register`}>
-              <Button size="lg" className="text-base">
-                <svg
-                  className="mr-2 h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-7h-7z"
-                  />
-                </svg>
+              <Button size="lg" className="w-full text-base sm:w-auto">
+                <Zap className="mr-2 h-5 w-5" />
                 {t("startTrial")}
               </Button>
             </Link>
             <Link href={`/${locale}/login`}>
-              <Button variant="outline" size="lg" className="text-base">
-                <User className="mr-2 h-5 w-5" />
+              <Button variant="outline" size="lg" className="w-full text-base sm:w-auto">
+                <LogIn className="mr-2 h-5 w-5" />
                 {t("userLogin")}
               </Button>
             </Link>
-            <Link href={`/${locale}/login`}>
-              <Button variant="secondary" size="lg" className="text-base">
-                <LayoutDashboard className="mr-2 h-5 w-5" />
-                {t("adminPortal")}
-              </Button>
-            </Link>
           </div>
         </div>
       </section>
 
-      {/* Features */}
+      {/* 2. Product Introduction */}
       <section className="py-20">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-bold">{t("introTitle")}</h2>
+            <p className="mt-6 text-lg text-muted-foreground">{t("introBody")}</p>
+          </div>
+          <div className="mt-12 grid gap-6 md:grid-cols-2">
+            <Card className="border-0 shadow-sm">
+              <CardContent className="pt-6">
+                <UserPlus className="h-8 w-8 text-primary" />
+                <h3 className="mt-4 text-lg font-semibold">{t("introWhoTitle")}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{t("introWhoBody")}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-0 shadow-sm">
+              <CardContent className="pt-6">
+                <CheckCircle2 className="h-8 w-8 text-primary" />
+                <h3 className="mt-4 text-lg font-semibold">{t("introSolveTitle")}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{t("introSolveBody")}</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Key Benefits */}
+      <section id="benefits" className="bg-card py-20">
+        <div className="mx-auto max-w-7xl px-4">
+          <h2 className="text-center text-3xl font-bold">{t("benefitsTitle")}</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">
+            {t("benefitsSubtitle")}
+          </p>
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {benefits.map((benefit) => (
+              <Card key={benefit.titleKey} className="border-0 shadow-sm">
+                <CardContent className="pt-6">
+                  <benefit.icon className="h-8 w-8 text-primary" />
+                  <h3 className="mt-4 text-lg font-semibold">{t(benefit.titleKey)}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{t(benefit.descKey)}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 4. How It Works */}
+      <section id="how-it-works" className="py-20">
+        <div className="mx-auto max-w-7xl px-4">
+          <h2 className="text-center text-3xl font-bold">{t("howItWorksTitle")}</h2>
+          <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {steps.map((step) => (
+              <div key={step.step} className="text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
+                  {step.step}
+                </div>
+                <h3 className="mt-4 text-lg font-semibold">{t(step.titleKey)}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{t(step.descKey)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 5. Features */}
+      <section id="features" className="bg-card py-20">
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="text-center text-3xl font-bold">{t("featuresTitle")}</h2>
           <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">
@@ -154,26 +175,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="bg-card py-20">
-        <div className="mx-auto max-w-7xl px-4">
-          <h2 className="text-center text-3xl font-bold">{t("howItWorksTitle")}</h2>
-          <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {steps.map((step) => (
-              <div key={step.step} className="text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground text-lg font-bold">
-                  {step.step}
-                </div>
-                <h3 className="mt-4 text-lg font-semibold">{t(step.titleKey)}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{t(step.descKey)}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section className="py-20">
+      {/* 6. Pricing */}
+      <section id="pricing" className="py-20">
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="text-center text-3xl font-bold">{t("pricingTitle")}</h2>
           <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">
@@ -183,19 +186,16 @@ export default function HomePage() {
             {/* Trial Plan */}
             <Card className="border-0 shadow-sm">
               <CardContent className="pt-6">
-                <h3 className="text-xl font-bold">{siteConfig.pricing.trial.label}</h3>
+                <h3 className="text-xl font-bold">{t("trial")}</h3>
                 <div className="mt-2">
-                  <span className="text-3xl font-bold">{siteConfig.pricing.trial.price}</span>
-                  <span className="text-muted-foreground">
-                    {" "}
-                    {siteConfig.pricing.trial.duration}
-                  </span>
+                  <span className="text-3xl font-bold">{t("trialPrice")}</span>
+                  <span className="text-muted-foreground"> {t("trialDuration")}</span>
                 </div>
                 <ul className="mt-6 space-y-3">
-                  {siteConfig.pricing.trial.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-center gap-2 text-sm">
+                  {["trialF1", "trialF2", "trialF3"].map((key) => (
+                    <li key={key} className="flex items-center gap-2 text-sm">
                       <span className="text-primary">&#10003;</span>
-                      {feature}
+                      {t(key)}
                     </li>
                   ))}
                 </ul>
@@ -213,45 +213,39 @@ export default function HomePage() {
                 {t("popular")}
               </div>
               <CardContent className="pt-6">
-                <h3 className="text-xl font-bold">{siteConfig.pricing.standard.label}</h3>
+                <h3 className="text-xl font-bold">{t("standard")}</h3>
                 <div className="mt-2">
                   <p className="text-xs font-medium text-muted-foreground">
                     {tp("introductoryOffer")}
                   </p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold">
-                      {siteConfig.pricing.standard.firstMonth}
+                    <span className="text-3xl font-bold">{t("standardPriceFirstMonth")}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {t("standardDurationFirstMonth")}
                     </span>
-                    <span className="text-sm text-muted-foreground">{tp("firstMonth")}</span>
                   </div>
                 </div>
-                <table className="w-full text-sm mt-4">
+                <table className="mt-4 w-full text-sm">
                   <tbody>
                     <tr>
                       <td className="py-1 text-muted-foreground">{tp("duration3Months")}</td>
-                      <td className="py-1 text-right font-medium">
-                        {siteConfig.pricing.standard.threeMonths}
-                      </td>
+                      <td className="py-1 text-right font-medium">{t("standardPrice3Months")}</td>
                     </tr>
                     <tr>
                       <td className="py-1 text-muted-foreground">{tp("duration6Months")}</td>
-                      <td className="py-1 text-right font-medium">
-                        {siteConfig.pricing.standard.sixMonths}
-                      </td>
+                      <td className="py-1 text-right font-medium">{t("standardPrice6Months")}</td>
                     </tr>
                     <tr>
                       <td className="py-1 text-muted-foreground">{tp("duration12Months")}</td>
-                      <td className="py-1 text-right font-medium">
-                        {siteConfig.pricing.standard.annual}
-                      </td>
+                      <td className="py-1 text-right font-medium">{t("standardPrice12Months")}</td>
                     </tr>
                   </tbody>
                 </table>
                 <ul className="mt-6 space-y-3">
-                  {siteConfig.pricing.standard.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-center gap-2 text-sm">
+                  {["standardF1", "standardF2", "standardF3", "standardF4"].map((key) => (
+                    <li key={key} className="flex items-center gap-2 text-sm">
                       <span className="text-primary">&#10003;</span>
-                      {feature}
+                      {t(key)}
                     </li>
                   ))}
                 </ul>
@@ -267,47 +261,43 @@ export default function HomePage() {
                 {tp("bestValue")}
               </div>
               <CardContent className="pt-6">
-                <h3 className="text-xl font-bold">{siteConfig.pricing.business.label}</h3>
+                <h3 className="text-xl font-bold">{t("business")}</h3>
                 <div className="mt-2">
                   <p className="text-xs font-medium text-muted-foreground">
                     {tp("introductoryOffer")}
                   </p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold">
-                      {siteConfig.pricing.business.firstMonth}
+                    <span className="text-3xl font-bold">{t("businessPriceFirstMonth")}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {t("businessDurationFirstMonth")}
                     </span>
-                    <span className="text-sm text-muted-foreground">{tp("firstMonth")}</span>
                   </div>
                 </div>
-                <table className="w-full text-sm mt-4">
+                <table className="mt-4 w-full text-sm">
                   <tbody>
                     <tr>
                       <td className="py-1 text-muted-foreground">{tp("duration3Months")}</td>
-                      <td className="py-1 text-right font-medium">
-                        {siteConfig.pricing.business.threeMonths}
-                      </td>
+                      <td className="py-1 text-right font-medium">{t("businessPrice3Months")}</td>
                     </tr>
                     <tr>
                       <td className="py-1 text-muted-foreground">{tp("duration6Months")}</td>
-                      <td className="py-1 text-right font-medium">
-                        {siteConfig.pricing.business.sixMonths}
-                      </td>
+                      <td className="py-1 text-right font-medium">{t("businessPrice6Months")}</td>
                     </tr>
                     <tr>
                       <td className="py-1 text-muted-foreground">{tp("duration12Months")}</td>
-                      <td className="py-1 text-right font-medium">
-                        {siteConfig.pricing.business.annual}
-                      </td>
+                      <td className="py-1 text-right font-medium">{t("businessPrice12Months")}</td>
                     </tr>
                   </tbody>
                 </table>
                 <ul className="mt-6 space-y-3">
-                  {siteConfig.pricing.business.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-center gap-2 text-sm">
-                      <span className="text-primary">&#10003;</span>
-                      {feature}
-                    </li>
-                  ))}
+                  {["businessF1", "businessF2", "businessF3", "businessF4", "businessF5"].map(
+                    (key) => (
+                      <li key={key} className="flex items-center gap-2 text-sm">
+                        <span className="text-primary">&#10003;</span>
+                        {t(key)}
+                      </li>
+                    )
+                  )}
                 </ul>
                 <Link href={`/${locale}/register`} className="mt-6 block">
                   <Button
@@ -323,16 +313,59 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA */}
+      {/* 7. Trial / Register CTA */}
       <section className="bg-primary py-20 text-primary-foreground">
         <div className="mx-auto max-w-4xl px-4 text-center">
           <h2 className="text-3xl font-bold">{t("ctaTitle")}</h2>
           <p className="mt-4 text-lg opacity-90">{t("ctaDescription")}</p>
-          <Link href={`/${locale}/register`}>
-            <Button size="lg" variant="secondary" className="mt-8 text-base">
-              {t("startTrial")}
-            </Button>
-          </Link>
+          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Link href={`/${locale}/register`}>
+              <Button size="lg" variant="secondary" className="w-full text-base sm:w-auto">
+                <UserPlus className="mr-2 h-5 w-5" />
+                {t("startTrial")}
+              </Button>
+            </Link>
+            <Link href={`/${locale}/login`}>
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full border-primary-foreground/40 bg-transparent text-base text-primary-foreground hover:bg-primary-foreground/10 sm:w-auto"
+              >
+                {t("ctaLogin")}
+              </Button>
+            </Link>
+          </div>
+          <p className="mt-6 text-sm opacity-80">{t("ctaTrialNote")}</p>
+        </div>
+      </section>
+
+      {/* 8. Contact */}
+      <section id="contact" className="py-20">
+        <div className="mx-auto max-w-7xl px-4">
+          <h2 className="text-center text-3xl font-bold">{t("contactTitle")}</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">
+            {t("contactSubtitle")}
+          </p>
+          <div className="mx-auto mt-12 grid max-w-4xl gap-6 sm:grid-cols-3">
+            <div className="flex flex-col items-center gap-2 text-center">
+              <Phone className="h-6 w-6 text-primary" />
+              <p className="text-sm font-medium">{siteConfig.contact.phone}</p>
+              <p className="text-xs text-muted-foreground">{siteConfig.contact.phoneHours}</p>
+            </div>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <Mail className="h-6 w-6 text-primary" />
+              <p className="break-all text-sm font-medium">{siteConfig.contact.email}</p>
+            </div>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <MapPin className="h-6 w-6 text-primary" />
+              <p className="text-sm font-medium">{siteConfig.contact.address}</p>
+            </div>
+          </div>
+          <div className="mt-10 text-center">
+            <Link href={`/${locale}/contact`}>
+              <Button variant="outline">{t("contactPageLink")}</Button>
+            </Link>
+          </div>
         </div>
       </section>
     </div>

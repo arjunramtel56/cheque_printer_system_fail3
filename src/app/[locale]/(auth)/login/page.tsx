@@ -17,14 +17,15 @@ import {
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { siteConfig } from "@/lib/config";
 import { Link, useRouter as useI18nRouter } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
+  const locale = useLocale();
   const router = useRouter();
   const i18nRouter = useI18nRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/en/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") || `/${locale}/dashboard`;
   const errorParam = searchParams.get("error");
 
   const [email, setEmail] = useState("");
@@ -42,12 +43,24 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError("");
+
+    // Client-side validation (server remains the source of truth).
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      setError(t("fillAllFields"));
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
+      setError(t("invalidEmail"));
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const result = await signIn("credentials", {
-        email,
+        email: trimmedEmail,
         password,
         redirect: false,
       });
@@ -58,7 +71,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push(callbackUrl);
+      i18nRouter.push(callbackUrl);
       router.refresh();
     } catch {
       setError(t("somethingWentWrong"));
@@ -83,7 +96,7 @@ export default function LoginPage() {
           <CardTitle className="text-2xl font-bold">{t("welcomeBack")}</CardTitle>
           <CardDescription>{t("signInToAccount")}</CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <CardContent className="space-y-4">
             {error && (
               <div
@@ -91,13 +104,16 @@ export default function LoginPage() {
                 className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
               >
                 {error}
+                <span className="sr-only">{t("invalidCredentials")}</span>
               </div>
             )}
             <div className="space-y-2">
               <Label htmlFor="email">{t("email")}</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -108,17 +124,14 @@ export default function LoginPage() {
               <Label htmlFor="password">{t("password")}</Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
+                autoComplete="current-password"
                 placeholder="••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-            </div>
-            <div className="flex items-center justify-between">
-              <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                {t("forgotPasswordQuestion")}
-              </Link>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
