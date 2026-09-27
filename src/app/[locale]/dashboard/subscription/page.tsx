@@ -123,7 +123,7 @@ export default function SubscriptionPage() {
     const p = PLAN_PRICING[plan];
     const amount =
       selectedDuration === "1" ? p.introPrice : p.monthlyPrice * Number(selectedDuration);
-    return;
+    return `NPR ${amount.toLocaleString()}`;
   }
 
   async function handleFonepaySubmit() {
