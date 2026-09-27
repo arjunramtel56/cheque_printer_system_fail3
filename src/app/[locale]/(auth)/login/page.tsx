@@ -17,15 +17,20 @@ import {
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { siteConfig } from "@/lib/config";
 import { Link, useRouter as useI18nRouter } from "@/i18n/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
-  const locale = useLocale();
   const router = useRouter();
   const i18nRouter = useI18nRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || `/${locale}/dashboard`;
+  // The i18n router prefixes the current locale itself, so callback URLs must
+  // be locale-less (middleware passes locale-prefixed pathnames).
+  const rawCallback = searchParams.get("callbackUrl");
+  const callbackUrl =
+    rawCallback && rawCallback.startsWith("/")
+      ? rawCallback.replace(/^\/(en|ne)(?=\/|$)/, "") || "/"
+      : "/dashboard";
   const errorParam = searchParams.get("error");
 
   const [email, setEmail] = useState("");
@@ -104,7 +109,6 @@ export default function LoginPage() {
                 className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
               >
                 {error}
-                <span className="sr-only">{t("invalidCredentials")}</span>
               </div>
             )}
             <div className="space-y-2">
