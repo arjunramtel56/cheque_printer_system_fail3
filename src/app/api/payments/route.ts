@@ -7,7 +7,8 @@ import { getAuthenticatedUser } from "@/lib/api-helpers";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
 import { randomUUID } from "crypto";
-import { VALID_PAYMENT_METHODS, validatePaymentAmount } from "@/modules/payments/validations";
+import { VALID_PAYMENT_METHODS } from "@/modules/payments/validations";
+import { getAmountDue, isPaidPlan, VALID_DURATIONS } from "@/lib/pricing";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"];
@@ -71,7 +72,6 @@ export async function POST(request: NextRequest) {
     const paymentMethod = formData.get("paymentMethod") as string;
     const reference = (formData.get("reference") as string) || "";
     const notes = (formData.get("notes") as string) || "";
-    const amountStr = (formData.get("amount") as string) || "";
     const currency = formData.get("currency") as string;
     const proofFile = formData.get("proof") as File | null;
 
@@ -80,16 +80,20 @@ export async function POST(request: NextRequest) {
     }
 
     const duration = parseInt(durationStr || "1");
-    if (isNaN(duration) || duration < 1 || duration > 12) {
+    if (isNaN(duration) || !VALID_DURATIONS.includes(duration as any)) {
       return NextResponse.json({ error: "Invalid duration" }, { status: 400 });
     }
 
-    // Resolve plan (must be an active plan)
+    // Resolve plan (must be an active paid plan)
     const plan = await prisma.plan.findFirst({
       where: { name: planName, isActive: true },
     });
     if (!plan) {
       return NextResponse.json({ error: "Plan not found or inactive" }, { status: 404 });
+    }
+
+    if (!isPaidPlan(planName)) {
+      return NextResponse.json({ error: "Selected plan is not a paid plan" }, { status: 400 });
     }
 
     // Validate payment method
@@ -113,24 +117,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Notes too long" }, { status: 400 });
     }
 
-    // Calculate amount. If client provides a custom amount, validate it against plan price.
-    const expectedAmount = Number(plan.price) * (duration <= 1 ? 1 : duration);
-    let amount: number;
-    if (amountStr) {
-      amount = parseFloat(amountStr);
-      if (isNaN(amount) || amount <= 0) {
-        return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
-      }
-      // Amount from client must match the expected amount for the plan/duration
-      if (!validatePaymentAmount(amount, Number(plan.price), duration)) {
-        return NextResponse.json(
-          { error: "Amount does not match selected plan and duration" },
-          { status: 400 }
-        );
-      }
-    } else {
-      amount = expectedAmount;
+    // Amount due is computed SERVER-SIDE from the pricing module.
+    // The client-provided amount (if any) is ignored except as an
+    // informational echo — it can never override the real price.
+    const amountDue = getAmountDue(planName, duration);
+    if (amountDue === null) {
+      return NextResponse.json({ error: "Invalid plan or duration" }, { status: 400 });
     }
+    const amount = amountDue;
 
     let proofUrl: string | null = null;
 
@@ -146,19 +140,21 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const uploadDir = join(process.cwd(), "public", "uploads", "payments");
+      // Store OUTSIDE public/ — proof images are only served through the
+      // authenticated /api/payments/proof/[filename] route.
+      const uploadDir = join(process.cwd(), ".data", "payment-proofs");
       if (!existsSync(uploadDir)) {
         mkdirSync(uploadDir, { recursive: true });
       }
 
-      const ext = proofFile.type.split("/")[1];
+      const ext = (proofFile.type.split("/")[1] || "png").replace(/[^a-z0-9]/gi, "");
       const filename = `pay_${randomUUID()}.${ext}`;
       const filepath = join(uploadDir, filename);
 
       const buffer = Buffer.from(await proofFile.arrayBuffer());
       writeFileSync(filepath, buffer);
 
-      proofUrl = `/uploads/payments/${filename}`;
+      proofUrl = `/api/payments/proof/${filename}`;
     } else {
       // Payment proof is required for all manual payment methods
       return NextResponse.json({ error: "Payment proof is required" }, { status: 400 });

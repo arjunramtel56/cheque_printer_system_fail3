@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CreditCard, Upload, Check, AlertTriangle, Clock, X, FileText } from "lucide-react";
 import { siteConfig } from "@/lib/config";
+import { PLAN_PRICING } from "@/lib/pricing";
 import { useToast } from "@/providers/toast-provider";
 import Link from "next/link";
 
@@ -116,15 +117,13 @@ export default function SubscriptionPage() {
     setNotes("");
   }
 
+  // Amounts mirror the server-side pricing module — the API recomputes
+  // these server-side, so the displayed value is always what gets charged.
   function getPayAmount(plan: "standard" | "business"): string {
-    const data = plan === "business" ? pricing.business : pricing.standard;
-    const durationMap = {
-      "1": data.firstMonth,
-      "3": data.threeMonths,
-      "6": data.sixMonths,
-      "12": data.annual,
-    };
-    return durationMap[selectedDuration as keyof typeof durationMap];
+    const p = PLAN_PRICING[plan];
+    const amount =
+      selectedDuration === "1" ? p.introPrice : p.monthlyPrice * Number(selectedDuration);
+    return;
   }
 
   async function handleFonepaySubmit() {
