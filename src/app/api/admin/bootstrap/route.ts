@@ -3,8 +3,19 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
+import { timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { isRateLimited, clientIp } from "@/lib/rate-limit";
+
+/** Length-safe, timing-resistant comparison with a small constant delay. */
+async function secretMatches(provided: string, expected: string): Promise<boolean> {
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  const equal = a.length === b.length && timingSafeEqual(a, b);
+  await new Promise((r) => setTimeout(r, 50));
+  return equal;
+}
 
 const bootstrapSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -20,6 +31,14 @@ const bootstrapSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Prevent brute-forcing the bootstrap secret: 5 attempts per IP per hour.
+    if (isRateLimited(`bootstrap:${clientIp(request)}`, 5, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const result = bootstrapSchema.safeParse(body);
 
@@ -38,7 +57,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (bootstrapSecret !== adminBootstrapSecret) {
+    if (!(await secretMatches(bootstrapSecret, adminBootstrapSecret))) {
       return NextResponse.json({ error: "Invalid bootstrap secret." }, { status: 403 });
     }
 
