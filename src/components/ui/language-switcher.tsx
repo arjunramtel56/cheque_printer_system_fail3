@@ -27,15 +27,10 @@ export function LanguageSwitcher({ className }: { className?: string }) {
       // Storage unavailable (private mode etc.) — URL routing still persists the choice.
     }
 
-    const segments = pathname.split("/");
-    if (segments[1] === locale) {
-      segments[1] = newLocale;
-    } else {
-      segments.splice(1, 0, newLocale);
-    }
+    // usePathname() returns a locale-less path; the i18n router applies the
+    // target locale itself, so no manual prefix surgery is needed here.
     startTransition(() => {
-      router.push(segments.join("/"));
-      router.refresh();
+      router.push(pathname, { locale: newLocale });
     });
   };
 
