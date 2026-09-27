@@ -5,8 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Settings } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/providers/toast-provider";
 
 interface Bank {
   id: string;
@@ -30,6 +38,8 @@ interface UserSettings {
 }
 
 export default function SettingsPage() {
+  const t = useTranslations("settings");
+  const { showToast } = useToast();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [banks, setBanks] = useState<Bank[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,12 +57,13 @@ export default function SettingsPage() {
 
   useEffect(() => {
     Promise.all([fetchSettings(), fetchBanks()]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchSettings() {
     try {
       const res = await fetch("/api/settings");
-      if (!res.ok) throw new Error("Failed to fetch settings");
+      if (!res.ok) throw new Error("failed");
       const data = await res.json();
       setSettings(data);
       setFormData({
@@ -91,12 +102,12 @@ export default function SettingsPage() {
         body: JSON.stringify(formData),
       });
 
-      if (!res.ok) throw new Error("Failed to save settings");
+      if (!res.ok) throw new Error("failed");
       const updated = await res.json();
       setSettings(updated);
-      alert("Settings saved successfully");
-    } catch (error: any) {
-      alert(error.message);
+      showToast(t("settingsSaved"), "success");
+    } catch (error) {
+      showToast(t("saveError"), "error");
     } finally {
       setIsSaving(false);
     }
@@ -108,10 +119,10 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold">Settings</h2>
+        <h2 className="text-2xl font-bold">{t("title")}</h2>
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Loading settings...</p>
+            <p className="text-muted-foreground">{t("loading")}</p>
           </CardContent>
         </Card>
       </div>
@@ -121,17 +132,17 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Settings</h2>
+        <h2 className="text-2xl font-bold">{t("title")}</h2>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Default Preferences</CardTitle>
+            <CardTitle>{t("defaultPreferences")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="defaultBankId">Default Bank</Label>
+              <Label htmlFor="defaultBankId">{t("defaultBank")}</Label>
               <Select
                 value={formData.defaultBankId}
                 onValueChange={(value: string) =>
@@ -143,7 +154,7 @@ export default function SettingsPage() {
                 }
               >
                 <SelectTrigger id="defaultBankId">
-                  <SelectValue placeholder="Select a bank" />
+                  <SelectValue placeholder={t("selectABank")} />
                 </SelectTrigger>
                 <SelectContent>
                   {banks.map((bank) => (
@@ -157,7 +168,7 @@ export default function SettingsPage() {
 
             {availableTemplates.length > 0 && (
               <div>
-                <Label htmlFor="defaultTemplateId">Default Template</Label>
+                <Label htmlFor="defaultTemplateId">{t("defaultTemplate")}</Label>
                 <Select
                   value={formData.defaultTemplateId}
                   onValueChange={(value: string) =>
@@ -165,7 +176,7 @@ export default function SettingsPage() {
                   }
                 >
                   <SelectTrigger id="defaultTemplateId">
-                    <SelectValue placeholder="Select a template" />
+                    <SelectValue placeholder={t("selectATemplate")} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableTemplates.map((template) => (
@@ -179,14 +190,12 @@ export default function SettingsPage() {
             )}
 
             <div>
-              <Label htmlFor="defaultAccountName">Default Account Name</Label>
+              <Label htmlFor="defaultAccountName">{t("defaultAccountName")}</Label>
               <Input
                 id="defaultAccountName"
                 value={formData.defaultAccountName}
-                onChange={(e) =>
-                  setFormData({ ...formData, defaultAccountName: e.target.value })
-                }
-                placeholder="e.g. My Business Account"
+                onChange={(e) => setFormData({ ...formData, defaultAccountName: e.target.value })}
+                placeholder={t("accountNamePlaceholder")}
               />
             </div>
           </CardContent>
@@ -194,11 +203,11 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Regional Settings</CardTitle>
+            <CardTitle>{t("regionalSettings")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="language">Language</Label>
+              <Label htmlFor="language">{t("language")}</Label>
               <Select
                 value={formData.language}
                 onValueChange={(value: string) => setFormData({ ...formData, language: value })}
@@ -207,14 +216,14 @@ export default function SettingsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="ne">नेपाली (Nepali)</SelectItem>
+                  <SelectItem value="en">{t("english")}</SelectItem>
+                  <SelectItem value="ne">{t("nepali")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label htmlFor="dateFormat">Date Format</Label>
+              <Label htmlFor="dateFormat">{t("dateFormat")}</Label>
               <Select
                 value={formData.dateFormat}
                 onValueChange={(value: string) => setFormData({ ...formData, dateFormat: value })}
@@ -231,7 +240,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <Label htmlFor="currency">Currency</Label>
+              <Label htmlFor="currency">{t("currency")}</Label>
               <Select
                 value={formData.currency}
                 onValueChange={(value: string) => setFormData({ ...formData, currency: value })}
@@ -248,12 +257,12 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <Label htmlFor="printerName">Default Printer</Label>
+              <Label htmlFor="printerName">{t("defaultPrinter")}</Label>
               <Input
                 id="printerName"
                 value={formData.printerName}
                 onChange={(e) => setFormData({ ...formData, printerName: e.target.value })}
-                placeholder="Leave blank for default printer"
+                placeholder={t("printerPlaceholder")}
               />
             </div>
           </CardContent>
@@ -262,10 +271,12 @@ export default function SettingsPage() {
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? "Saving..." : (
+          {isSaving ? (
+            t("saving")
+          ) : (
             <>
               <Settings size={16} className="mr-2" />
-              Save Settings
+              {t("saveSettings")}
             </>
           )}
         </Button>

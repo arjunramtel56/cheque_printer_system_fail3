@@ -1,8 +1,9 @@
 "use client";
 
-import { useTranslations, useLocale } from "next-intl";
-import { useRouter, usePathname } from "next/navigation";
+import { useLocale } from "next-intl";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
+import { useTransition } from "react";
 
 const LANGUAGE_LABELS: Record<string, { flag: string; label: string }> = {
   en: { flag: "🇬🇧", label: "EN" },
@@ -12,13 +13,19 @@ const LANGUAGE_LABELS: Record<string, { flag: string; label: string }> = {
 const STORAGE_KEY = "NEXT_LOCALE";
 
 export function LanguageSwitcher({ className }: { className?: string }) {
-  const t = useTranslations("theme");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
 
   const switchLanguage = (newLocale: string) => {
-    localStorage.setItem(STORAGE_KEY, newLocale);
+    // Persist the choice for middleware (bare-path redirects) and future visits.
+    try {
+      localStorage.setItem(STORAGE_KEY, newLocale);
+      document.cookie = `${STORAGE_KEY}=${newLocale}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+    } catch {
+      // Storage unavailable (private mode etc.) — URL routing still persists the choice.
+    }
 
     const segments = pathname.split("/");
     if (segments[1] === locale) {
@@ -26,8 +33,10 @@ export function LanguageSwitcher({ className }: { className?: string }) {
     } else {
       segments.splice(1, 0, newLocale);
     }
-    const newPath = segments.join("/");
-    router.push(newPath);
+    startTransition(() => {
+      router.push(segments.join("/"));
+      router.refresh();
+    });
   };
 
   const otherLocale = locale === "en" ? "ne" : "en";
@@ -40,9 +49,11 @@ export function LanguageSwitcher({ className }: { className?: string }) {
     <button
       type="button"
       onClick={() => switchLanguage(otherLocale)}
-      aria-label={t("menuLabel")}
+      disabled={isPending}
+      aria-label={otherLocale === "ne" ? "Switch to Nepali" : "नेपालीमा सार्नुहोस्"}
+      title={otherLocale === "ne" ? "Switch to Nepali" : "नेपालीमा सार्नुहोस्"}
       className={cn(
-        "flex items-center gap-1 rounded-lg border border-input bg-background px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors",
+        "flex items-center gap-1 rounded-lg border border-input bg-background px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50",
         className
       )}
     >

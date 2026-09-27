@@ -25,7 +25,8 @@
     "register": "Register",
     "dashboard": "Dashboard",
     "admin": "Admin",
-    "logout": "Logout"
+    "logout": "Logout",
+    "allRightsReserved": "All rights reserved."
   },
   "home": {
     "heroTitle": "Cheque Printing",
@@ -92,7 +93,7 @@
     "businessF5": "Custom templates",
     "getStarted": "Get Started",
     "ctaTitle": "Ready to Get Started?",
-    "ctaDescription": "Join businesses across Nepal who trust RCPS for their cheque printing needs.",
+    "ctaDescription": "Join businesses across Nepal who trust Reactify Cheque Printer System for their cheque printing needs.",
     "quickAccess": "Quick Access",
     "quickAccessDesc": "Choose your panel to get started.",
     "userLogin": "User Login",
@@ -114,7 +115,7 @@
     "title": "Dashboard",
     "welcome": "Welcome, {name}",
     "trialActive": "TRIAL ACTIVE: {count} prints left",
-    "trialExpiring": "Your trial period ends in {days} day{days, plural, {one {} other {s}}}.",
+    "trialExpiring": "Your trial period ends in {days} day(s).",
     "upgradeNow": "Upgrade Now",
     "trialExpired": "Your trial period has expired.",
     "pleaseUpgrade": "Please upgrade your subscription to continue using the service.",
@@ -184,14 +185,19 @@
     "passwordTooShort": "Password must be at least 6 characters",
     "companyOptional": "Company name (optional)",
     "phoneOptional": "Phone (optional)",
-    "rememberMe": "Remember me"
+    "rememberMe": "Remember me",
+    "namePlaceholder": "e.g. Ram Bahadur",
+    "phonePlaceholder": "+977 9743836026",
+    "passwordHint": "Min 8 chars, with uppercase, lowercase & number",
+    "resetLinkSent": "If an account exists with that email, you'll receive a password reset link shortly.",
+    "oauthAccountNotLinked": "OAuth account not linked."
   },
   "about": {
     "title": "About Reactify Cheque Printer System",
     "description": "We are dedicated to simplifying cheque printing for Nepalese businesses.",
     "storyTitle": "Our Story",
-    "storyP1": "Reactify Cheque Printer System was born from a simple observation: Nepalese businesses spend too much time and effort on cheque printing. Traditional methods are often inaccurate, time-consuming, and frustrating.",
-    "storyP2": "We set out to create a solution that would make cheque printing as simple as filling out a form. With pre-configured templates for all major Nepalese banks and precise alignment technology, we've helped hundreds of businesses streamline their payment processes.",
+    "storyP1": "Reactify Software Technologies crafts efficient software solutions that scale. We noticed Nepalese businesses spend too much time and effort on cheque printing, so we set out to create a solution that would make cheque printing as simple as filling out a form.",
+    "storyP2": "With pre-configured templates for all major Nepalese banks and precise alignment technology, we've helped hundreds of businesses streamline their payment processes.",
     "valuesTitle": "Our Values",
     "mission": "Our Mission",
     "missionDesc": "To simplify cheque printing for every Nepalese business, making financial transactions faster and more accurate.",
@@ -206,7 +212,7 @@
   },
   "features": {
     "title": "Features",
-    "description": "Discover all the features that make RCPS the best choice for cheque printing.",
+    "description": "Discover all the features that make Reactify Cheque Printer System the best choice for cheque printing.",
     "preciseAlignment": "Precise Print Alignment",
     "preciseAlignmentDesc": "Our templates are carefully calibrated to ensure your cheque details print exactly where they should, eliminating misalignment issues.",
     "multipleBanks": "Multiple Bank Templates",
@@ -224,7 +230,7 @@
     "multiUser": "Multi-User Support",
     "multiUserDesc": "Allow multiple team members to access and print cheques with role-based permissions.",
     "ctaTitle": "Ready to Get Started?",
-    "ctaDescription": "Start your free trial today and experience the ease of RCPS."
+    "ctaDescription": "Start your free trial today and experience the ease of Reactify Cheque Printer System."
   },
   "pricing": {
     "title": "Pricing",
@@ -232,7 +238,7 @@
   },
   "faq": {
     "title": "Frequently Asked Questions",
-    "description": "Find answers to common questions about RCPS.",
+    "description": "Find answers to common questions about Reactify Cheque Printer System.",
     "q1": "What banks are supported?",
     "a1": "We support all major Nepalese banks including Nabil Bank, Global IME Bank, Siddhartha Bank, NIC Asia, Prabhu Bank, and many more. We're constantly adding new bank templates.",
     "q2": "How accurate is the cheque printing?",
@@ -244,7 +250,7 @@
     "q5": "Is my data secure?",
     "a5": "Absolutely. We use industry-standard encryption to protect your data. Your cheque information is stored securely and is never shared with third parties.",
     "q6": "How do I get support?",
-    "a6": "We offer email support for all plans, with priority support for Business plan users. You can reach us at support@reactify.com.np."
+    "a6": "We offer email support for all plans, with priority support for Business plan users. You can reach us at support@reactifysoftwaretechnologies.com.np."
   },
   "contact": {
     "title": "Contact Us",
@@ -252,6 +258,7 @@
     "email": "Email Us",
     "phone": "Call Us",
     "address": "Visit Us",
+    "website": "Website",
     "formTitle": "Send us a Message",
     "formName": "Your Name",
     "formNamePlaceholder": "Ram Bahadur",
@@ -265,7 +272,7 @@
   },
   "blog": {
     "title": "Blog",
-    "description": "Latest news and updates from RCPS.",
+    "description": "Latest news and updates from Reactify Cheque Printer System.",
     "category1": "Product Update",
     "category2": "Banking Tips",
     "category3": "Banking Tips",
@@ -274,7 +281,7 @@
     "post2Title": "How to Maintain Cheque Book Accuracy",
     "post2Desc": "Handwriting errors on cheques are one of the leading causes of bank rejections. Here are 5 tips to ensure your cheques are always accepted.",
     "post3Title": "Supported Banks: Complete List for 2024",
-    "post3Desc": "See the full list of Nepalese banks supported by RCPS and what each template offers.",
+    "post3Desc": "See the full list of Nepalese banks supported by Reactify Cheque Printer System and what each template offers.",
     "allArticles": "All Articles"
   },
   "cheque": {
@@ -348,7 +355,31 @@
     "payWithFonepay": "Pay with Fonepay",
     "saveDraftSuccess": "Cheque saved to history!",
     "saveDraft": "Save to history (TODO: implement API)",
-    "paymentSubmitted": "Payment submitted. Pending Admin verification."
+    "paymentSubmitted": "Payment submitted. Pending Admin verification.",
+    "dashboard": "Dashboard",
+    "adminPanel": "Admin Panel",
+    "welcomeHeader": "Welcome, {name}",
+    "trialBadge": "Trial",
+    "overview": "Overview",
+    "printsLeftTrial": "Prints Left (Trial)",
+    "trialEndingSoon": "Your trial period ends in {days} day(s).",
+    "trialExpired": "Your trial period has expired.",
+    "upgradeToContinue": "Please upgrade your subscription to continue using the service.",
+    "upgradeNow": "Upgrade Now",
+    "recentActivity": "Recent Activity",
+    "noRecentActivity": "No recent activity.",
+    "table": {
+      "user": "User",
+      "action": "Action",
+      "time": "Time"
+    },
+    "viewTemplates": "View Templates",
+    "printHistory": "Print History",
+    "printNewCheque": "Print New Cheque",
+    "reports": "Reports",
+    "reportsPlaceholder": "Print reports and analytics will appear here.",
+    "security": "Security",
+    "securityPlaceholder": "Password change and security settings will appear here."
   },
   "subscription": {
     "title": "Subscription",
@@ -374,7 +405,42 @@
     "selectPlanUnlock": "Select a free trial to unlock payment options.",
     "submitting": "Submitting...",
     "firstMonth": "First Month",
-    "bestValue": "BEST VALUE"
+    "bestValue": "BEST VALUE",
+    "introductoryOffer": "Introductory offer - first month only",
+    "regularPricing": "Regular pricing:",
+    "transactionReference": "Transaction Reference",
+    "transactionReferencePlaceholder": "e.g. TXN-12345 or UTR number",
+    "additionalNotes": "Additional Notes",
+    "notesPlaceholder": "Any additional information for the admin",
+    "viewMyPayments": "View My Payments",
+    "trialExpired": "Your trial period has expired.",
+    "upgradeToContinue": "Please upgrade your subscription to continue using the service.",
+    "paymentRejected": "Your last payment was rejected.",
+    "reason": "Reason",
+    "loading": "Loading subscription info..."
+  },
+  "paymentStatus": {
+    "title": "My Payments",
+    "noPayments": "No payments submitted",
+    "noPaymentsDesc": "You haven't submitted any payments yet.",
+    "upgradeSubscription": "Upgrade Subscription",
+    "pendingVerification": "Pending Verification",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "pendingDesc": "Your payment is awaiting admin review. This typically takes 1-2 business days.",
+    "approvedDesc": "Your payment has been verified and your subscription is now active.",
+    "rejectedDesc": "Your payment was rejected. Please review the reason and submit a new payment.",
+    "plan": "Plan",
+    "amount": "Amount",
+    "duration": "Duration",
+    "paymentMethod": "Payment Method",
+    "reference": "Reference",
+    "notes": "Notes",
+    "paymentProof": "Payment Proof",
+    "rejectionReason": "Rejection Reason",
+    "reviewedOn": "Reviewed on",
+    "backToSubscription": "Back to Subscription",
+    "loading": "Loading payments..."
   },
   "profile": {
     "title": "Profile Settings",
@@ -407,7 +473,8 @@
     "printerPlaceholder": "Leave blank for default printer",
     "saveSettings": "Save Settings",
     "saving": "Saving...",
-    "settingsSaved": "Settings saved successfully"
+    "settingsSaved": "Settings saved successfully",
+    "saveError": "Failed to save settings"
   },
   "history": {
     "title": "Print History",
@@ -668,7 +735,8 @@
     "entityPlaceholder": "e.g. ChequeEntry",
     "userId": "User ID",
     "userIdPlaceholder": "User ID",
-    "system": "System"
+    "system": "System",
+    "exportError": "Failed to export CSV"
   },
   "admin_settings": {
     "title": "System Settings",
@@ -695,12 +763,47 @@
     "title": "Payments",
     "pendingPayments": "Pending Payments",
     "allPayments": "All Payments",
+    "all": "All",
     "user": "User",
     "amount": "Amount",
     "plan": "Plan",
     "status": "Status",
+    "pending_verification": "Pending Verification",
+    "approved": "Approved",
+    "rejected": "Rejected",
     "date": "Date",
-    "actions": "Actions"
+    "actions": "Actions",
+    "method": "Method",
+    "duration": "Duration",
+    "review": "Review",
+    "reviewPayment": "Review Payment",
+    "approve": "Approve",
+    "reject": "Reject",
+    "rejectionReason": "Rejection Reason",
+    "enterReason": "Enter reason for rejection...",
+    "confirmApprove": "Approve this payment?",
+    "confirmReject": "Reject this payment?",
+    "approveSuccess": "Payment approved and subscription activated",
+    "rejectSuccess": "Payment rejected",
+    "approveError": "Failed to approve payment",
+    "rejectError": "Failed to reject payment",
+    "filters": "Filters",
+    "search": "Search by user or reference...",
+    "noPayments": "No payments found",
+    "noPaymentsDesc": "No payments match your filters.",
+    "clearSearch": "Clear Search",
+    "refresh": "Refresh",
+    "loading": "Loading payments...",
+    "reference": "Reference",
+    "notes": "Notes",
+    "paymentProof": "Payment Proof",
+    "submitted": "Submitted",
+    "reviewed": "Reviewed",
+    "role": "Role",
+    "noDescription": "No description",
+    "months": "month(s)",
+    "cancel": "Cancel",
+    "total": "total"
   },
   "admin_plans": {
     "title": "Plans",
@@ -773,5 +876,29 @@
     "yes": "Yes",
     "no": "No",
     "or": "or"
+  },
+  "sidebar": {
+    "home": "Home",
+    "about": "About",
+    "features": "Features",
+    "pricing": "Pricing",
+    "contact": "Contact",
+    "dashboard": "Dashboard",
+    "newCheque": "Print Cheque",
+    "myCheques": "My Cheques",
+    "templates": "Templates",
+    "history": "History",
+    "payees": "Payees",
+    "assistant": "Assistant",
+    "profile": "Profile",
+    "subscription": "Subscription",
+    "settings": "Settings",
+    "pendingPayments": "Pending Payments",
+    "users": "Users",
+    "banks": "Banks",
+    "auditLogs": "Audit Logs",
+    "plans": "Plans",
+    "reports": "Reports",
+    "logout": "Sign out"
   }
 }

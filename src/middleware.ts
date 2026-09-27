@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+const locales = ["en", "ne"] as const;
+const defaultLocale = "en";
+const LOCALE_COOKIE = "NEXT_LOCALE";
+
 const publicRoutes = [
   "/",
   "/login",
@@ -20,15 +24,38 @@ const adminRoutes = ["/admin"];
 // Trial-restricted routes (require active trial or paid subscription)
 const protectedUserRoutes = ["/dashboard"];
 
+function parseLocaleCookie(request: NextRequest): string | null {
+  try {
+    const value = request.cookies.get(LOCALE_COOKIE)?.value;
+    return value && (locales as readonly string[]).includes(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseAcceptLanguage(request: NextRequest): string | null {
+  const header = request.headers.get("accept-language");
+  if (!header) return null;
+  for (const part of header.split(",")) {
+    const tag = part.trim().split(";")[0]?.toLowerCase();
+    if (!tag) continue;
+    if (tag === "ne" || tag.startsWith("ne-")) return "ne";
+    if (tag === "en" || tag.startsWith("en-")) return "en";
+  }
+  return null;
+}
+
+/** Preferred locale: explicit cookie choice wins, then OS/browser language, then default. */
+function preferredLocale(request: NextRequest): string {
+  return parseLocaleCookie(request) ?? parseAcceptLanguage(request) ?? defaultLocale;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
   });
-
-  const locale = pathname.split("/")[1] || "en";
-  const pathWithoutLocale = pathname.replace(`/${locale}`, "") || "/";
 
   // Allow public static assets
   if (
@@ -40,14 +67,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Redirect / to /en
-  if (pathname === "/") {
-    return NextResponse.redirect(new URL("/en", request.url));
-  }
+  const firstSegment = pathname.split("/")[1] ?? "";
+  const hasLocale = (locales as readonly string[]).includes(firstSegment);
+  const locale = hasLocale ? firstSegment : preferredLocale(request);
+  const pathWithoutLocale = hasLocale ? pathname.replace(`/${locale}`, "") || "/" : pathname;
 
-  // Bare /dev/calibration (no locale) -> canonical locale-prefixed path
-  if (pathname === "/dev/calibration") {
-    return NextResponse.redirect(new URL("/en/dev/calibration", request.url));
+  // Redirect locale-less paths (e.g. "/", "/login", "/admin") to the
+  // user's preferred locale — cookie first, then browser language.
+  if (!hasLocale) {
+    const target = new URL(`/${locale}${pathname === "/" ? "" : pathname}`, request.url);
+    return NextResponse.redirect(target);
   }
 
   // Calibration tool: open in development; 404 in production unless

@@ -4,6 +4,7 @@ import DashboardSidebar from "@/components/dashboard-sidebar";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { siteConfig } from "@/lib/config";
+import { getTranslations } from "next-intl/server";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -13,10 +14,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   const user = session.user as any;
-
-  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
-    redirect("/en/dashboard");
-  }
+  const t = await getTranslations("dashboard_ui");
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -31,14 +29,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 className="logo-image h-7 w-auto"
               />
               <div>
-                <h1 className="text-lg font-semibold">Admin Panel</h1>
-                <p className="text-sm text-muted-foreground">Welcome, {user.name}</p>
+                <h1 className="text-lg font-semibold">{t("adminPanel")}</h1>
+                <p className="text-sm text-muted-foreground">
+                  {t("welcomeHeader", { name: user.name ?? "" })}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <ThemeToggle />
               <LanguageSwitcher />
-              <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+              <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-800 dark:bg-purple-950/60 dark:text-purple-200">
                 ADMIN
               </span>
             </div>

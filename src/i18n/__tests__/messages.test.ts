@@ -57,10 +57,10 @@ describe("i18n message coverage", () => {
     assert.deepEqual(mismatches, [], `Placeholder mismatches:\n${mismatches.join("\n")}`);
   });
 
-  it("translates core UI sections (nav, dashboard, auth) into Devanagari", () => {
+  it("translates core UI sections (nav, sidebar, dashboard_ui, auth) into Devanagari", () => {
     const untranslated: string[] = [];
     for (const key of neKeys) {
-      if (!/^(nav|dashboard|auth)\./.test(key)) continue;
+      if (!/^(nav|sidebar|dashboard_ui|auth)\./.test(key)) continue;
       if (!DEVANAGARI.test(neFlat[key])) {
         untranslated.push(`${key} = ${neFlat[key]}`);
       }

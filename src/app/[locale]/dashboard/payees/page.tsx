@@ -14,6 +14,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Plus, Trash2, Edit, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/providers/toast-provider";
 
 interface Payee {
   id: string;
@@ -27,6 +29,8 @@ interface Payee {
 }
 
 export default function PayeesPage() {
+  const t = useTranslations("payees");
+  const { showToast } = useToast();
   const [payees, setPayees] = useState<Payee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -43,13 +47,14 @@ export default function PayeesPage() {
 
   useEffect(() => {
     fetchPayees();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchPayees() {
     setIsLoading(true);
     try {
       const res = await fetch("/api/payees");
-      if (!res.ok) throw new Error("Failed to fetch payees");
+      if (!res.ok) throw new Error("failed");
       const data = await res.json();
       setPayees(data);
     } catch (error) {
@@ -86,18 +91,18 @@ export default function PayeesPage() {
   }
 
   async function handleDelete(payee: Payee) {
-    if (!confirm(`Are you sure you want to delete "${payee.name}"?`)) return;
+    if (!window.confirm(t("deleteConfirm", { name: payee.name }))) return;
 
     try {
       const res = await fetch(`/api/payees?id=${payee.id}`, {
         method: "DELETE",
       });
 
-      if (!res.ok) throw new Error("Failed to delete payee");
+      if (!res.ok) throw new Error("failed");
       setPayees(payees.filter((p) => p.id !== payee.id));
     } catch (error) {
       console.error("Error deleting payee:", error);
-      alert("Failed to delete payee");
+      showToast(t("deleteError"), "error");
     }
   }
 
@@ -105,7 +110,7 @@ export default function PayeesPage() {
     event.preventDefault();
 
     if (!formData.name.trim()) {
-      alert("Name is required");
+      showToast(t("nameRequired"), "error");
       return;
     }
 
@@ -113,9 +118,7 @@ export default function PayeesPage() {
       const url = editingPayee ? `/api/payees` : "/api/payees";
       const method = editingPayee ? "PUT" : "POST";
 
-      const body = editingPayee
-        ? { id: editingPayee.id, ...formData }
-        : formData;
+      const body = editingPayee ? { id: editingPayee.id, ...formData } : formData;
 
       const res = await fetch(url, {
         method,
@@ -125,7 +128,7 @@ export default function PayeesPage() {
 
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || "Failed to save payee");
+        throw new Error(error.error || "failed");
       }
 
       const saved = await res.json();
@@ -135,37 +138,36 @@ export default function PayeesPage() {
         setPayees([saved, ...payees]);
       }
       setIsDialogOpen(false);
+      showToast(editingPayee ? t("update") : t("create"), "success");
     } catch (error: any) {
-      alert(error.message);
+      showToast(error?.message || t("saveError"), "error");
     }
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Saved Payees</h2>
+        <h2 className="text-2xl font-bold">{t("title")}</h2>
         <Button onClick={handleAddNew} className="gap-2">
           <Plus size={16} />
-          Add Payee
+          {t("addPayee")}
         </Button>
       </div>
 
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground">
-              Loading payees...
-            </div>
+            <div className="p-8 text-center text-muted-foreground">{t("loading")}</div>
           ) : payees.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium">Name</th>
-                    <th className="px-4 py-3 text-left font-medium">Bank Account</th>
-                    <th className="px-4 py-3 text-left font-medium">Phone</th>
-                    <th className="px-4 py-3 text-left font-medium">Email</th>
-                    <th className="px-4 py-3 text-right font-medium">Actions</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("name")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("bankAccount")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("phone")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("email")}</th>
+                    <th className="px-4 py-3 text-right font-medium">{t("actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -177,11 +179,7 @@ export default function PayeesPage() {
                       <td className="px-4 py-3">{payee.email || "-"}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(payee)}
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(payee)}>
                             <Edit size={16} />
                           </Button>
                           <Button
@@ -202,13 +200,11 @@ export default function PayeesPage() {
           ) : (
             <CardContent className="py-12 text-center">
               <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">No payees saved</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Add payees to quickly select them when creating cheques.
-              </p>
+              <h3 className="mt-4 text-lg font-semibold">{t("noPayeesSaved")}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{t("noPayeesDesc")}</p>
               <Button onClick={handleAddNew} className="mt-4 gap-2">
                 <Plus size={16} />
-                Add Your First Payee
+                {t("addFirstPayee")}
               </Button>
             </CardContent>
           )}
@@ -218,86 +214,78 @@ export default function PayeesPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingPayee ? "Edit Payee" : "Add New Payee"}
-            </DialogTitle>
+            <DialogTitle>{editingPayee ? t("editPayee") : t("addNewPayee")}</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 py-2">
             <div>
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">{t("name")} *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g. Ram Bahadur"
+                placeholder={t("namePlaceholder")}
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="bankAccount">Bank Account</Label>
+              <Label htmlFor="bankAccount">{t("bankAccount")}</Label>
               <Input
                 id="bankAccount"
                 value={formData.bankAccount}
                 onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
-                placeholder="Account number"
+                placeholder={t("accountPlaceholder")}
               />
             </div>
 
             <div>
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="phone">{t("phone")}</Label>
               <Input
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+977-XXXXXXXXXX"
+                placeholder={t("phonePlaceholder")}
               />
             </div>
 
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("email")}</Label>
               <Input
                 id="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="name@example.com"
+                placeholder={t("emailPlaceholder")}
               />
             </div>
 
             <div>
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="address">{t("address")}</Label>
               <Input
                 id="address"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="Full address"
+                placeholder={t("addressPlaceholder")}
               />
             </div>
 
             <div>
-              <Label htmlFor="chequeLimit">Cheque Limit (NPR)</Label>
+              <Label htmlFor="chequeLimit">{t("chequeLimit")}</Label>
               <Input
                 id="chequeLimit"
                 type="number"
                 value={formData.chequeLimit}
                 onChange={(e) => setFormData({ ...formData, chequeLimit: e.target.value })}
-                placeholder="e.g. 100000"
+                placeholder={t("chequeLimitPlaceholder")}
               />
             </div>
 
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-              >
-                Cancel
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                {t("cancel")}
               </Button>
-              <Button type="submit">
-                {editingPayee ? "Update" : "Create"}
-              </Button>
+              <Button type="submit">{editingPayee ? t("update") : t("create")}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

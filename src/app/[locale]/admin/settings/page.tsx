@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Settings, Save, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/providers/toast-provider";
 
 interface SystemSetting {
   id: string;
@@ -16,6 +18,8 @@ interface SystemSetting {
 }
 
 export default function AdminSettingsPage() {
+  const t = useTranslations("admin_settings");
+  const { showToast } = useToast();
   const [settings, setSettings] = useState<SystemSetting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -65,7 +69,7 @@ export default function AdminSettingsPage() {
       setSettings(settings.map((s) => (s.key === key ? updated : s)));
       setEditingKey(null);
     } catch (error: any) {
-      alert(error.message);
+      showToast(error?.message || t("save"), "error");
     } finally {
       setIsSaving(false);
     }
@@ -86,20 +90,17 @@ export default function AdminSettingsPage() {
     return JSON.stringify(value, null, 2);
   }
 
-  const categorizedSettings = settings.reduce(
-    (acc: Record<string, SystemSetting[]>, setting) => {
-      const category = setting.key.split(".")[0];
-      if (!acc[category]) acc[category] = [];
-      acc[category].push(setting);
-      return acc;
-    },
-    {},
-  );
+  const categorizedSettings = settings.reduce((acc: Record<string, SystemSetting[]>, setting) => {
+    const category = setting.key.split(".")[0];
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(setting);
+    return acc;
+  }, {});
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">System Settings</h2>
+        <h2 className="text-2xl font-bold">{t("title")}</h2>
         <Button variant="outline" size="sm" onClick={fetchSettings}>
           <RefreshCw size={16} className="mr-2" />
           Refresh
@@ -107,12 +108,12 @@ export default function AdminSettingsPage() {
       </div>
 
       {isLoading ? (
-        <div className="p-8 text-center text-muted-foreground">Loading settings...</div>
+        <div className="p-8 text-center text-muted-foreground">{t("loading")}</div>
       ) : settings.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Settings className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">No system settings found</h3>
+            <h3 className="mt-4 text-lg font-semibold">{t("noSettings")}</h3>
           </CardContent>
         </Card>
       ) : (
@@ -127,22 +128,20 @@ export default function AdminSettingsPage() {
                   <div key={setting.key} className="rounded-lg border p-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <Label className="font-medium text-slate-700">
-                          {setting.key}
-                        </Label>
+                        <Label className="font-medium">{setting.key}</Label>
                         <p className="text-sm text-muted-foreground mt-1">
-                          {setting.description || "No description available"}
+                          {setting.description || t("noDescription")}
                         </p>
                         {editingKey === setting.key ? (
                           <textarea
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
-                            className="mt-2 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-mono outline-none focus:border-blue-500 focus:bg-white"
+                            className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-ring"
                             rows={3}
                             spellCheck={false}
                           />
                         ) : (
-                          <pre className="mt-2 rounded bg-slate-950 p-2 text-xs text-emerald-300">
+                          <pre className="mt-2 rounded bg-muted p-2 text-xs text-foreground">
                             {formatValue(setting.value)}
                           </pre>
                         )}
@@ -150,9 +149,13 @@ export default function AdminSettingsPage() {
                       <div className="ml-4 flex flex-col gap-2">
                         {editingKey === setting.key ? (
                           <>
-                            <Button size="sm" onClick={() => handleSave(setting.key)} disabled={isSaving}>
+                            <Button
+                              size="sm"
+                              onClick={() => handleSave(setting.key)}
+                              disabled={isSaving}
+                            >
                               <Save size={14} className="mr-1" />
-                              {isSaving ? "Saving..." : "Save"}
+                              {isSaving ? t("saving") : t("save")}
                             </Button>
                             <Button size="sm" variant="outline" onClick={cancelEdit}>
                               Cancel

@@ -8,8 +8,8 @@
     "subtitle": "तपाईंको चेकबुकबाट सिधै चेक प्रिन्ट गर्नुहोस्।"
   },
   "theme": {
-    "light": "प्रकाशित",
-    "dark": "अन्धकार",
+    "light": "उज्यालो",
+    "dark": "अँध्यारो",
     "system": "प्रणाली",
     "menuLabel": "थिम मेनु"
   },
@@ -25,7 +25,8 @@
     "register": "दर्ता गर्नुहोस्",
     "dashboard": "ड्यासबोर्ड",
     "admin": "अडमिन",
-    "logout": "लग आउट"
+    "logout": "लग आउट",
+    "allRightsReserved": "सर्वाधिकार सुरक्षित।"
   },
   "home": {
     "heroTitle": "चेक प्रिन्टिङ",
@@ -114,7 +115,7 @@
     "title": "ड्यासबोर्ड",
     "welcome": "पुनः स्वागत छ, {name}",
     "trialActive": "परीक्षण सक्रिय: {count} प्रिन्ट बाँकी",
-    "trialExpiring": "तपाईंको परीक्षण अवधि {days} दिनभित्र सकिनेछ।",
+    "trialExpiring": "तपाईंको परीक्षण अवधि {days} दिन(हरू) सकिनेछ।",
     "upgradeNow": "अहिले अपग्रेड गर्नुहोस्",
     "trialExpired": "तपाईंको परीक्षण अवधि सकिएको छ।",
     "pleaseUpgrade": "कृपया सेवा जारी राख्न आफ्नो सदस्यता अपग्रेड गर्नुहोस्।",
@@ -184,7 +185,12 @@
     "passwordTooShort": "पासवर्ड कम्तिमा ६ अक्षर हुनुपर्छ",
     "companyOptional": "कम्पनीको नाम (वैकल्पिक)",
     "phoneOptional": "फोन (वैकल्पिक)",
-    "rememberMe": "मलाई सम्झनुहोस्"
+    "rememberMe": "मलाई सम्झनुहोस्",
+    "namePlaceholder": "जस्तै: राम बहादुर",
+    "phonePlaceholder": "+977 ९७४३८३६०२६",
+    "passwordHint": "कम्तीमा ८ अक्षर, ठूलो र सानो अक्षर तथा अंक सहित",
+    "resetLinkSent": "त्यो इमेलमा खाता भएमा, तपाईंले छिट्टै पासवर्ड रिसेट लिंक प्राप्त गर्नुहुनेछ।",
+    "oauthAccountNotLinked": "OAuth खाता जोडिएको छैन।"
   },
   "about": {
     "title": "Reactify Cheque Printer System बारेमा",
@@ -349,7 +355,31 @@
     "payWithFonepay": "फोनपेसँग भुक्तानी गर्नुहोस्",
     "saveDraftSuccess": "चेक इतिहासमा सुरक्षित गरियो!",
     "saveDraft": "इतिहासमा सुरक्षित गर्नुहोस् (टोडो: API कार्यान्वयन)",
-    "paymentSubmitted": "⏳ भुक्तानी पठाइएको छ। व्यवस्थापकको पुष्टि हिँचुलाई बाँकी छ।"
+    "paymentSubmitted": "⏳ भुक्तानी पठाइएको छ। व्यवस्थापकको पुष्टि हिँचुलाई बाँकी छ।",
+    "dashboard": "ड्यासबोर्ड",
+    "adminPanel": "एडमिन प्यानल",
+    "welcomeHeader": "स्वागत, {name}",
+    "trialBadge": "ट्रायल",
+    "overview": "सारांश",
+    "printsLeftTrial": "बाँकी प्रिन्ट (ट्रायल)",
+    "trialEndingSoon": "तपाईंको ट्रायल अवधि {days} दिनमा समाप्त हुँदैछ।",
+    "trialExpired": "तपाईंको ट्रायल अवधि समाप्त भएको छ।",
+    "upgradeToContinue": "सेवा निरन्तरता दिन कृपया आफ्नो सदस्यता अपग्रेड गर्नुहोस्।",
+    "upgradeNow": "अहिले नै अपग्रेड गर्नुहोस्",
+    "recentActivity": "हालका गतिविधिहरू",
+    "noRecentActivity": "हाल कुनै गतिविधि छैन।",
+    "table": {
+      "user": "प्रयोगकर्ता",
+      "action": "कार्य",
+      "time": "समय"
+    },
+    "viewTemplates": "टेम्पलेटहरू हेर्नुहोस्",
+    "printHistory": "प्रिन्ट इतिहास",
+    "printNewCheque": "नयाँ चेक प्रिन्ट गर्नुहोस्",
+    "reports": "रिपोर्टहरू",
+    "reportsPlaceholder": "प्रिन्ट रिपोर्ट र विश्लेषण यहाँ देखिनेछन्।",
+    "security": "सुरक्षा",
+    "securityPlaceholder": "पासवर्ड परिवर्तन र सुरक्षा सेटिङहरू यहाँ देखिनेछन्।"
   },
   "subscription": {
     "title": "सदस्यता",
@@ -382,7 +412,12 @@
     "transactionReferencePlaceholder": "उदाहरण: TXN-12345 वा यूटीएल नम्बर",
     "additionalNotes": "अतिरिक्त टिप्पणी",
     "notesPlaceholder": "अडमिनका लागि अतिरिक्त जानकारी",
-    "viewMyPayments": "मेरा भुक्तानीहरू हेर्नुहोस्"
+    "viewMyPayments": "मेरा भुक्तानीहरू हेर्नुहोस्",
+    "trialExpired": "तपाईंको ट्रायल अवधि समाप्त भएको छ।",
+    "upgradeToContinue": "सेवा निरन्तरता दिन कृपया आफ्नो सदस्यता अपग्रेड गर्नुहोस्।",
+    "paymentRejected": "तपाईंको पछिल्लो भुक्तानी अस्वीकृत भएको छ।",
+    "reason": "कारण",
+    "loading": "सदस्यता जानकारी लोड हुँदैछ..."
   },
   "paymentStatus": {
     "title": "मेरा भुक्तानीहरू",
@@ -404,7 +439,8 @@
     "paymentProof": "भुक्तानी प्रमाणपत्र",
     "rejectionReason": "अस्वीकृति कारण",
     "reviewedOn": "समीक्षा मिति",
-    "backToSubscription": "सदस्यतामा फर्कनुहोस्"
+    "backToSubscription": "सदस्यतामा फर्कनुहोस्",
+    "loading": "भुक्तानीहरू लोड हुँदैछ..."
   },
   "profile": {
     "title": "प्रोफाइल सेटिङ",
@@ -437,7 +473,8 @@
     "printerPlaceholder": "डिफल्ट प्रिन्टरका लागि खाली छोड्नुहोस्",
     "saveSettings": "सेटिङहरू सुरक्षित गर्नुहोस्",
     "saving": "सुरक्षित गर्दैछ...",
-    "settingsSaved": "सेटिङहरू सफलतापूर्वक सुरक्षित गरियो"
+    "settingsSaved": "सेटिङहरू सफलतापूर्वक सुरक्षित गरियो",
+    "saveError": "सेटिङहरू सुरक्षित गर्न सफल भएन"
   },
   "history": {
     "title": "प्रिन्ट इतिहास",
@@ -496,7 +533,6 @@
     "cancel": "रद्द गर्नुहोस्",
     "create": "सिर्जना गर्नुहोस्",
     "update": "अपडेट गर्नुहोस्",
-    "view": "हेर्नुहोस्",
     "noPayeesSaved": "कुनै सुरक्षित प्रापक छैन",
     "noPayeesDesc": "चेक सिर्जना गर्दा प्रापकहरूलाई छानेर उपयोग गर्न सकिने गरी थप्नुहोस्।",
     "addFirstPayee": "पहिलो प्रापक थप्नुहोस्",
@@ -543,8 +579,8 @@
     "setAsDefault": "यो बैंकका लागि डिफल्ट टेम्पलेट तल्याउनुहोस्",
     "activeCheckbox": "सक्रिय",
     "fields": "फिल्डहरू",
-    "field": "फिल्ड",
-    "addFieldBtn": "फिल्ड थप्नुहोस्",
+    "addNewTemplate": "नयाँ टेम्पलेट थप्नुहोस्",
+    "editTemplate": "टेम्पलेट सम्पादन गर्नुहोस्",
     "create": "सिर्जना गर्नुहोस्",
     "update": "अपडेट गर्नुहोस्",
     "cancel": "रद्द गर्नुहोस्",
@@ -552,16 +588,12 @@
     "codePlaceholder": "उदाहरण: NABIL",
     "logoPlaceholder": "https://example.com/logo.png",
     "backgroundPlaceholder": "/images/nabil-bank-cheque.png",
-    "xPlaceholder": "X (मिमी)",
-    "yPlaceholder": "Y (मिमी)",
-    "widthPlaceholder": "चौडाइ (मिमी)",
+    "xPlaceholder": "X (mm)",
+    "yPlaceholder": "Y (mm)",
+    "widthPlaceholder": "चौडाइ (mm)",
     "fontSize": "फन्ट आकार",
     "deleteConfirm": "के तपाईंले \"{name}\" मेटाउन चाहनुहुन्छ? यो पूर्ववत गर्न सकिँदैन।",
-    "deleteError": "टेम्पलेट मेटाउन सकिएन",
-    "saveError": "टेम्पलेट सुरक्षित गर्न सकिएन",
-    "loading": "टेम्पलेटहरू लोड गर्दैछ...",
-    "templatesCount": "{count} टेम्पलेटहरू",
-    "version": "v{version}"
+    "deleteError": "टेम्पलेट मेटाउन सकिएन"
   },
   "admin_ui": {
     "title": "अडमिन ड्यासबोर्ड",
@@ -703,7 +735,8 @@
     "entityPlaceholder": "उदाहरण: ChequeEntry",
     "userId": "प्रयोगकर्ता आईडी",
     "userIdPlaceholder": "प्रयोगकर्ता आईडी",
-    "system": "प्रणाली"
+    "system": "प्रणाली",
+    "exportError": "CSV निर्यात गर्न सफल भएन"
   },
   "admin_settings": {
     "title": "प्रणाली सेटिङहरू",
@@ -843,5 +876,29 @@
     "yes": "हो",
     "no": "होइन",
     "or": "वा"
+  },
+  "sidebar": {
+    "home": "गृहपृष्ठ",
+    "about": "हाम्रोबारे",
+    "features": "विशेषताहरू",
+    "pricing": "मूल्य",
+    "contact": "सम्पर्क",
+    "dashboard": "ड्यासबोर्ड",
+    "newCheque": "चेक प्रिन्ट",
+    "myCheques": "मेरा चेकहरू",
+    "templates": "टेम्पलेटहरू",
+    "history": "इतिहास",
+    "payees": "भुक्तानी पाउनेहरू",
+    "assistant": "सहायक",
+    "profile": "प्रोफाइल",
+    "subscription": "सदस्यता",
+    "settings": "सेटिङहरू",
+    "pendingPayments": "बाँकी भुक्तानीहरू",
+    "users": "प्रयोगकर्ताहरू",
+    "banks": "बैंकहरू",
+    "auditLogs": "अडिट लगहरू",
+    "plans": "योजनाहरू",
+    "reports": "रिपोर्टहरू",
+    "logout": "साइन आउट"
   }
 }

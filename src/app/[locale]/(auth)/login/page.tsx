@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,9 +17,13 @@ import {
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { siteConfig } from "@/lib/config";
+import { Link, useRouter as useI18nRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 
 export default function LoginPage() {
+  const t = useTranslations("auth");
   const router = useRouter();
+  const i18nRouter = useI18nRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/en/dashboard";
   const errorParam = searchParams.get("error");
@@ -29,11 +32,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(
     errorParam === "account_suspended"
-      ? "Your account has been suspended."
+      ? t("accountSuspended")
       : errorParam === "account_expired"
-        ? "Your account has expired."
+        ? t("accountExpired")
         : errorParam === "OAuthAccountNotLinked"
-          ? "OAuth account not linked."
+          ? t("oauthAccountNotLinked")
           : ""
   );
   const [loading, setLoading] = useState(false);
@@ -51,7 +54,7 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        setError(t("invalidCredentials"));
         setLoading(false);
         return;
       }
@@ -59,13 +62,13 @@ export default function LoginPage() {
       router.push(callbackUrl);
       router.refresh();
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(t("somethingWentWrong"));
       setLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="absolute top-4 right-4 flex items-center gap-2">
         <ThemeToggle />
         <LanguageSwitcher />
@@ -79,14 +82,21 @@ export default function LoginPage() {
               className="logo-image h-10 w-auto"
             />
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-          <CardDescription>Sign in to your Cheque Printer account</CardDescription>
+          <CardTitle className="text-2xl font-bold">{t("welcomeBack")}</CardTitle>
+          <CardDescription>{t("signInToAccount")}</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</div>}
+            {error && (
+              <div
+                role="alert"
+                className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+              >
+                {error}
+              </div>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -97,7 +107,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("password")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -108,19 +118,19 @@ export default function LoginPage() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Link href="/en/forgot-password" className="text-sm text-primary hover:underline">
-                Forgot password?
+              <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                {t("forgotPasswordQuestion")}
               </Link>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? t("signingIn") : t("signIn")}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{" "}
-              <Link href="/en/register" className="text-primary hover:underline">
-                Sign up
+              {t("dontHaveAccount")}{" "}
+              <Link href="/register" className="text-primary hover:underline">
+                {t("signUp")}
               </Link>
             </p>
           </CardFooter>

@@ -4,6 +4,7 @@ import DashboardSidebar from "@/components/dashboard-sidebar";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { siteConfig } from "@/lib/config";
+import { getTranslations } from "next-intl/server";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -13,6 +14,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   const user = session.user as any;
+  const t = await getTranslations("dashboard_ui");
+
+  const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -28,18 +32,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
               />
               <div>
                 <h1 className="text-lg font-semibold">
-                  {user.role === "ADMIN" || user.role === "SUPER_ADMIN"
-                    ? "Admin Panel"
-                    : "Dashboard"}
+                  {isAdmin ? t("adminPanel") : t("dashboard")}
                 </h1>
-                <p className="text-sm text-muted-foreground">Welcome, {user.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("welcomeHeader", { name: user.name ?? "" })}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <ThemeToggle />
               <LanguageSwitcher />
               <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                {user.role === "TRIAL_USER" ? "Trial" : user.role}
+                {user.role === "TRIAL_USER" ? t("trialBadge") : user.role}
               </span>
             </div>
           </div>

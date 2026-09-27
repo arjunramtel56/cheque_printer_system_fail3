@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Search, Download, RefreshCw, FileText } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/providers/toast-provider";
 
 interface AuditLog {
   id: string;
@@ -30,6 +32,8 @@ interface AuditLogsResponse {
 }
 
 export default function AdminAuditLogsPage() {
+  const t = useTranslations("admin_audit");
+  const { showToast } = useToast();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,7 +81,7 @@ export default function AdminAuditLogsPage() {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      alert("Failed to export CSV");
+      showToast(t("exportError"), "error");
     }
   }
 
@@ -96,28 +100,29 @@ export default function AdminAuditLogsPage() {
 
   function getActionColor(action: string): string {
     const colors: Record<string, string> = {
-      CHEQUE_CREATED: "bg-blue-100 text-blue-700",
-      CHEQUE_UPDATED: "bg-indigo-100 text-indigo-700",
-      CHEQUE_DELETED: "bg-red-100 text-red-700",
-      PRINT_CHEQUE: "bg-green-100 text-green-700",
-      EXPORT_PDF: "bg-purple-100 text-purple-700",
-      CREATE_BANK: "bg-amber-100 text-amber-700",
-      UPDATE_BANK: "bg-orange-100 text-orange-700",
-      DELETE_BANK: "bg-pink-100 text-pink-700",
-      CREATE_TEMPLATE: "bg-teal-100 text-teal-700",
-      UPDATE_TEMPLATE: "bg-cyan-100 text-cyan-700",
-      DELETE_TEMPLATE: "bg-fuchsia-100 text-fuchsia-700",
-      UPDATE_USER: "bg-indigo-100 text-indigo-700",
-      DELETE_USER: "bg-red-100 text-red-700",
-      UPDATE_SYSTEM_SETTING: "bg-gray-100 text-gray-700",
+      CHEQUE_CREATED: "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-200",
+      CHEQUE_UPDATED: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-200",
+      CHEQUE_DELETED: "bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-200",
+      PRINT_CHEQUE: "bg-green-100 text-green-800 dark:bg-green-950/60 dark:text-green-200",
+      EXPORT_PDF: "bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-200",
+      CREATE_BANK: "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-200",
+      UPDATE_BANK: "bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-200",
+      DELETE_BANK: "bg-pink-100 text-pink-800 dark:bg-pink-950/60 dark:text-pink-200",
+      CREATE_TEMPLATE: "bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-200",
+      UPDATE_TEMPLATE: "bg-cyan-100 text-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-200",
+      DELETE_TEMPLATE:
+        "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-950/60 dark:text-fuchsia-200",
+      UPDATE_USER: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-200",
+      DELETE_USER: "bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-200",
+      UPDATE_SYSTEM_SETTING: "bg-muted text-muted-foreground",
     };
-    return colors[action] || "bg-slate-100 text-slate-700";
+    return colors[action] || "bg-muted text-muted-foreground";
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Audit Log</h2>
+        <h2 className="text-2xl font-bold">{t("title")}</h2>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleExportCSV}>
             <Download size={16} className="mr-2" />
@@ -132,12 +137,12 @@ export default function AdminAuditLogsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
+          <CardTitle>{t("filters")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-5">
             <div>
-              <Label htmlFor="searchAction">Action</Label>
+              <Label htmlFor="searchAction">{t("action")}</Label>
               <Input
                 id="searchAction"
                 value={searchAction}
@@ -146,7 +151,7 @@ export default function AdminAuditLogsPage() {
               />
             </div>
             <div>
-              <Label htmlFor="searchEntity">Entity</Label>
+              <Label htmlFor="searchEntity">{t("entity")}</Label>
               <Input
                 id="searchEntity"
                 value={searchEntity}
@@ -155,16 +160,16 @@ export default function AdminAuditLogsPage() {
               />
             </div>
             <div>
-              <Label htmlFor="searchUserId">User ID</Label>
+              <Label htmlFor="searchUserId">{t("userId")}</Label>
               <Input
                 id="searchUserId"
                 value={searchUserId}
                 onChange={(e) => setSearchUserId(e.target.value)}
-                placeholder="User ID"
+                placeholder={t("userIdPlaceholder")}
               />
             </div>
             <div>
-              <Label htmlFor="dateFrom">From Date</Label>
+              <Label htmlFor="dateFrom">{t("dateFrom")}</Label>
               <Input
                 id="dateFrom"
                 type="date"
@@ -173,7 +178,7 @@ export default function AdminAuditLogsPage() {
               />
             </div>
             <div>
-              <Label htmlFor="dateTo">To Date</Label>
+              <Label htmlFor="dateTo">{t("dateTo")}</Label>
               <Input
                 id="dateTo"
                 type="date"
@@ -196,30 +201,30 @@ export default function AdminAuditLogsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Audit Logs ({total} total)</CardTitle>
+          <CardTitle>
+            {t("auditLogs")} ({total} {t("total")})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground">Loading audit logs...</div>
+            <div className="p-8 text-center text-muted-foreground">{t("loading")}</div>
           ) : logs.length === 0 ? (
             <div className="py-12 text-center">
               <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">No audit logs found</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                No audit log entries match your filters.
-              </p>
+              <h3 className="mt-4 text-lg font-semibold">{t("noLogsFound")}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{t("noLogsDesc")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium">Date & Time</th>
-                    <th className="px-4 py-3 text-left font-medium">User</th>
-                    <th className="px-4 py-3 text-left font-medium">Action</th>
-                    <th className="px-4 py-3 text-left font-medium">Entity</th>
-                    <th className="px-4 py-3 text-left font-medium">Entity ID</th>
-                    <th className="px-4 py-3 text-left font-medium">Details</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("time")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("user")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("action")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("entity")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("entityId")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("details")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -246,9 +251,7 @@ export default function AdminAuditLogsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">{log.entity}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {log.entityId || "-"}
-                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{log.entityId || "-"}</td>
                       <td className="px-4 py-3">
                         {log.details && (
                           <code className="rounded bg-slate-100 px-2 py-1 text-xs">

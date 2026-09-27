@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
-  const t = useTranslations("nav");
+  const tNav = useTranslations("nav");
   const locale = useLocale();
 
   return (
@@ -26,7 +26,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                   href={`/${locale}${item.href}`}
                   className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
-                  {t(item.label.toLowerCase() as keyof typeof t)}
+                  {tNav(item.labelKey)}
                 </Link>
               ))}
             </nav>
@@ -37,13 +37,13 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 href={`/${locale}/login`}
                 className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent"
               >
-                {t("login")}
+                {tNav("login")}
               </Link>
               <Link
                 href={`/${locale}/register`}
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               >
-                {t("register")}
+                {tNav("register")}
               </Link>
             </div>
           </div>
@@ -67,7 +67,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              &copy; {new Date().getFullYear()} {siteConfig.company}. All rights reserved.
+              &copy; {new Date().getFullYear()} {siteConfig.company}. {tNav("allRightsReserved")}
             </p>
           </div>
         </div>

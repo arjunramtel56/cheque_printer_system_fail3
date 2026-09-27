@@ -25,7 +25,8 @@
     "register": "Register",
     "dashboard": "Dashboard",
     "admin": "Admin",
-    "logout": "Logout"
+    "logout": "Logout",
+    "allRightsReserved": "All rights reserved."
   },
   "home": {
     "heroTitle": "Cheque Printing",
@@ -114,7 +115,7 @@
     "title": "Dashboard",
     "welcome": "Welcome, {name}",
     "trialActive": "TRIAL ACTIVE: {count} prints left",
-    "trialExpiring": "Your trial period ends in {days} day{days, plural, {one {} other {s}}}.",
+    "trialExpiring": "Your trial period ends in {days} day(s).",
     "upgradeNow": "Upgrade Now",
     "trialExpired": "Your trial period has expired.",
     "pleaseUpgrade": "Please upgrade your subscription to continue using the service.",
@@ -184,7 +185,12 @@
     "passwordTooShort": "Password must be at least 6 characters",
     "companyOptional": "Company name (optional)",
     "phoneOptional": "Phone (optional)",
-    "rememberMe": "Remember me"
+    "rememberMe": "Remember me",
+    "namePlaceholder": "e.g. Ram Bahadur",
+    "phonePlaceholder": "+977 9743836026",
+    "passwordHint": "Min 8 chars, with uppercase, lowercase & number",
+    "resetLinkSent": "If an account exists with that email, you'll receive a password reset link shortly.",
+    "oauthAccountNotLinked": "OAuth account not linked."
   },
   "about": {
     "title": "About Reactify Cheque Printer System",
@@ -349,7 +355,31 @@
     "payWithFonepay": "Pay with Fonepay",
     "saveDraftSuccess": "Cheque saved to history!",
     "saveDraft": "Save to history (TODO: implement API)",
-    "paymentSubmitted": "Payment submitted. Pending Admin verification."
+    "paymentSubmitted": "Payment submitted. Pending Admin verification.",
+    "dashboard": "Dashboard",
+    "adminPanel": "Admin Panel",
+    "welcomeHeader": "Welcome, {name}",
+    "trialBadge": "Trial",
+    "overview": "Overview",
+    "printsLeftTrial": "Prints Left (Trial)",
+    "trialEndingSoon": "Your trial period ends in {days} day(s).",
+    "trialExpired": "Your trial period has expired.",
+    "upgradeToContinue": "Please upgrade your subscription to continue using the service.",
+    "upgradeNow": "Upgrade Now",
+    "recentActivity": "Recent Activity",
+    "noRecentActivity": "No recent activity.",
+    "table": {
+      "user": "User",
+      "action": "Action",
+      "time": "Time"
+    },
+    "viewTemplates": "View Templates",
+    "printHistory": "Print History",
+    "printNewCheque": "Print New Cheque",
+    "reports": "Reports",
+    "reportsPlaceholder": "Print reports and analytics will appear here.",
+    "security": "Security",
+    "securityPlaceholder": "Password change and security settings will appear here."
   },
   "subscription": {
     "title": "Subscription",
@@ -382,7 +412,12 @@
     "transactionReferencePlaceholder": "e.g. TXN-12345 or UTR number",
     "additionalNotes": "Additional Notes",
     "notesPlaceholder": "Any additional information for the admin",
-    "viewMyPayments": "View My Payments"
+    "viewMyPayments": "View My Payments",
+    "trialExpired": "Your trial period has expired.",
+    "upgradeToContinue": "Please upgrade your subscription to continue using the service.",
+    "paymentRejected": "Your last payment was rejected.",
+    "reason": "Reason",
+    "loading": "Loading subscription info..."
   },
   "paymentStatus": {
     "title": "My Payments",
@@ -404,7 +439,8 @@
     "paymentProof": "Payment Proof",
     "rejectionReason": "Rejection Reason",
     "reviewedOn": "Reviewed on",
-    "backToSubscription": "Back to Subscription"
+    "backToSubscription": "Back to Subscription",
+    "loading": "Loading payments..."
   },
   "profile": {
     "title": "Profile Settings",
@@ -437,7 +473,8 @@
     "printerPlaceholder": "Leave blank for default printer",
     "saveSettings": "Save Settings",
     "saving": "Saving...",
-    "settingsSaved": "Settings saved successfully"
+    "settingsSaved": "Settings saved successfully",
+    "saveError": "Failed to save settings"
   },
   "history": {
     "title": "Print History",
@@ -698,7 +735,8 @@
     "entityPlaceholder": "e.g. ChequeEntry",
     "userId": "User ID",
     "userIdPlaceholder": "User ID",
-    "system": "System"
+    "system": "System",
+    "exportError": "Failed to export CSV"
   },
   "admin_settings": {
     "title": "System Settings",
@@ -838,5 +876,29 @@
     "yes": "Yes",
     "no": "No",
     "or": "or"
+  },
+  "sidebar": {
+    "home": "Home",
+    "about": "About",
+    "features": "Features",
+    "pricing": "Pricing",
+    "contact": "Contact",
+    "dashboard": "Dashboard",
+    "newCheque": "Print Cheque",
+    "myCheques": "My Cheques",
+    "templates": "Templates",
+    "history": "History",
+    "payees": "Payees",
+    "assistant": "Assistant",
+    "profile": "Profile",
+    "subscription": "Subscription",
+    "settings": "Settings",
+    "pendingPayments": "Pending Payments",
+    "users": "Users",
+    "banks": "Banks",
+    "auditLogs": "Audit Logs",
+    "plans": "Plans",
+    "reports": "Reports",
+    "logout": "Sign out"
   }
 }

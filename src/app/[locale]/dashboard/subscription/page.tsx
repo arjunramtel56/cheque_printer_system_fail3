@@ -213,7 +213,7 @@ export default function SubscriptionPage() {
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">{t("title")}</h2>
-        <div className="text-center py-8 text-muted-foreground">Loading subscription info...</div>
+        <div className="text-center py-8 text-muted-foreground">{t("loading")}</div>
       </div>
     );
   }
@@ -245,10 +245,8 @@ export default function SubscriptionPage() {
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-0.5 h-5 w-5 text-red-600" />
                 <div>
-                  <p className="font-semibold">Your trial period has expired.</p>
-                  <p className="mt-1">
-                    Please upgrade your subscription to continue using the service.
-                  </p>
+                  <p className="font-semibold">{t("trialExpired")}</p>
+                  <p className="mt-1">{t("upgradeToContinue")}</p>
                 </div>
               </div>
             </div>
@@ -484,9 +482,11 @@ export default function SubscriptionPage() {
 
               {latestRejectedPayment && (
                 <div className="mt-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-3 text-sm text-red-700 dark:text-red-300">
-                  <p className="font-semibold">Your last payment was rejected.</p>
+                  <p className="font-semibold">{t("paymentRejected")}</p>
                   {latestRejectedPayment.rejectionReason && (
-                    <p>Reason: {latestRejectedPayment.rejectionReason}</p>
+                    <p>
+                      {t("reason")}: {latestRejectedPayment.rejectionReason}
+                    </p>
                   )}
                 </div>
               )}
@@ -501,7 +501,7 @@ export default function SubscriptionPage() {
                   !!latestPendingPayment
                 }
               >
-                {paymentStatus === "submitting" ? "Submitting..." : t("submitPayment")}
+                {paymentStatus === "submitting" ? t("submitting") : t("submitPayment")}
               </Button>
             </>
           ) : (

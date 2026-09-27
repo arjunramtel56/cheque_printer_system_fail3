@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Shield, Eye, EyeOff, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/providers/toast-provider";
 
 interface User {
   id: string;
@@ -22,6 +24,8 @@ interface User {
 }
 
 export default function AdminUsersPage() {
+  const t = useTranslations("admin_users");
+  const { showToast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [, setIsLoading] = useState(true);
 
@@ -55,7 +59,7 @@ export default function AdminUsersPage() {
       setUsers(users.map((u) => (u.id === updated.id ? updated : u)));
     } catch (error) {
       console.error("Error updating user:", error);
-      alert("Failed to update user");
+      showToast(t("updateError"), "error");
     }
   }
 
@@ -72,43 +76,43 @@ export default function AdminUsersPage() {
       setUsers(users.map((u) => (u.id === updated.id ? updated : u)));
     } catch (error) {
       console.error("Error updating user:", error);
-      alert("Failed to update user");
+      showToast(t("updateError"), "error");
     }
   }
 
   async function handleDelete(userId: string) {
-    if (!confirm("Are you sure you want to delete this user?")) return;
+    if (!window.confirm(t("deleteConfirm"))) return;
 
     try {
       const res = await fetch(`/api/users?id=${userId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete user");
       setUsers(users.filter((u) => u.id !== userId));
     } catch (error) {
-      alert("Failed to delete user");
+      showToast(t("deleteError"), "error");
     }
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Users</h2>
+        <h2 className="text-2xl font-bold">{t("title")}</h2>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>All Users</CardTitle>
+          <CardTitle>{t("allUsers")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left font-medium">Name</th>
-                  <th className="px-4 py-3 text-left font-medium">Email</th>
-                  <th className="px-4 py-3 text-left font-medium">Role</th>
-                  <th className="px-4 py-3 text-center font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium">Plan</th>
-                  <th className="px-4 py-3 text-center font-medium">Actions</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("name")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("email")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("role")}</th>
+                  <th className="px-4 py-3 text-center font-medium">{t("status")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("plan")}</th>
+                  <th className="px-4 py-3 text-center font-medium">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -121,12 +125,12 @@ export default function AdminUsersPage() {
                       <span
                         className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${
                           user.status === "ACTIVE"
-                            ? "bg-green-100 text-green-700"
+                            ? "bg-green-100 text-green-800 dark:bg-green-950/60 dark:text-green-200"
                             : user.status === "SUSPENDED"
-                            ? "bg-red-100 text-red-700"
-                            : user.status === "EXPIRED"
-                            ? "bg-orange-100 text-orange-700"
-                            : "bg-slate-100 text-slate-700"
+                              ? "bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-200"
+                              : user.status === "EXPIRED"
+                                ? "bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-200"
+                                : "bg-muted text-muted-foreground"
                         }`}
                       >
                         {user.status}
@@ -136,7 +140,7 @@ export default function AdminUsersPage() {
                       {user.subscription ? (
                         <span className="text-sm">
                           {user.subscription.plan.name}
-                          {user.subscription.isActive ? " (Active)" : " (Inactive)"}
+                          {user.subscription.isActive ? ` (${t("active")})` : ` (${t("inactive")})`}
                         </span>
                       ) : (
                         "-"
@@ -149,7 +153,7 @@ export default function AdminUsersPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => updateUserStatus(user.id, "SUSPENDED")}
-                            title="Suspend user"
+                            title={t("suspendUser")}
                           >
                             <EyeOff size={16} />
                           </Button>
@@ -158,7 +162,7 @@ export default function AdminUsersPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => updateUserStatus(user.id, "ACTIVE")}
-                            title="Activate user"
+                            title={t("activateUser")}
                           >
                             <Eye size={16} />
                           </Button>
@@ -168,7 +172,7 @@ export default function AdminUsersPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(user.id)}
-                            title="Delete user"
+                            title={t("deleteUser")}
                             className="text-destructive hover:text-destructive"
                           >
                             <Trash2 size={16} />

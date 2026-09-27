@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LayoutTemplate, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 
 interface Bank {
   id: string;
@@ -25,17 +27,20 @@ interface Template {
 }
 
 export default function TemplatesPage() {
+  const t = useTranslations("templates");
+  const router = useRouter();
   const [banks, setBanks] = useState<Bank[]>([]);
   const [, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchTemplates() {
     try {
       const res = await fetch("/api/banks");
-      if (!res.ok) throw new Error("Failed to fetch templates");
+      if (!res.ok) throw new Error("failed");
       const data = await res.json();
       setBanks(data);
     } catch (error) {
@@ -48,10 +53,10 @@ export default function TemplatesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Cheque Templates</h2>
-        <Button variant="outline" onClick={() => window.location.assign("/en/dashboard/print")}>
+        <h2 className="text-2xl font-bold">{t("title")}</h2>
+        <Button variant="outline" onClick={() => router.push("/dashboard/print")}>
           <Plus size={16} className="mr-2" />
-          New Cheque
+          {t("newCheque")}
         </Button>
       </div>
 
@@ -62,36 +67,34 @@ export default function TemplatesPage() {
               <CardTitle className="flex items-center justify-between">
                 <span>{bank.name}</span>
                 <span className="text-sm font-medium text-muted-foreground">
-                  {bank.templates.length} template(s)
+                  {t("templatesCount", { count: bank.templates.length })}
                 </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               {bank.templates.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No templates available</p>
+                <p className="text-sm text-muted-foreground">{t("noTemplates")}</p>
               ) : (
                 <div className="space-y-3">
                   {bank.templates.map((template) => (
                     <div
                       key={template.id}
-                      className="flex items-center justify-between rounded-lg border border-slate-200 p-3"
+                      className="flex items-center justify-between rounded-lg border border-border p-3"
                     >
                       <div>
                         <p className="font-medium">{template.name}</p>
                         <p className="text-xs text-muted-foreground">
                           {template.chequeWidth}mm × {template.chequeHeight}mm
-                          {template.isDefault && " · Default"}
+                          {template.isDefault && ` · ${t("default")}`}
                           {" · v" + template.version}
                         </p>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() =>
-                          (window.location.href = "/en/dashboard/print")
-                        }
+                        onClick={() => router.push("/dashboard/print")}
                       >
-                        Use Template
+                        {t("useTemplate")}
                       </Button>
                     </div>
                   ))}

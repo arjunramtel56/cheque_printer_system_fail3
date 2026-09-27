@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +8,11 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { siteConfig } from "@/lib/config";
 import { useState } from "react";
+import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations("auth");
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -20,7 +22,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="absolute top-4 right-4 flex items-center gap-2">
         <ThemeToggle />
         <LanguageSwitcher />
@@ -34,18 +36,17 @@ export default function ForgotPasswordPage() {
               className="logo-image h-10 w-auto"
             />
           </div>
-          <CardTitle className="text-2xl font-bold">Forgot password?</CardTitle>
-          <CardDescription>Enter your email and we&apos;ll send you a reset link</CardDescription>
+          <CardTitle className="text-2xl font-bold">{t("forgotPasswordQuestion")}</CardTitle>
+          <CardDescription>{t("enterEmail")}</CardDescription>
         </CardHeader>
         {submitted ? (
           <CardContent className="space-y-4 text-center">
-            <div className="rounded-md bg-green-50 p-3 text-sm text-green-600">
-              If an account exists with that email, you&apos;ll receive a password reset link
-              shortly.
+            <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900 dark:border-green-900/50 dark:bg-green-950/40 dark:text-green-100">
+              {t("resetLinkSent")}
             </div>
-            <Link href="/en/login">
+            <Link href="/login">
               <Button variant="outline" className="w-full">
-                Back to login
+                {t("backToLogin")}
               </Button>
             </Link>
           </CardContent>
@@ -53,7 +54,7 @@ export default function ForgotPasswordPage() {
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("email")}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -66,11 +67,11 @@ export default function ForgotPasswordPage() {
             </CardContent>
             <CardContent className="flex flex-col space-y-4">
               <Button type="submit" className="w-full">
-                Send reset link
+                {t("sendResetLink")}
               </Button>
-              <Link href="/en/login">
+              <Link href="/login">
                 <Button variant="ghost" className="w-full">
-                  Back to login
+                  {t("backToLogin")}
                 </Button>
               </Link>
             </CardContent>

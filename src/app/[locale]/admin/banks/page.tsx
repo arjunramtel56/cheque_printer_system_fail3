@@ -14,6 +14,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Plus, Edit, Trash2, Banknote } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/providers/toast-provider";
 
 interface Bank {
   id: string;
@@ -27,6 +29,8 @@ interface Bank {
 }
 
 export default function AdminBanksPage() {
+  const t = useTranslations("admin_banks");
+  const { showToast } = useToast();
   const [banks, setBanks] = useState<Bank[]>([]);
   const [, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -78,9 +82,7 @@ export default function AdminBanksPage() {
     event.preventDefault();
 
     try {
-      const url = editingBank
-        ? `/api/admin/banks/${editingBank.id}`
-        : "/api/admin/banks";
+      const url = editingBank ? `/api/admin/banks/${editingBank.id}` : "/api/admin/banks";
       const method = editingBank ? "PUT" : "POST";
 
       const res = await fetch(url, {
@@ -102,12 +104,12 @@ export default function AdminBanksPage() {
       }
       setIsDialogOpen(false);
     } catch (error: any) {
-      alert(error.message);
+      showToast(error?.message || t("saveError"), "error");
     }
   }
 
   async function handleDelete(bank: Bank) {
-    if (!confirm(`Delete "${bank.name}"? This cannot be undone.`)) return;
+    if (!window.confirm(t("deleteConfirm", { name: bank.name }))) return;
 
     try {
       const res = await fetch(`/api/admin/banks/${bank.id}`, {
@@ -117,35 +119,33 @@ export default function AdminBanksPage() {
       if (!res.ok) throw new Error("Failed to delete bank");
       setBanks(banks.filter((b) => b.id !== bank.id));
     } catch (error) {
-      alert("Failed to delete bank");
+      showToast(t("deleteError"), "error");
     }
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Banks</h2>
+        <h2 className="text-2xl font-bold">{t("title")}</h2>
         <Button onClick={handleAddNew} className="gap-2">
           <Plus size={16} />
-          Add Bank
+          {t("addBank")}
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>All Banks</CardTitle>
+          <CardTitle>{t("allBanks")}</CardTitle>
         </CardHeader>
         <CardContent>
           {banks.length === 0 ? (
             <div className="py-12 text-center">
               <Banknote className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">No banks configured</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Add banks to enable cheque printing for their templates.
-              </p>
+              <h3 className="mt-4 text-lg font-semibold">{t("noBanksConfigured")}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{t("noBanksDesc")}</p>
               <Button onClick={handleAddNew} className="mt-4 gap-2">
                 <Plus size={16} />
-                Add First Bank
+                {t("addFirstBank")}
               </Button>
             </div>
           ) : (
@@ -161,7 +161,7 @@ export default function AdminBanksPage() {
                       <div>
                         <p className="font-medium">{bank.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          Code: {bank.code} · {bank.templates.length} template(s)
+                          {t("code")}: {bank.code} · {bank.templates.length} {t("templates")}
                         </p>
                       </div>
                     </div>
@@ -169,12 +169,10 @@ export default function AdminBanksPage() {
                   <div className="flex items-center gap-2">
                     <span
                       className={`text-xs font-medium ${
-                        bank.isActive
-                          ? "text-green-600"
-                          : "text-red-600"
+                        bank.isActive ? "text-green-600" : "text-red-600"
                       }`}
                     >
-                      {bank.isActive ? "Active" : "Inactive"}
+                      {bank.isActive ? t("active") : t("inactive")}
                     </span>
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(bank)}>
                       <Edit size={16} />
@@ -198,42 +196,40 @@ export default function AdminBanksPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingBank ? "Edit Bank" : "Add New Bank"}
-            </DialogTitle>
+            <DialogTitle>{editingBank ? t("editBank") : t("addNewBank")}</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 py-2">
             <div>
-              <Label htmlFor="name">Bank Name *</Label>
+              <Label htmlFor="name">{t("bankName")}</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g. Nabil Bank Limited"
+                placeholder={t("namePlaceholder")}
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="code">Bank Code *</Label>
+              <Label htmlFor="code">{t("bankCode")}</Label>
               <Input
                 id="code"
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                placeholder="e.g. NABIL"
+                placeholder={t("codePlaceholder")}
                 maxLength={10}
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="logoUrl">Logo URL</Label>
+              <Label htmlFor="logoUrl">{t("logoUrl")}</Label>
               <Input
                 id="logoUrl"
                 value={formData.logoUrl}
                 onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
-                placeholder="https://example.com/logo.png"
+                placeholder={t("logoPlaceholder")}
               />
             </div>
 
@@ -246,7 +242,7 @@ export default function AdminBanksPage() {
                 className="h-4 w-4 rounded border-gray-300 text-blue-600"
               />
               <Label htmlFor="isActive" className="font-normal">
-                Active
+                {t("active")}
               </Label>
             </div>
 
@@ -254,7 +250,7 @@ export default function AdminBanksPage() {
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">{editingBank ? "Update" : "Create"}</Button>
+              <Button type="submit">{editingBank ? t("update") : t("create")}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

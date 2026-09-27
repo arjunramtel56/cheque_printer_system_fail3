@@ -1,12 +1,12 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Printer, FileText, Clock, CreditCard, AlertTriangle } from "lucide-react";
-import Link from "next/link";
-import { ChequePrintLayout } from "@/components/cheque/ChequePrintLayout";
+import { Link } from "@/i18n/navigation";
+import { getTranslations } from "next-intl/server";
 
 export default async function DashboardPage() {
+  const t = await getTranslations("dashboard_ui");
   const session = await auth();
   const user = session?.user as any;
 
@@ -57,22 +57,22 @@ export default async function DashboardPage() {
 
   const stats = [
     {
-      title: "Cheques Printed",
+      title: t("stats.chequesPrinted"),
       value: chequeCount.toString(),
       icon: FileText,
     },
     {
-      title: "Trial Days Left",
+      title: t("stats.trialDaysLeft"),
       value: trialInfo.isTrial ? trialInfo.daysLeft.toString() : "—",
       icon: AlertTriangle,
     },
     {
-      title: "Active Templates",
+      title: t("stats.activeTemplates"),
       value: "3",
       icon: CreditCard,
     },
     {
-      title: "Prints Left (Trial)",
+      title: t("printsLeftTrial"),
       value: trialInfo.isTrial ? trialInfo.printsLeft.toString() : "—",
       icon: Printer,
     },
@@ -82,39 +82,34 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {trialInfo.isTrial && trialInfo.daysLeft <= 7 && trialInfo.daysLeft > 0 && (
-        <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
+      {isTrial && trialInfo.isTrial && trialInfo.daysLeft <= 7 && trialInfo.daysLeft > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-400" />
             <div>
-              <p className="font-semibold">
-                Your trial period ends in {trialInfo.daysLeft} day
-                {trialInfo.daysLeft !== 1 ? "s" : ""}.
-              </p>
-              <p className="mt-1">Upgrade now to continue creating cheques without interruption.</p>
-              <Link href="/en/dashboard/subscription">
-                <Button size="sm" className="mt-2">
-                  Upgrade Now
-                </Button>
+              <p className="font-semibold">{t("trialEndingSoon", { days: trialInfo.daysLeft })}</p>
+              <p className="mt-1">{t("upgradeToContinue")}</p>
+              <Link href="/dashboard/subscription">
+                <span className="mt-2 inline-block rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                  {t("upgradeNow")}
+                </span>
               </Link>
             </div>
           </div>
         </div>
       )}
 
-      {trialInfo.isTrial && trialInfo.daysLeft <= 0 && (
-        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800">
+      {isTrial && trialInfo.isTrial && trialInfo.daysLeft <= 0 && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 text-red-600" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-red-600 dark:text-red-400" />
             <div>
-              <p className="font-semibold">Your trial period has expired.</p>
-              <p className="mt-1">
-                Please upgrade your subscription to continue using the service.
-              </p>
-              <Link href="/en/dashboard/subscription">
-                <Button size="sm" className="mt-2">
-                  Upgrade Now
-                </Button>
+              <p className="font-semibold">{t("trialExpired")}</p>
+              <p className="mt-1">{t("upgradeToContinue")}</p>
+              <Link href="/dashboard/subscription">
+                <span className="mt-2 inline-block rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                  {t("upgradeNow")}
+                </span>
               </Link>
             </div>
           </div>
@@ -122,13 +117,13 @@ export default async function DashboardPage() {
       )}
 
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Overview</h2>
+        <h2 className="text-2xl font-bold">{t("overview")}</h2>
         <Link
-          href="/en/dashboard/cheques/new"
+          href="/dashboard/cheques/new"
           className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           <Printer className="mr-2 h-4 w-4" />
-          Print New Cheque
+          {t("printNewCheque")}
         </Link>
       </div>
 
@@ -148,19 +143,19 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-          <h3 className="font-bold text-slate-900 dark:text-slate-100">Recent Activity</h3>
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-border">
+          <h3 className="font-bold text-foreground">{t("recentActivity")}</h3>
         </div>
-        <table className="w-full text-left text-sm text-slate-800 dark:text-slate-200">
-          <thead className="bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-medium">
+        <table className="w-full text-left text-sm text-foreground">
+          <thead className="bg-muted text-muted-foreground font-medium">
             <tr>
-              <th className="px-6 py-3">User</th>
-              <th className="px-6 py-3">Action</th>
-              <th className="px-6 py-3">Time</th>
+              <th className="px-6 py-3">{t("table.user")}</th>
+              <th className="px-6 py-3">{t("table.action")}</th>
+              <th className="px-6 py-3">{t("table.time")}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+          <tbody className="divide-y divide-border">
             {recentCheques.length > 0 ? (
               recentCheques.map((cheque) => (
                 <tr key={cheque.id}>
@@ -168,22 +163,19 @@ export default async function DashboardPage() {
                     {cheque.payeeName || cheque.accountHolder || "—"}
                   </td>
                   <td className="px-6 py-4 text-sm">
-                    <span className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-1 rounded text-xs font-bold">
+                    <span className="bg-muted text-muted-foreground px-2 py-1 rounded text-xs font-bold">
                       CHEQUE_CREATED
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                  <td className="px-6 py-4 text-muted-foreground text-xs">
                     {new Date(cheque.createdAt).toLocaleString()}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td
-                  colSpan={3}
-                  className="px-6 py-8 text-center text-slate-500 dark:text-slate-400"
-                >
-                  No recent activity.
+                <td colSpan={3} className="px-6 py-8 text-center text-muted-foreground">
+                  {t("noRecentActivity")}
                 </td>
               </tr>
             )}
@@ -193,30 +185,30 @@ export default async function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle>{t("quickActions")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <Link
-              href="/en/dashboard/cheques/new"
+              href="/dashboard/cheques/new"
               className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 w-full"
             >
               <Printer className="mr-2 h-4 w-4" />
-              Create New Cheque
+              {t("createNew")}
             </Link>
             <Link
-              href="/en/dashboard/templates"
+              href="/dashboard/templates"
               className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-3 text-sm font-medium shadow-sm hover:bg-accent w-full"
             >
               <FileText className="mr-2 h-4 w-4" />
-              View Templates
+              {t("viewTemplates")}
             </Link>
             <Link
-              href="/en/dashboard/history"
+              href="/dashboard/history"
               className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-3 text-sm font-medium shadow-sm hover:bg-accent w-full"
             >
               <Clock className="mr-2 h-4 w-4" />
-              Print History
+              {t("printHistory")}
             </Link>
           </div>
         </CardContent>

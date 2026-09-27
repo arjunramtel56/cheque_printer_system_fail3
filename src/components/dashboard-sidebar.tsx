@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/lib/config";
 import {
@@ -20,6 +20,8 @@ import {
   ChevronRight,
   Building2,
   BarChart3,
+  Bot,
+  User,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -34,6 +36,8 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   CreditCard,
   Building2,
   BarChart3,
+  Bot,
+  User,
 };
 
 interface DashboardSidebarProps {
@@ -41,6 +45,7 @@ interface DashboardSidebarProps {
 }
 
 export default function DashboardSidebar({ role }: DashboardSidebarProps) {
+  const t = useTranslations("sidebar");
   const pathname = usePathname();
   const locale = useLocale();
   const [collapsed, setCollapsed] = useState(false);
@@ -80,10 +85,10 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                 collapsed && "justify-center px-2"
               )}
-              title={collapsed ? item.label : undefined}
+              title={collapsed ? t(item.labelKey) : undefined}
             >
               <Icon size={18} />
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && <span>{t(item.labelKey)}</span>}
             </Link>
           );
         })}
@@ -95,10 +100,10 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
             "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground",
             collapsed && "justify-center px-2"
           )}
-          title={collapsed ? "Sign out" : undefined}
+          title={collapsed ? t("logout") : undefined}
         >
           <LogOut size={18} />
-          {!collapsed && <span>Sign out</span>}
+          {!collapsed && <span>{t("logout")}</span>}
         </button>
       </div>
     </aside>

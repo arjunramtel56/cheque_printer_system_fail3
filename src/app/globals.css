@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-background: hsl(0 0% 100%);
   --color-foreground: hsl(222.2 84% 4.9%);
@@ -22,6 +24,10 @@
 }
 
 @layer base {
+  html {
+    color-scheme: light;
+    background-color: var(--color-background);
+  }
   * {
     border-color: var(--color-border);
   }
@@ -37,6 +43,7 @@
 }
 
 :root.dark {
+  color-scheme: dark;
   --color-background: hsl(222.2 84% 4.9%);
   --color-foreground: hsl(0 0% 97%);
   --color-card: hsl(223 47% 11%);

@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Edit, Trash2, LayoutTemplate, Save } from "lucide-react";
 import ChequePreview from "@/components/cheque/cheque-preview";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/providers/toast-provider";
 import { ChequeTemplate } from "@/types";
 
 interface Bank {
@@ -71,6 +73,8 @@ const FIELD_PRESETS = [
 ];
 
 export default function AdminTemplatesPage() {
+  const t = useTranslations("admin_templates");
+  const { showToast } = useToast();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [banks, setBanks] = useState<Bank[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -221,12 +225,12 @@ export default function AdminTemplatesPage() {
       }
       setIsDialogOpen(false);
     } catch (error: any) {
-      alert(error.message);
+      showToast(error?.message || t("saveError"), "error");
     }
   }
 
   async function handleDelete(template: Template) {
-    if (!confirm(`Delete "${template.name}"? This cannot be undone.`)) return;
+    if (!window.confirm(t("deleteConfirm", { name: template.name }))) return;
 
     try {
       const res = await fetch(`/api/admin/templates?id=${template.id}`, {
@@ -236,7 +240,7 @@ export default function AdminTemplatesPage() {
       if (!res.ok) throw new Error("Failed to delete template");
       setTemplates(templates.filter((t) => t.id !== template.id));
     } catch (error) {
-      alert("Failed to delete template");
+      showToast(t("deleteError"), "error");
     }
   }
 
@@ -271,30 +275,28 @@ export default function AdminTemplatesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Templates</h2>
+        <h2 className="text-2xl font-bold">{t("title")}</h2>
         <Button onClick={handleAddNew} className="gap-2">
           <Plus size={16} />
-          Add Template
+          {t("addTemplate")}
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>All Templates</CardTitle>
+          <CardTitle>{t("allTemplates")}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground">Loading templates...</div>
+            <div className="p-8 text-center text-muted-foreground">{t("loading")}</div>
           ) : templates.length === 0 ? (
             <div className="py-12 text-center">
               <LayoutTemplate className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">No templates configured</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Add templates to define cheque layouts for bank cheque books.
-              </p>
+              <h3 className="mt-4 text-lg font-semibold">{t("noTemplates")}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{t("noTemplatesDesc")}</p>
               <Button onClick={handleAddNew} className="mt-4 gap-2">
                 <Plus size={16} />
-                Add First Template
+                {t("addFirstTemplate")}
               </Button>
             </div>
           ) : (
@@ -312,7 +314,7 @@ export default function AdminTemplatesPage() {
                         <p className="text-sm text-muted-foreground">
                           {template.bank.name} · {template.chequeWidth}mm × {template.chequeHeight}
                           mm · {template.fields.length} field(s)
-                          {template.isDefault && " · Default"}
+                          {template.isDefault && ` · ${t("setAsDefault")}`}
                           {" · v" + template.version}
                         </p>
                       </div>
@@ -324,7 +326,7 @@ export default function AdminTemplatesPage() {
                         template.isActive ? "text-green-600" : "text-red-600"
                       }`}
                     >
-                      {template.isActive ? "Active" : "Inactive"}
+                      {template.isActive ? t("active") : t("inactive")}
                     </span>
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(template)}>
                       <Edit size={16} />
@@ -348,19 +350,19 @@ export default function AdminTemplatesPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>{editingTemplate ? "Edit Template" : "Add New Template"}</DialogTitle>
+            <DialogTitle>{editingTemplate ? t("editTemplate") : t("addNewTemplate")}</DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_300px]">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="bankId">Bank *</Label>
+                <Label htmlFor="bankId">{t("bank")} *</Label>
                 <Select
                   value={formData.bankId}
                   onValueChange={(value) => setFormData({ ...formData, bankId: value })}
                 >
                   <SelectTrigger id="bankId">
-                    <SelectValue placeholder="Select a bank" />
+                    <SelectValue placeholder={t("selectABank")} />
                   </SelectTrigger>
                   <SelectContent>
                     {banks.map((bank) => (
@@ -373,7 +375,7 @@ export default function AdminTemplatesPage() {
               </div>
 
               <div>
-                <Label htmlFor="name">Template Name *</Label>
+                <Label htmlFor="name">{t("templateName")} *</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -385,7 +387,7 @@ export default function AdminTemplatesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="chequeWidth">Cheque Width (mm)</Label>
+                  <Label htmlFor="chequeWidth">{t("chequeWidth")}</Label>
                   <Input
                     id="chequeWidth"
                     type="number"
@@ -398,7 +400,7 @@ export default function AdminTemplatesPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="chequeHeight">Cheque Height (mm)</Label>
+                  <Label htmlFor="chequeHeight">{t("chequeHeight")}</Label>
                   <Input
                     id="chequeHeight"
                     type="number"
@@ -413,7 +415,7 @@ export default function AdminTemplatesPage() {
               </div>
 
               <div>
-                <Label htmlFor="backgroundUrl">Background Image URL</Label>
+                <Label htmlFor="backgroundUrl">{t("backgroundImageUrl")}</Label>
                 <Input
                   id="backgroundUrl"
                   value={formData.backgroundUrl}
@@ -430,7 +432,7 @@ export default function AdminTemplatesPage() {
                     onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
                     className="h-4 w-4 rounded border-gray-300 text-blue-600"
                   />
-                  <Label className="font-normal">Set as default template for this bank</Label>
+                  <Label className="font-normal">{t("setAsDefault")}</Label>
                 </label>
                 <label className="flex items-center gap-2">
                   <input
@@ -439,12 +441,12 @@ export default function AdminTemplatesPage() {
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                     className="h-4 w-4 rounded border-gray-300 text-blue-600"
                   />
-                  <Label className="font-normal">Active</Label>
+                  <Label className="font-normal">{t("active")}</Label>
                 </label>
               </div>
 
               <div>
-                <Label className="mb-2 block">Template Fields</Label>
+                <Label className="mb-2 block">{t("fields")}</Label>
                 <div className="space-y-3">
                   {formData.fields.map((field, index) => (
                     <div key={index} className="rounded-lg border border-slate-200 p-3 space-y-2">
@@ -459,7 +461,7 @@ export default function AdminTemplatesPage() {
                           <SelectContent>
                             {FIELD_PRESETS.map((preset) => (
                               <SelectItem key={preset.field} value={preset.field}>
-                                {preset.label}
+                                {preset.field}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -523,17 +525,17 @@ export default function AdminTemplatesPage() {
                   onClick={handleAddField}
                 >
                   <Plus size={14} />
-                  Add Field
+                  {t("addField")}
                 </Button>
               </div>
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
+                  {t("cancel")}
                 </Button>
                 <Button type="submit">
                   <Save size={16} className="mr-2" />
-                  {editingTemplate ? "Update" : "Create"}
+                  {editingTemplate ? t("update") : t("create")}
                 </Button>
               </DialogFooter>
             </form>

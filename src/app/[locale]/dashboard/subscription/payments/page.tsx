@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Check, X, FileText, AlertCircle } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 
 type PaymentStatus = "PENDING_VERIFICATION" | "APPROVED" | "REJECTED";
 
@@ -64,7 +64,6 @@ const statusInfo: Record<
 
 export default function UserPaymentsPage() {
   const t = useTranslations("paymentStatus");
-  const locale = useLocale();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -89,7 +88,7 @@ export default function UserPaymentsPage() {
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">{t("title")}</h2>
-        <div className="text-center py-8 text-muted-foreground">Loading payments...</div>
+        <div className="text-center py-8 text-muted-foreground">{t("loading")}</div>
       </div>
     );
   }
@@ -98,7 +97,7 @@ export default function UserPaymentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">{t("title")}</h2>
-        <Link href={`/${locale}/dashboard/subscription`}>
+        <Link href="/dashboard/subscription">
           <Button variant="outline" size="sm">
             {t("backToSubscription")}
           </Button>
@@ -109,12 +108,10 @@ export default function UserPaymentsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">No payments submitted</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              You haven't submitted any payments yet.
-            </p>
-            <Link href="/en/dashboard/subscription">
-              <Button className="mt-4">Upgrade Subscription</Button>
+            <h3 className="mt-4 text-lg font-semibold">{t("noPayments")}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{t("noPaymentsDesc")}</p>
+            <Link href="/dashboard/subscription">
+              <Button className="mt-4">{t("upgradeSubscription")}</Button>
             </Link>
           </CardContent>
         </Card>
@@ -183,7 +180,7 @@ export default function UserPaymentsPage() {
 
                     {payment.proofUrl && (
                       <div>
-                        <p className="text-sm font-medium">Payment Proof</p>
+                        <p className="text-sm font-medium">{t("paymentProof")}</p>
                         <img
                           src={payment.proofUrl}
                           alt="Payment proof"
@@ -194,12 +191,19 @@ export default function UserPaymentsPage() {
                     )}
 
                     {payment.rejectionReason && (
-                      <div className="rounded-lg bg-red-50 p-3">
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/40">
                         <div className="flex items-start gap-2">
-                          <AlertCircle size={16} className="mt-0.5 text-red-600" />
+                          <AlertCircle
+                            size={16}
+                            className="mt-0.5 text-red-600 dark:text-red-400"
+                          />
                           <div>
-                            <p className="font-medium text-sm text-red-800">Rejection Reason</p>
-                            <p className="text-sm text-red-700">{payment.rejectionReason}</p>
+                            <p className="font-medium text-sm text-red-900 dark:text-red-100">
+                              {t("rejectionReason")}
+                            </p>
+                            <p className="text-sm text-red-800 dark:text-red-200">
+                              {payment.rejectionReason}
+                            </p>
                           </div>
                         </div>
                       </div>
