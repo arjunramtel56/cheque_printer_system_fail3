@@ -21,3 +21,4 @@ coverage/
 
 # vercel
 .vercel/
+.embedded-pg-data/

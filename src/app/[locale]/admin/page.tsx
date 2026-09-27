@@ -165,28 +165,28 @@ export default async function AdminDashboardPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3">
             <Link href="/admin/users">
-              <a className="rounded-lg border p-3 text-center transition hover:bg-accent">
+              <span className="block rounded-lg border p-3 text-center transition hover:bg-accent">
                 <Users className="mx-auto h-5 w-5 text-muted-foreground" />
                 <p className="mt-1 text-sm font-medium">{t("manageUsers")}</p>
-              </a>
+              </span>
             </Link>
             <Link href="/admin/banks">
-              <a className="rounded-lg border p-3 text-center transition hover:bg-accent">
+              <span className="block rounded-lg border p-3 text-center transition hover:bg-accent">
                 <Banknote className="mx-auto h-5 w-5 text-muted-foreground" />
                 <p className="mt-1 text-sm font-medium">{t("manageBanks")}</p>
-              </a>
+              </span>
             </Link>
             <Link href="/admin/templates">
-              <a className="rounded-lg border p-3 text-center transition hover:bg-accent">
+              <span className="block rounded-lg border p-3 text-center transition hover:bg-accent">
                 <LayoutTemplate className="mx-auto h-5 w-5 text-muted-foreground" />
                 <p className="mt-1 text-sm font-medium">{t("manageTemplates")}</p>
-              </a>
+              </span>
             </Link>
             <Link href="/admin/audit-logs">
-              <a className="rounded-lg border p-3 text-center transition hover:bg-accent">
+              <span className="block rounded-lg border p-3 text-center transition hover:bg-accent">
                 <BarChart3 className="mx-auto h-5 w-5 text-muted-foreground" />
                 <p className="mt-1 text-sm font-medium">{t("auditLogs")}</p>
-              </a>
+              </span>
             </Link>
           </CardContent>
         </Card>
