@@ -6,8 +6,9 @@ export const siteConfig = {
   company: "Reactify Software Technologies Pvt. Ltd.",
   contact: {
     phone: "+977-9743836026",
+    phoneHours: "Sun–Fri, 10am–5pm",
     email: "info@reactifysoftwaretechnologies.com.np",
-    address: "Kathmandu, Nepal",
+    address: "Kankai Municipality-3, Campus Road, Surunga, Jhapa, Nepal",
     website: "https://www.reactifysoftwaretechnologies.com.np/",
   },
   navItems: [
@@ -54,7 +55,12 @@ export const siteConfig = {
     },
     { label: "Users", labelKey: "users", href: "/admin/users", icon: "Users" },
     { label: "Banks", labelKey: "banks", href: "/admin/banks", icon: "Building2" },
-    { label: "Templates", labelKey: "templates", href: "/admin/templates", icon: "LayoutTemplate" },
+    {
+      label: "Templates",
+      labelKey: "templates",
+      href: "/admin/templates",
+      icon: "LayoutTemplate",
+    },
     { label: "Audit Logs", labelKey: "auditLogs", href: "/admin/audit-logs", icon: "BarChart3" },
     { label: "Settings", labelKey: "settings", href: "/admin/settings", icon: "Settings" },
     { label: "Plans", labelKey: "plans", href: "/admin/plans", icon: "CreditCard" },

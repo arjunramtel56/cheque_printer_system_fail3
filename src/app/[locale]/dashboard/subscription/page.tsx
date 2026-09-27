@@ -344,7 +344,7 @@ export default function SubscriptionPage() {
                 onClick={() => handleSelectPlan("business")}
               >
                 {pricing.business.bestValue && (
-                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-yellow-400 text-xs font-bold px-2 py-0.5 rounded">
+                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-950 text-xs font-bold px-2 py-0.5 rounded">
                     {t("bestValue")}
                   </span>
                 )}

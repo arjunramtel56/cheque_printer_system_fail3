@@ -60,6 +60,7 @@ const steps = [
 
 export default function HomePage() {
   const t = useTranslations("home");
+  const tp = useTranslations("subscription");
   const locale = useLocale();
 
   return (
@@ -215,28 +216,31 @@ export default function HomePage() {
                 <h3 className="text-xl font-bold">{siteConfig.pricing.standard.label}</h3>
                 <div className="mt-2">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Introductory offer - first month only
+                    {tp("introductoryOffer")}
                   </p>
-                  <span className="text-3xl font-bold">
-                    {siteConfig.pricing.standard.firstMonth}
-                  </span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold">
+                      {siteConfig.pricing.standard.firstMonth}
+                    </span>
+                    <span className="text-sm text-muted-foreground">{tp("firstMonth")}</span>
+                  </div>
                 </div>
                 <table className="w-full text-sm mt-4">
                   <tbody>
                     <tr>
-                      <td className="py-1 text-muted-foreground">3 Months</td>
+                      <td className="py-1 text-muted-foreground">{tp("duration3Months")}</td>
                       <td className="py-1 text-right font-medium">
                         {siteConfig.pricing.standard.threeMonths}
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-1 text-muted-foreground">6 Months</td>
+                      <td className="py-1 text-muted-foreground">{tp("duration6Months")}</td>
                       <td className="py-1 text-right font-medium">
                         {siteConfig.pricing.standard.sixMonths}
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-1 text-muted-foreground">12 Months</td>
+                      <td className="py-1 text-muted-foreground">{tp("duration12Months")}</td>
                       <td className="py-1 text-right font-medium">
                         {siteConfig.pricing.standard.annual}
                       </td>
@@ -259,35 +263,38 @@ export default function HomePage() {
 
             {/* Business Plan */}
             <Card className="relative border-2 border-yellow-400">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold">
-                BEST VALUE
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold text-yellow-950">
+                {tp("bestValue")}
               </div>
               <CardContent className="pt-6">
                 <h3 className="text-xl font-bold">{siteConfig.pricing.business.label}</h3>
                 <div className="mt-2">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Introductory offer - first month only
+                    {tp("introductoryOffer")}
                   </p>
-                  <span className="text-3xl font-bold">
-                    {siteConfig.pricing.business.firstMonth}
-                  </span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold">
+                      {siteConfig.pricing.business.firstMonth}
+                    </span>
+                    <span className="text-sm text-muted-foreground">{tp("firstMonth")}</span>
+                  </div>
                 </div>
                 <table className="w-full text-sm mt-4">
                   <tbody>
                     <tr>
-                      <td className="py-1 text-muted-foreground">3 Months</td>
+                      <td className="py-1 text-muted-foreground">{tp("duration3Months")}</td>
                       <td className="py-1 text-right font-medium">
                         {siteConfig.pricing.business.threeMonths}
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-1 text-muted-foreground">6 Months</td>
+                      <td className="py-1 text-muted-foreground">{tp("duration6Months")}</td>
                       <td className="py-1 text-right font-medium">
                         {siteConfig.pricing.business.sixMonths}
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-1 text-muted-foreground">12 Months</td>
+                      <td className="py-1 text-muted-foreground">{tp("duration12Months")}</td>
                       <td className="py-1 text-right font-medium">
                         {siteConfig.pricing.business.annual}
                       </td>
@@ -305,7 +312,7 @@ export default function HomePage() {
                 <Link href={`/${locale}/register`} className="mt-6 block">
                   <Button
                     variant="outline"
-                    className="w-full border-yellow-600 text-yellow-600 hover:bg-yellow-50"
+                    className="w-full border-yellow-600 text-yellow-700 hover:bg-yellow-50 dark:text-yellow-400 dark:hover:bg-yellow-950/40"
                   >
                     {t("getStarted")}
                   </Button>

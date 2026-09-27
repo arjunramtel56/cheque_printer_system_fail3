@@ -22,6 +22,7 @@ const contactInfo: IconData[] = [
     icon: Phone,
     titleKey: "phone",
     value: siteConfig.contact.phone,
+    extra: siteConfig.contact.phoneHours,
   },
   {
     icon: MapPin,
@@ -33,7 +34,7 @@ const contactInfo: IconData[] = [
     icon: Globe,
     titleKey: "website",
     value: siteConfig.contact.website,
-    extra: "Official Website",
+    extra: undefined,
   },
 ];
 
