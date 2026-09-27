@@ -9,7 +9,7 @@ export const siteConfig = {
     phoneHours: "Sun–Fri, 10am–5pm",
     email: "info@reactifysoftwaretechnologies.com.np",
     address: "Kankai Municipality-3, Campus Road, Surunga, Jhapa, Nepal",
-    website: "https://www.reactifysoftwaretechnologies.com.np/",
+    website: "www.reactifysoftwaretechnologies.com.np",
   },
   navItems: [
     { label: "Home", labelKey: "home", href: "/" },

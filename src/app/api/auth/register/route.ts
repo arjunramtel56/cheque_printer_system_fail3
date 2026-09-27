@@ -16,7 +16,23 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
+    // The browser form posts multipart/form-data while API clients may post
+    // JSON. Parse whichever content type arrives; a malformed body is a
+    // client error (400), not a server error.
+    let body: Record<string, unknown>;
+    try {
+      const contentType = request.headers.get("content-type") ?? "";
+      if (
+        contentType.includes("multipart/form-data") ||
+        contentType.includes("application/x-www-form-urlencoded")
+      ) {
+        body = Object.fromEntries((await request.formData()).entries());
+      } else {
+        body = await request.json();
+      }
+    } catch {
+      return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+    }
 
     // Normalize: accept either name or fullName from the client
     const normalized = {

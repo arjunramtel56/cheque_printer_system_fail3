@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { siteConfig } from "@/lib/config";
 import { useState } from "react";
@@ -24,7 +23,6 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="absolute top-4 right-4 flex items-center gap-2">
-        <ThemeToggle />
         <LanguageSwitcher />
       </div>
       <Card className="w-full max-w-md">
