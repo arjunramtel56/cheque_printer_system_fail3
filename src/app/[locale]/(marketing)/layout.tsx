@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { siteConfig } from "@/lib/config";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
@@ -31,6 +32,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               ))}
             </nav>
             <div className="flex items-center gap-2">
+              <ThemeToggle />
               <span className="hidden sm:inline-flex">
                 <LanguageSwitcher />
               </span>

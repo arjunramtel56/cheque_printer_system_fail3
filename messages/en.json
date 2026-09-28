@@ -7,6 +7,12 @@
     "title": "Reactify Cheque Printing System",
     "subtitle": "Print cheques directly from your cheque books with precision and ease."
   },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "menuLabel": "Theme menu"
+  },
   "nav": {
     "home": "Home",
     "about": "About",
