@@ -1,6 +1,7 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet, pdf, Image } from "@react-pdf/renderer";
 import { TemplateFieldConfig } from "@/types";
+import { CHEQUE } from "@/lib/cheque/constants";
 
 interface ChequePDFProps {
   bankName: string;
@@ -88,8 +89,8 @@ export async function generateChequePDF(
 ): Promise<Buffer> {
   const template = cheque.template;
   const bankName = template?.bank?.name || "Bank Cheque";
-  const chequeWidth = template?.chequeWidth || 210;
-  const chequeHeight = template?.chequeHeight || 90;
+  const chequeWidth = template?.chequeWidth || CHEQUE.WIDTH_MM;
+  const chequeHeight = template?.chequeHeight || CHEQUE.HEIGHT_MM;
   const backgroundUrl = template?.backgroundUrl || null;
   const templateFields = (template?.fields || []).map((f: any) => ({
     id: f.id,

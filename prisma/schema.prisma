@@ -177,8 +177,8 @@ model BankTemplate {
   id             String   @id @default(cuid())
   bankId         String
   name           String
-  chequeWidth    Float    @default(210)
-  chequeHeight   Float    @default(90)
+  chequeWidth    Float    @default(190.5)
+  chequeHeight   Float    @default(88.9)
   backgroundUrl  String?
   isActive       Boolean  @default(true)
   isDefault      Boolean  @default(false)

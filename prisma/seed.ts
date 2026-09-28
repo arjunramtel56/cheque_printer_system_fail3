@@ -75,8 +75,8 @@ async function main() {
       create: {
         bankId: created.id,
         name: "Standard Cheque",
-        chequeWidth: 210,
-        chequeHeight: 90,
+        chequeWidth: 190.5,
+        chequeHeight: 88.9,
         isDefault: true,
         fields: {
           create: [
@@ -90,25 +90,25 @@ async function main() {
             },
             {
               field: "date",
-              x: 140,
-              y: 10,
+              x: 127,
+              y: 9.9,
               fontSize: 10,
               fontFamily: "Arial",
               fontWeight: "normal",
             },
             {
               field: "amountWords",
-              x: 25,
-              y: 40,
-              width: 150,
+              x: 22.7,
+              y: 39.5,
+              width: 136,
               fontSize: 10,
               fontFamily: "Arial",
               fontWeight: "normal",
             },
             {
               field: "amountNumber",
-              x: 145,
-              y: 55,
+              x: 131.5,
+              y: 54.3,
               fontSize: 12,
               fontFamily: "Arial",
               fontWeight: "bold",

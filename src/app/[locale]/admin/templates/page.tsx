@@ -83,8 +83,8 @@ export default function AdminTemplatesPage() {
   const [formData, setFormData] = useState({
     bankId: "",
     name: "",
-    chequeWidth: 210,
-    chequeHeight: 90,
+    chequeWidth: 190.5,
+    chequeHeight: 88.9,
     backgroundUrl: "",
     isDefault: false,
     isActive: true,
@@ -125,8 +125,8 @@ export default function AdminTemplatesPage() {
     setFormData({
       bankId: "",
       name: "",
-      chequeWidth: 210,
-      chequeHeight: 90,
+      chequeWidth: 190.5,
+      chequeHeight: 88.9,
       backgroundUrl: "",
       isDefault: false,
       isActive: true,
@@ -393,7 +393,7 @@ export default function AdminTemplatesPage() {
                     type="number"
                     value={formData.chequeWidth}
                     onChange={(e) =>
-                      setFormData({ ...formData, chequeWidth: parseInt(e.target.value) || 210 })
+                      setFormData({ ...formData, chequeWidth: parseInt(e.target.value) || 190.5 })
                     }
                     min="50"
                     max="210"
@@ -406,7 +406,7 @@ export default function AdminTemplatesPage() {
                     type="number"
                     value={formData.chequeHeight}
                     onChange={(e) =>
-                      setFormData({ ...formData, chequeHeight: parseInt(e.target.value) || 90 })
+                      setFormData({ ...formData, chequeHeight: parseInt(e.target.value) || 88.9 })
                     }
                     min="50"
                     max="297"

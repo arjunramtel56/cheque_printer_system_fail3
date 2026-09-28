@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
       data: {
         bankId,
         name,
-        chequeWidth: chequeWidth || 210,
-        chequeHeight: chequeHeight || 90,
+        chequeWidth: chequeWidth || 190.5,
+        chequeHeight: chequeHeight || 88.9,
         backgroundUrl: backgroundUrl || null,
         isDefault: isDefault || false,
         fields: {
