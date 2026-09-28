@@ -1,7 +1,14 @@
 "use client";
 
 import { forwardRef, useMemo } from "react";
-import { A4, CHEQUE, DEFAULT_PLACEMENT, FIELD_POSITIONS } from "@/lib/cheque/constants";
+import {
+  A4,
+  CHEQUE,
+  CROSSING_CENTER_Y_MM,
+  DEFAULT_PLACEMENT,
+  FIELD_POSITIONS,
+} from "@/lib/cheque/constants";
+import { formatDateDigits } from "@/lib/amount-to-words";
 
 export type ChequePrintProps = {
   payeeName: string;
@@ -17,13 +24,6 @@ export type ChequePrintProps = {
   memo?: string;
   isTrial?: boolean;
 };
-
-const fmt = (d: Date, lang: "en" | "ne") =>
-  new Intl.DateTimeFormat(lang === "ne" ? "ne-NP" : "en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(d);
 
 const money = (n: number, lang: "en" | "ne") =>
   new Intl.NumberFormat(lang === "ne" ? "ne-NP" : "en-IN", {
@@ -46,6 +46,9 @@ export const ChequePrintLayout = forwardRef<HTMLDivElement, ChequePrintProps>(
     const placement = DEFAULT_PLACEMENT[orientation];
     const page = A4[orientation];
 
+    // DDMMYYYY — one digit per pre-printed date box, no separators.
+    const dateDigits = formatDateDigits(props.chequeDate);
+
     const style = useMemo(
       () => ({
         page: {
@@ -66,18 +69,27 @@ export const ChequePrintLayout = forwardRef<HTMLDivElement, ChequePrintProps>(
       <div ref={ref} className="cheque-page" style={style.page} data-orientation={orientation}>
         {isTrial && <div className="trial-watermark">TRIAL VERSION</div>}
         <div className="cheque-sheet" style={style.cheque}>
-          {accountPayeeOnly && <div className="cheque-crossing">A/C PAYEE ONLY</div>}
+          {accountPayeeOnly && (
+            <div className="cheque-crossing" style={{ top: `${CROSSING_CENTER_Y_MM}mm` }}>
+              A/C PAYEE ONLY
+            </div>
+          )}
 
+          {/* Date: eight individual digit boxes (DDMMYYYY), top right */}
           <div
-            className="cheque-field"
+            className="cheque-date-row"
             style={{
               left: `${FIELD_POSITIONS.date.x}mm`,
               top: `${FIELD_POSITIONS.date.y}mm`,
               width: `${FIELD_POSITIONS.date.w}mm`,
-              textAlign: FIELD_POSITIONS.date.align,
+              height: `${FIELD_POSITIONS.date.h}mm`,
             }}
           >
-            {fmt(props.chequeDate, language)}
+            {Array.from({ length: FIELD_POSITIONS.date.boxes }).map((_, i) => (
+              <div key={i} className="cheque-date-box">
+                {dateDigits[i] ?? ""}
+              </div>
+            ))}
           </div>
 
           <div
@@ -104,13 +116,14 @@ export const ChequePrintLayout = forwardRef<HTMLDivElement, ChequePrintProps>(
             {props.amountWords}
           </div>
 
+          {/* Amount box on the right of the beneficiary line */}
           <div
-            className="cheque-field cheque-amount-figure"
+            className="cheque-amount-box"
             style={{
               left: `${FIELD_POSITIONS.amountFig.x}mm`,
               top: `${FIELD_POSITIONS.amountFig.y}mm`,
               width: `${FIELD_POSITIONS.amountFig.w}mm`,
-              textAlign: FIELD_POSITIONS.amountFig.align,
+              height: `${FIELD_POSITIONS.amountFig.h}mm`,
             }}
           >
             {money(props.amountFigure, language)}

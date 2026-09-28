@@ -246,6 +246,20 @@ export function amountToWords(amount: number | string, language: "en" | "ne" = "
   return `${result} Only`;
 }
 
+/**
+ * Formats a date as eight separator-free digits (DDMMYYYY) for bank date
+ * boxes. `28/09/2026` -> `28092026`. Returns "" for invalid input.
+ */
+export function formatDateDigits(date: string | Date): string {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = String(d.getFullYear());
+  return `${day}${month}${year}`;
+}
+
 export function formatAmount(amount: number | string): string {
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
   if (isNaN(num)) return "0.00";

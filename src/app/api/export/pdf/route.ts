@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/api-helpers";
 import { generateChequePDF } from "@/lib/cheque-pdf";
-import { amountToWords, formatDate } from "@/lib/amount-to-words";
+import { amountToWords, formatDateDigits } from "@/lib/amount-to-words";
 
 export async function POST(request: NextRequest) {
   const user = await getAuthenticatedUser(request);
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const fields: Record<string, string> = {
-      date: formatDate(cheque.chequeDate.toISOString().split("T")[0]),
+      date: formatDateDigits(cheque.chequeDate.toISOString().split("T")[0]),
       payee: cheque.payeeName || "",
       amountWords: cheque.amountWords,
       amountNumber: Number(cheque.amountNumber).toFixed(2),

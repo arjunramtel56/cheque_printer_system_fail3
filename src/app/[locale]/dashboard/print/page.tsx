@@ -12,7 +12,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useLocale } from "next-intl";
-import { amountToWords, formatDate } from "@/lib/amount-to-words";
+import { amountToWords, formatDateDigits } from "@/lib/amount-to-words";
 import { ChequeTemplate } from "@/types";
 import ChequePreview from "@/components/cheque/cheque-preview";
 import { useToast } from "@/providers/toast-provider";
@@ -129,7 +129,7 @@ export default function PrintPage() {
     : null;
 
   const previewFields: Record<string, string> = {
-    date: chequeDate ? formatDate(chequeDate) : "",
+    date: chequeDate ? formatDateDigits(chequeDate) : "",
     payee: payeeName || "",
     amountWords: amountWords || "",
     amountNumber: amount || "",

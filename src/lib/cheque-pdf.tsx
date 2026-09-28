@@ -1,7 +1,7 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet, pdf, Image } from "@react-pdf/renderer";
 import { TemplateFieldConfig } from "@/types";
-import { CHEQUE } from "@/lib/cheque/constants";
+import { CHEQUE, CROSSING_CENTER_Y_MM, FIELD_POSITIONS } from "@/lib/cheque/constants";
 
 interface ChequePDFProps {
   bankName: string;
@@ -12,7 +12,8 @@ interface ChequePDFProps {
   templateFields: TemplateFieldConfig[];
 }
 
-const MM_TO_PT = 1;
+/** Width of one date digit box in mm (8 boxes spanning the date row). */
+const DATE_BOX_W_MM = FIELD_POSITIONS.date.w / FIELD_POSITIONS.date.boxes;
 
 export const ChequePDFDocument = (props: ChequePDFProps) => {
   const { bankName, chequeWidth, chequeHeight, backgroundUrl, fields, templateFields } = props;
@@ -46,7 +47,81 @@ export const ChequePDFDocument = (props: ChequePDFProps) => {
               }}
             />
           )}
+
+          {/* A/C PAYEE ONLY — horizontal band centred on the date line */}
+          <View
+            style={{
+              position: "absolute",
+              top: CROSSING_CENTER_Y_MM - 3.5,
+              left: 0,
+              width: chequeWidth,
+              height: 7,
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 5,
+            }}
+            wrap={false}
+          >
+            <Text
+              style={{
+                fontSize: 11,
+                fontFamily: "Courier",
+                fontWeight: "bold",
+                letterSpacing: 2,
+                color: "#000000",
+                borderStyle: "solid",
+                borderWidth: 1,
+                borderColor: "#000000",
+                paddingHorizontal: 8,
+                paddingVertical: 1,
+              }}
+            >
+              {"A/C PAYEE ONLY"}
+            </Text>
+          </View>
+
+          {/* Date: eight individual DDMMYYYY digit boxes, top right */}
+          <View
+            style={{
+              position: "absolute",
+              left: FIELD_POSITIONS.date.x,
+              top: FIELD_POSITIONS.date.y,
+              width: FIELD_POSITIONS.date.w,
+              height: FIELD_POSITIONS.date.h,
+              flexDirection: "row",
+              zIndex: 5,
+            }}
+            wrap={false}
+          >
+            {Array.from({ length: FIELD_POSITIONS.date.boxes }).map((_, i) => (
+              <View
+                key={i}
+                style={{
+                  width: DATE_BOX_W_MM,
+                  height: FIELD_POSITIONS.date.h,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 9,
+                    fontFamily: "Courier",
+                    fontWeight: "bold",
+                    color: "#000000",
+                  }}
+                >
+                  {fields.date ? (fields.date.replace(/\D/g, "")[i] ?? "") : ""}
+                </Text>
+              </View>
+            ))}
+          </View>
+
           {fieldPositions.map((field) => {
+            // Date + amount figure are rendered by the dedicated blocks above
+            // (digit boxes / amount box) for print parity.
+            if (field.field === "date" || field.field === "amountNumber") return null;
+
             const value = fields[field.field] || "";
             return (
               <Text
@@ -68,6 +143,36 @@ export const ChequePDFDocument = (props: ChequePDFProps) => {
               </Text>
             );
           })}
+
+          {/* Amount box on the right of the beneficiary line */}
+          <View
+            style={{
+              position: "absolute",
+              left: FIELD_POSITIONS.amountFig.x,
+              top: FIELD_POSITIONS.amountFig.y,
+              width: FIELD_POSITIONS.amountFig.w,
+              height: FIELD_POSITIONS.amountFig.h,
+              borderStyle: "solid",
+              borderWidth: 1,
+              borderColor: "#000000",
+              alignItems: "flex-end",
+              justifyContent: "center",
+              paddingRight: 6,
+              zIndex: 5,
+            }}
+            wrap={false}
+          >
+            <Text
+              style={{
+                fontSize: 11,
+                fontFamily: "Courier",
+                fontWeight: "bold",
+                color: "#000000",
+              }}
+            >
+              {fields.amountNumber || ""}
+            </Text>
+          </View>
         </View>
       </Page>
     </Document>
