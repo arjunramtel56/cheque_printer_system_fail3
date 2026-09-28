@@ -8,6 +8,7 @@ import {
   Printer,
   FileText,
   Shield,
+  ShieldCheck,
   Clock,
   CreditCard,
   Zap,
@@ -17,13 +18,16 @@ import {
   Ruler,
   Lock,
   UserPlus,
-  LogIn,
   Phone,
   Mail,
   MapPin,
   CheckCircle2,
 } from "lucide-react";
 import { siteConfig } from "@/lib/config";
+import { DemoChequePreview } from "@/components/marketing/demo-cheque-preview";
+import { MarketingBanksSection } from "@/components/marketing/banks-section";
+import { HomeFaq } from "@/components/marketing/home-faq";
+import { PaymentBadges } from "@/components/marketing/payment-badges";
 
 const benefits = [
   { icon: Zap, titleKey: "benefit1Title", descKey: "benefit1Desc" },
@@ -59,32 +63,44 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col">
-      {/* 1. Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 to-background py-20 md:py-28">
-        <div className="mx-auto max-w-7xl px-4 text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-primary">
-            {siteConfig.company}
-          </p>
-          <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-            {t("heroTitle")}
-            <span className="text-primary"> {t("heroTitleHighlight")}</span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-            {t("heroDescription")}
-          </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link href={`/${locale}/register`}>
-              <Button size="lg" className="w-full text-base sm:w-auto">
-                <Zap className="mr-2 h-5 w-5" />
-                {t("startTrial")}
-              </Button>
-            </Link>
-            <Link href={`/${locale}/login`}>
-              <Button variant="outline" size="lg" className="w-full text-base sm:w-auto">
-                <LogIn className="mr-2 h-5 w-5" />
-                {t("userLogin")}
-              </Button>
-            </Link>
+      {/* 1. Hero Section with live demo */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 to-background py-16 md:py-24">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 lg:grid-cols-2">
+          <div className="text-center lg:text-left">
+            <p className="text-sm font-semibold uppercase tracking-widest text-primary">
+              {siteConfig.company}
+            </p>
+            <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
+              {t("heroTitle")}
+              <span className="text-primary"> {t("heroTitleHighlight")}</span>
+            </h1>
+            <p className="mx-auto mt-6 max-w-xl text-lg text-muted-foreground lg:mx-0">
+              {t("heroDescription")}
+            </p>
+            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start">
+              <Link href={`/${locale}/register`}>
+                <Button size="lg" className="w-full text-base sm:w-auto">
+                  <Zap className="mr-2 h-5 w-5" />
+                  {t("startTrial")}
+                </Button>
+              </Link>
+              <a
+                href="#how-it-works"
+                className="inline-flex h-11 w-full items-center justify-center rounded-md border border-input bg-background px-8 text-base font-medium shadow-sm hover:bg-accent hover:text-accent-foreground sm:w-auto"
+              >
+                <Eye className="mr-2 h-5 w-5" />
+                {t("viewDemo")}
+              </a>
+            </div>
+            <p className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground lg:justify-start">
+              <ShieldCheck className="h-4 w-4 shrink-0 text-green-600" />
+              {t("heroBadge")}
+            </p>
+          </div>
+          {/* Live demo mockup — interactive, doubles as the hero visual */}
+          <div className="mx-auto w-full max-w-md lg:max-w-lg">
+            <DemoChequePreview compact />
+            <p className="mt-3 text-center text-sm text-muted-foreground">{t("demoDescription")}</p>
           </div>
         </div>
       </section>
@@ -174,6 +190,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* 5b. Supported Banks + printer compatibility */}
+      <MarketingBanksSection />
 
       {/* 6. Pricing */}
       <section id="pricing" className="py-20">
@@ -310,6 +329,13 @@ export default function HomePage() {
               </CardContent>
             </Card>
           </div>
+          <div className="mt-14 flex flex-col items-center gap-5">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold">{t("paymentsTitle")}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t("paymentsNote")}</p>
+            </div>
+            <PaymentBadges />
+          </div>
         </div>
       </section>
 
@@ -338,6 +364,9 @@ export default function HomePage() {
           <p className="mt-6 text-sm opacity-80">{t("ctaTrialNote")}</p>
         </div>
       </section>
+
+      {/* 7b. FAQ */}
+      <HomeFaq />
 
       {/* 8. Contact */}
       <section id="contact" className="py-20">

@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { siteConfig } from "@/lib/config";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { MarketingFooter } from "@/components/marketing/footer";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   const tNav = useTranslations("nav");
@@ -53,28 +54,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         </div>
       </header>
       <main className="flex-1">{children}</main>
-      <footer className="border-t bg-card">
-        <div className="mx-auto max-w-7xl px-4 py-8">
-          <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
-            <div className="flex flex-col items-center gap-2 md:items-start">
-              <img
-                src={siteConfig.logo}
-                alt={siteConfig.company}
-                className="logo-image h-8 w-auto"
-              />
-              <div className="text-center md:text-left">
-                <p className="text-sm font-medium">{siteConfig.name}</p>
-                <p className="text-xs text-muted-foreground">{siteConfig.company}</p>
-                <p className="text-xs text-muted-foreground">{siteConfig.contact.phone}</p>
-                <p className="text-xs text-muted-foreground">{siteConfig.contact.email}</p>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              &copy; {new Date().getFullYear()} {siteConfig.company}. {tNav("allRightsReserved")}
-            </p>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }
