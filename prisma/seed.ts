@@ -81,10 +81,18 @@ async function main() {
         fields: {
           create: [
             {
-              field: "name",
+              field: "payee",
               x: 8.4,
               y: 25.3,
               fontSize: 12,
+              fontFamily: "Arial",
+              fontWeight: "normal",
+            },
+            {
+              field: "name",
+              x: 8.4,
+              y: 45,
+              fontSize: 11,
               fontFamily: "Arial",
               fontWeight: "normal",
             },
