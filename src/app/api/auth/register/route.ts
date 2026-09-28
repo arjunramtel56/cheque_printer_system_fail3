@@ -80,28 +80,33 @@ export async function POST(request: Request) {
     const now = new Date();
     const endDate = new Date(now.getTime() + trialPlan.durationDays * 24 * 60 * 60 * 1000);
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        passwordHash,
-        company: company || null,
-        phone: phone || null,
-        role: "TRIAL_USER",
-        status: "ACTIVE",
-        trialExpires: endDate,
-        subscription: {
-          create: {
-            planId: trialPlan.id,
-            startDate: now,
-            endDate: endDate,
-            isActive: true,
+    // Atomic account creation: user + trial subscription + settings commit
+    // together or not at all, so a failure can never leave a partially
+    // created account behind.
+    const user = await prisma.$transaction(async (tx) => {
+      return tx.user.create({
+        data: {
+          name,
+          email,
+          passwordHash,
+          company: company || null,
+          phone: phone || null,
+          role: "TRIAL_USER",
+          status: "ACTIVE",
+          trialExpires: endDate,
+          subscription: {
+            create: {
+              planId: trialPlan.id,
+              startDate: now,
+              endDate: endDate,
+              isActive: true,
+            },
+          },
+          settings: {
+            create: {},
           },
         },
-        settings: {
-          create: {},
-        },
-      },
+      });
     });
 
     return NextResponse.json(
@@ -112,6 +117,15 @@ export async function POST(request: Request) {
     console.error("[REGISTER_ERROR]", error);
     if (error.code === "P2002") {
       return NextResponse.json({ error: "Email already registered" }, { status: 409 });
+    }
+    // Infrastructure failures (DB unreachable / schema missing) get their own
+    // safe message so on-call can distinguish them from bugs; the full
+    // Prisma code stays in the server log above.
+    if (error.code === "P1001" || error.code === "P2021" || error.code === "P2022") {
+      return NextResponse.json(
+        { error: "Unable to create your account right now. Please try again later." },
+        { status: 503 }
+      );
     }
     return NextResponse.json(
       { error: "Internal server error. Please try again." },

@@ -5,6 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { isRateLimited } from "@/lib/rate-limit";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  // Explicit secret: Auth.js v5 resolves AUTH_SECRET from the environment,
+  // but resolving it implicitly can surface as a generic 500 ("problem with
+  // the server configuration") on hosts where the variable is missing.
+  // Declaring it here makes the requirement loud and diagnostic.
+  secret: process.env.AUTH_SECRET,
   providers: [
     Credentials({
       name: "credentials",
