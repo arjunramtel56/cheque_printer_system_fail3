@@ -1,0 +1,139 @@
+/*
+ * Marketing landing page visual effects.
+ *
+ * Deliberately kept out of the printing pipeline: this file only defines
+ * opt-in utility classes used by the public landing page. Nothing here is
+ * imported by cheque print components or applied inside @media print.
+ */
+
+@keyframes marketing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes marketing-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes marketing-glow {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.08);
+  }
+}
+
+/* Entrance animation (plays once on mount) */
+.animate-fade-up {
+  animation: marketing-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Gentle idle float for decorative elements only */
+.animate-float {
+  animation: marketing-float 7s ease-in-out infinite;
+}
+
+/* Slow ambient pulse for decorative glow blobs */
+.animate-glow {
+  animation: marketing-glow 9s ease-in-out infinite;
+}
+
+/* Staggered entrance delays (suffix avoids Tailwind's transition-delay-*) */
+.anim-delay-75 {
+  animation-delay: 75ms;
+}
+.anim-delay-150 {
+  animation-delay: 150ms;
+}
+.anim-delay-200 {
+  animation-delay: 200ms;
+}
+.anim-delay-300 {
+  animation-delay: 300ms;
+}
+
+/* Scroll-reveal states driven by the <Reveal> component (IntersectionObserver) */
+.reveal-pending {
+  opacity: 0;
+  transform: translateY(18px);
+}
+.reveal-in {
+  animation: marketing-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Gradient headline text */
+.text-gradient {
+  background-image: linear-gradient(90deg, var(--color-primary), #7c3aed);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+:root.dark .text-gradient {
+  background-image: linear-gradient(90deg, var(--color-primary), #a78bfa);
+}
+
+/* Faint engineering-grid backdrop with a soft radial fade */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, hsl(221.2 83.2% 53.3% / 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(221.2 83.2% 53.3% / 0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 25%, black 40%, transparent 78%);
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 25%, black 40%, transparent 78%);
+}
+:root.dark .bg-grid {
+  background-image:
+    linear-gradient(to right, hsl(0 0% 100% / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(0 0% 100% / 0.06) 1px, transparent 1px);
+}
+
+/* Soft hover lift for marketing cards (never used on print surfaces) */
+.card-lift {
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.card-lift:hover {
+  transform: translateY(-4px);
+  border-color: hsl(221.2 83.2% 53.3% / 0.35);
+  box-shadow: 0 14px 34px -14px hsl(221.2 83.2% 53.3% / 0.3);
+}
+:root.dark .card-lift:hover {
+  border-color: hsl(217.2 92.2% 59.2% / 0.4);
+  box-shadow: 0 14px 34px -14px hsl(0 0% 0% / 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-float,
+  .animate-glow,
+  .reveal-in {
+    animation: none;
+  }
+  .reveal-pending {
+    opacity: 1;
+    transform: none;
+  }
+  .card-lift,
+  .card-lift:hover {
+    transition: none;
+    transform: none;
+  }
+}

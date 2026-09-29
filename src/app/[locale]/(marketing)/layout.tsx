@@ -1,5 +1,6 @@
 "use client";
 
+import "@/styles/marketing.css";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { siteConfig } from "@/lib/config";
