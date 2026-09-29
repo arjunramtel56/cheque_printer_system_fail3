@@ -17,6 +17,11 @@ export function LegalPage({ doc }: { doc: "privacy" | "terms" | "refund" }) {
       bodyKeys: ["privacyWeCollect1", "privacyWeCollect2", "privacyWeCollect3"],
     },
     { titleKey: "privacyWeDoTitle", bodyKeys: ["privacyWeDo1", "privacyWeDo2", "privacyWeDo3"] },
+    { titleKey: "privacyCookiesTitle", bodyKeys: ["privacyCookies1", "privacyCookies2"] },
+    {
+      titleKey: "privacyRetentionTitle",
+      bodyKeys: ["privacyRetention1", "privacyRetention2"],
+    },
   ];
 
   const termsSections = [

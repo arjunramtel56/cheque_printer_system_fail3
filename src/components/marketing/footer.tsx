@@ -14,6 +14,8 @@ export function MarketingFooter() {
   const productLinks = [
     { label: tNav("features"), href: "/features" },
     { label: tNav("pricing"), href: "/pricing" },
+    { label: t("benefits"), href: "/benefits" },
+    { label: t("howItWorks"), href: "/how-it-works" },
     { label: tNav("faq"), href: "/faq" },
     { label: tNav("contact"), href: "/contact" },
   ];

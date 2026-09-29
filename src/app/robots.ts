@@ -1,13 +1,17 @@
-import type { MetadataRoute } from 'next';
+import type { MetadataRoute } from "next";
+import { siteConfig } from "@/lib/config";
+
+const baseUrl = siteConfig.url.replace(/\/$/, "");
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
-        userAgent: '*',
-        allow: '/',
+        userAgent: "*",
+        allow: "/",
+        disallow: ["/dashboard", "/admin", "/api"],
       },
     ],
-    sitemap: 'https://reactify.com/sitemap.xml',
+    sitemap: `${baseUrl}/sitemap.xml`,
   };
 }

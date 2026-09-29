@@ -17,6 +17,11 @@ const publicRoutes = [
   "/contact",
   "/faq",
   "/blog",
+  "/benefits",
+  "/how-it-works",
+  "/privacy-policy",
+  "/terms-of-service",
+  "/refund-policy",
 ];
 const authRoutes = ["/login", "/register", "/forgot-password", "/reset-password", "/verify-email"];
 const adminRoutes = ["/admin"];
@@ -142,5 +147,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|images|logos|api/auth).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|images|logos|robots.txt|sitemap.xml|api/auth).*)",
+  ],
 };

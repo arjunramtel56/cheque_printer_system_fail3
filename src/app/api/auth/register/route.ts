@@ -62,16 +62,16 @@ export async function POST(request: Request) {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // Find or create trial plan
+    // Find or create trial plan (24-hour trial with 5 test prints)
     let trialPlan = await prisma.plan.findUnique({ where: { name: "trial" } });
     if (!trialPlan) {
       trialPlan = await prisma.plan.create({
         data: {
           name: "trial",
-          description: "14-day free trial with 10 cheque prints",
+          description: "24-hour free trial with 5 test prints",
           price: 0,
-          durationDays: 14,
-          chequeLimit: 10,
+          durationDays: 1,
+          chequeLimit: 5,
           features: JSON.stringify({ templates: "basic", export: false, bulkPrint: false }),
         },
       });

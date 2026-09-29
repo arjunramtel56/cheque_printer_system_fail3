@@ -30,10 +30,10 @@ export async function registerUser(prevState: any, formData: FormData) {
       trialPlan = await prisma.plan.create({
         data: {
           name: "trial",
-          description: "14-day free trial with 10 cheque prints",
+          description: "24-hour free trial with 5 test prints",
           price: 0,
-          durationDays: 14,
-          chequeLimit: 10,
+          durationDays: 1,
+          chequeLimit: 5,
           features: JSON.stringify({ templates: "basic", export: false, bulkPrint: false }),
         },
       });

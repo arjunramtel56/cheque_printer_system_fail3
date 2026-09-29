@@ -8,13 +8,18 @@ async function main() {
   // Create plans
   const trialPlan = await prisma.plan.upsert({
     where: { name: "trial" },
-    update: {},
+    // Keep existing rows in sync with the current trial model (24h / 5 prints).
+    update: {
+      durationDays: 1,
+      chequeLimit: 5,
+      description: "24-hour free trial with 5 test prints",
+    },
     create: {
       name: "trial",
-      description: "14-day free trial with 10 cheque prints",
+      description: "24-hour free trial with 5 test prints",
       price: 0,
-      durationDays: 14,
-      chequeLimit: 10,
+      durationDays: 1,
+      chequeLimit: 5,
       features: JSON.stringify({ templates: "basic", export: false, bulkPrint: false }),
     },
   });
@@ -24,8 +29,8 @@ async function main() {
     update: {},
     create: {
       name: "standard",
-      description: "Standard plan with 100 prints per month",
-      price: 500,
+      description: "Standard plan with 100 cheque prints",
+      price: 99,
       durationDays: 30,
       chequeLimit: 100,
       features: JSON.stringify({ templates: "all", export: true, bulkPrint: false }),
@@ -38,7 +43,7 @@ async function main() {
     create: {
       name: "business",
       description: "Business plan with unlimited prints",
-      price: 1500,
+      price: 149,
       durationDays: 30,
       chequeLimit: -1, // unlimited
       features: JSON.stringify({ templates: "all", export: true, bulkPrint: true }),
@@ -139,8 +144,8 @@ async function main() {
       value: "Reactify Software Technologies Pvt. Ltd.",
       description: "Company name",
     },
-    { key: "trial.durationDays", value: 14, description: "Default trial duration in days" },
-    { key: "trial.chequeLimit", value: 10, description: "Default trial cheque limit" },
+    { key: "trial.durationDays", value: 1, description: "Default trial duration in days" },
+    { key: "trial.chequeLimit", value: 5, description: "Default trial cheque limit" },
   ];
 
   for (const setting of settings) {

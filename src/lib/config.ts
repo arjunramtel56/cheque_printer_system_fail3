@@ -70,8 +70,8 @@ export const siteConfig = {
     trial: {
       label: "Free Trial",
       price: "Free",
-      duration: "14 days",
-      features: ["10 cheque prints", "Basic bank templates", "Print history"],
+      duration: "24 hours",
+      features: ["5 test prints", "Basic bank templates", "Print history"],
     },
     standard: {
       label: "Standard Plan",
@@ -79,7 +79,7 @@ export const siteConfig = {
       threeMonths: "NPR 99",
       sixMonths: "NPR 179",
       annual: "NPR 299",
-      features: ["100 cheque prints/month", "All bank templates", "Export to PDF", "Email support"],
+      features: ["100 cheque prints", "All bank templates", "Export to PDF", "Email support"],
       bestValue: false,
     },
     business: {
@@ -88,13 +88,7 @@ export const siteConfig = {
       threeMonths: "NPR 149",
       sixMonths: "NPR 269",
       annual: "NPR 499",
-      features: [
-        "Unlimited prints",
-        "All bank templates",
-        "Bulk printing",
-        "Priority support",
-        "Custom templates",
-      ],
+      features: ["Unlimited prints", "All bank templates", "Export to PDF", "Priority support"],
       bestValue: true,
     },
     fonepay: {
@@ -109,7 +103,7 @@ export const siteConfig = {
     a4HeightMm: 297,
   },
   trialConfig: {
-    maxPrints: 10,
-    daysDuration: 14,
+    maxPrints: 5,
+    daysDuration: 1,
   },
 };
