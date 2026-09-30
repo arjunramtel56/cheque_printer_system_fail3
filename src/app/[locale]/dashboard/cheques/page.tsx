@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Printer, Download, Trash2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { Input } from "@/components/ui/input";
+import { FileText, Printer, Download, Trash2, Search } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { useToast } from "@/providers/toast-provider";
 
@@ -27,10 +28,13 @@ interface ChequeEntry {
 
 export default function ChequesPage() {
   const t = useTranslations("cheques");
+  const locale = useLocale() as "en" | "ne";
   const router = useRouter();
   const { showToast } = useToast();
   const [cheques, setCheques] = useState<ChequeEntry[]>([]);
-  const [, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     fetchCheques();
@@ -38,13 +42,16 @@ export default function ChequesPage() {
   }, []);
 
   async function fetchCheques() {
+    setIsLoading(true);
+    setLoadError(false);
     try {
       const res = await fetch("/api/cheques?limit=50");
       if (!res.ok) throw new Error("failed");
       const data = await res.json();
-      setCheques(data);
+      setCheques(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching cheques:", error);
+      setLoadError(true);
     } finally {
       setIsLoading(false);
     }
@@ -86,17 +93,65 @@ export default function ChequesPage() {
     }
   }
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return cheques;
+    return cheques.filter(
+      (c) =>
+        (c.payeeName ?? "").toLowerCase().includes(q) ||
+        c.template?.bank?.name?.toLowerCase().includes(q) ||
+        String(c.amountNumber).includes(q)
+    );
+  }, [cheques, search]);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold">{t("title")}</h2>
-        <Button variant="outline" onClick={() => router.push("/dashboard/cheques/new")}>
-          <Printer size={16} className="mr-2" />
-          {t("newCheque")}
-        </Button>
+        <div className="flex items-center gap-3">
+          {cheques.length > 3 && (
+            <div className="relative">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={
+                  locale === "ne" ? "पाउने/बैंक/रकम खोज्नुहोस्…" : "Search payee, bank, amount…"
+                }
+                className="w-56 pl-10"
+              />
+            </div>
+          )}
+          <Button variant="outline" onClick={() => router.push("/dashboard/cheques/new")}>
+            <Printer size={16} className="mr-2" />
+            {t("newCheque")}
+          </Button>
+        </div>
       </div>
 
-      {cheques.length > 0 ? (
+      {isLoading ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            {locale === "ne" ? "लोड हुँदै…" : "Loading…"}
+          </CardContent>
+        </Card>
+      ) : loadError ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-destructive">
+              {locale === "ne"
+                ? "चेक लोड गर्न सकिएन। कृपया फेरि प्रयास गर्नुहोस्।"
+                : "Could not load your cheques. Please try again."}
+            </p>
+            <Button variant="outline" className="mt-3" onClick={fetchCheques}>
+              {locale === "ne" ? "फेरि प्रयास" : "Retry"}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : cheques.length > 0 ? (
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -112,7 +167,7 @@ export default function ChequesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {cheques.map((cheque) => (
+                  {filtered.map((cheque) => (
                     <tr key={cheque.id} className="border-b">
                       <td className="px-4 py-3 font-medium">
                         {cheque.payeeName || <span className="text-muted-foreground">—</span>}

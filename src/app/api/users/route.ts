@@ -66,6 +66,24 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
     }
 
+    // Privilege guards: an ADMIN (non-super) can never modify a SUPER_ADMIN
+    // account, and nobody can change their own role/status from this endpoint.
+    if (user.role !== "SUPER_ADMIN") {
+      const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+      if (target?.role === "SUPER_ADMIN") {
+        return NextResponse.json(
+          { error: "Super-admin accounts can only be modified by another super-admin." },
+          { status: 403 }
+        );
+      }
+    }
+    if (user.id === id && (role || status)) {
+      return NextResponse.json(
+        { error: "You cannot change your own role or status." },
+        { status: 400 }
+      );
+    }
+
     const updated = await prisma.user.update({
       where: { id },
       data: {
@@ -119,6 +137,17 @@ export async function DELETE(request: NextRequest) {
 
     if (user.id === id) {
       return NextResponse.json({ error: "Cannot delete your own account" }, { status: 400 });
+    }
+
+    // Only a SUPER_ADMIN may delete a SUPER_ADMIN account.
+    if (user.role !== "SUPER_ADMIN") {
+      const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+      if (target?.role === "SUPER_ADMIN") {
+        return NextResponse.json(
+          { error: "Super-admin accounts can only be deleted by another super-admin." },
+          { status: 403 }
+        );
+      }
     }
 
     await prisma.user.delete({ where: { id } });

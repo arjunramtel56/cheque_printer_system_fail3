@@ -30,7 +30,8 @@ export default function TemplatesPage() {
   const t = useTranslations("templates");
   const router = useRouter();
   const [banks, setBanks] = useState<Bank[]>([]);
-  const [, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     fetchTemplates();
@@ -38,13 +39,16 @@ export default function TemplatesPage() {
   }, []);
 
   async function fetchTemplates() {
+    setIsLoading(true);
+    setLoadError(false);
     try {
       const res = await fetch("/api/banks");
       if (!res.ok) throw new Error("failed");
       const data = await res.json();
-      setBanks(data);
+      setBanks(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching templates:", error);
+      setLoadError(true);
     } finally {
       setIsLoading(false);
     }
@@ -60,50 +64,74 @@ export default function TemplatesPage() {
         </Button>
       </div>
 
-      <div className="space-y-4">
-        {banks.map((bank) => (
-          <Card key={bank.id}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>{bank.name}</span>
-                <span className="text-sm font-medium text-muted-foreground">
-                  {t("templatesCount", { count: bank.templates.length })}
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {bank.templates.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("noTemplates")}</p>
-              ) : (
-                <div className="space-y-3">
-                  {bank.templates.map((template) => (
-                    <div
-                      key={template.id}
-                      className="flex items-center justify-between rounded-lg border border-border p-3"
-                    >
-                      <div>
-                        <p className="font-medium">{template.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {template.chequeWidth}mm × {template.chequeHeight}mm
-                          {template.isDefault && ` · ${t("default")}`}
-                          {" · v" + template.version}
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push("/dashboard/print")}
+      {isLoading ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            {t("loading")}
+          </CardContent>
+        </Card>
+      ) : loadError ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-destructive">{t("saveError")}</p>
+            <Button variant="outline" className="mt-3" onClick={fetchTemplates}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      ) : banks.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <LayoutTemplate className="mx-auto h-12 w-12 text-muted-foreground" />
+            <p className="mt-3 text-muted-foreground">{t("noTemplates")}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {banks.map((bank) => (
+            <Card key={bank.id}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>{bank.name}</span>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {t("templatesCount", { count: bank.templates.length })}
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {bank.templates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t("noTemplates")}</p>
+                ) : (
+                  <div className="space-y-3">
+                    {bank.templates.map((template) => (
+                      <div
+                        key={template.id}
+                        className="flex items-center justify-between rounded-lg border border-border p-3"
                       >
-                        {t("useTemplate")}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                        <div>
+                          <p className="font-medium">{template.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {template.chequeWidth}mm × {template.chequeHeight}mm
+                            {template.isDefault && ` · ${t("default")}`}
+                            {" · v" + template.version}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push("/dashboard/print")}
+                        >
+                          {t("useTemplate")}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
