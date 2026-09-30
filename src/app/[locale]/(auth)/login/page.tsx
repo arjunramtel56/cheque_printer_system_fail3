@@ -14,8 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { siteConfig } from "@/lib/config";
 import { Link, useRouter as useI18nRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
@@ -86,73 +84,68 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="absolute top-4 right-4 flex items-center gap-2">
-        <ThemeToggle />
-        <LanguageSwitcher />
-      </div>
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <img
-              src={siteConfig.logo}
-              alt={siteConfig.company}
-              className="logo-image h-10 w-auto"
+    <Card className="w-full max-w-md">
+      <CardHeader className="space-y-1 text-center">
+        <div className="flex justify-center mb-4">
+          <img src={siteConfig.logo} alt={siteConfig.company} className="logo-image h-10 w-auto" />
+        </div>
+        <CardTitle className="text-2xl font-bold">{t("welcomeBack")}</CardTitle>
+        <CardDescription>{t("signInToAccount")}</CardDescription>
+      </CardHeader>
+      <form onSubmit={handleSubmit} noValidate>
+        <CardContent className="space-y-4">
+          {error && (
+            <div
+              role="alert"
+              className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+            >
+              {error}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="email">{t("email")}</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="name@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
             />
           </div>
-          <CardTitle className="text-2xl font-bold">{t("welcomeBack")}</CardTitle>
-          <CardDescription>{t("signInToAccount")}</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit} noValidate>
-          <CardContent className="space-y-4">
-            {error && (
-              <div
-                role="alert"
-                className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
-              >
-                {error}
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">{t("email")}</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">{t("password")}</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? t("signingIn") : t("signIn")}
-            </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              {t("dontHaveAccount")}{" "}
-              <Link href="/register" className="text-primary hover:underline">
-                {t("signUp")}
-              </Link>
-            </p>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">{t("password")}</Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-4">
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? t("signingIn") : t("signIn")}
+          </Button>
+          <p className="text-center text-sm">
+            <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+              {t("forgotPassword")}
+            </Link>
+          </p>
+          <p className="text-center text-sm text-muted-foreground">
+            {t("dontHaveAccount")}{" "}
+            <Link href="/register" className="text-primary hover:underline">
+              {t("signUp")}
+            </Link>
+          </p>
+        </CardFooter>
+      </form>
+    </Card>
   );
 }

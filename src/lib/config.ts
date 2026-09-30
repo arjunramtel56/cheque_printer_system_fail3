@@ -7,7 +7,7 @@ export const siteConfig = {
   contact: {
     phone: "+977-9743836026",
     phoneHours: "Sun–Fri, 10am–5pm",
-    email: "info@reactifysoftwaretechnologies.com.np",
+    email: "support@reactifysoftwaretechnologies.com.np",
     address: "Kankai Municipality-3, Campus Road, Surunga, Jhapa, Nepal",
     website: "www.reactifysoftwaretechnologies.com.np",
   },

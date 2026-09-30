@@ -129,6 +129,7 @@
     "viewDemo": "See How It Works",
     "demoTitle": "Try it live — no sign-up needed",
     "demoDescription": "Type an amount and see how it converts to words and looks on a real cheque leaf.",
+    "demoDisclaimer": "This is a fictional demonstration cheque and is not valid for payment.",
     "demoAmountLabel": "Amount (NPR)",
     "demoDefaultAmount": "25000",
     "demoLivePreview": "Live cheque preview",
@@ -148,7 +149,19 @@
     "faqQ4": "Is my banking data safe?",
     "faqA4": "We never ask for bank passwords or online-banking credentials. You only enter the payee name, amount and date that get printed on your own cheque leaf.",
     "paymentsTitle": "Easy local payments",
-    "paymentsNote": "Pay securely with Fonepay QR — upload your payment proof for quick activation."
+    "paymentsNote": "Pay securely with Fonepay QR — upload your payment proof for quick activation.",
+    "demoBankName": "Reactify Software Technologies Pvt. Ltd.",
+    "demoBankBranch": "Kathmandu, Nepal",
+    "demoDateLabel": "Date",
+    "demoDateDay": "Day",
+    "demoDateMonth": "Month",
+    "demoDateYear": "Year",
+    "demoPayLabel": "Pay against this cheque to",
+    "demoPayeeName": "Reactify Software Technologies Pvt. Ltd.",
+    "demoOrBearer": "Or Bearer",
+    "demoSumLabel": "the sum of",
+    "demoSignature": "Authorised Signature(s) — Demo Only",
+    "demoNoLabel": "No."
   },
   "footer": {
     "product": "Product",
@@ -294,7 +307,11 @@
     "resetLinkSent": "If an account exists with that email, you'll receive a password reset link shortly.",
     "oauthAccountNotLinked": "OAuth account not linked.",
     "fillAllFields": "Please fill in all fields.",
-    "createAccountDesc": "Create your account and start your 24-hour free trial. No credit card required."
+    "createAccountDesc": "Create your account and start your 24-hour free trial. No credit card required.",
+    "passwordsDoNotMatch": "Passwords do not match.",
+    "resetSuccessMessage": "Your password has been updated successfully. You can now sign in with your new password.",
+    "resetInvalidToken": "This password reset link is invalid or has expired. Please request a new one.",
+    "newPasswordLabel": "New password"
   },
   "about": {
     "title": "About Reactify Cheque Printer System",
@@ -354,7 +371,7 @@
     "q5": "Is my data secure?",
     "a5": "Absolutely. We use industry-standard encryption to protect your data. Your cheque information is stored securely and is never shared with third parties.",
     "q6": "How do I get support?",
-    "a6": "We offer email support for all plans, with priority support for Business plan users. You can reach us at info@reactifysoftwaretechnologies.com.np."
+    "a6": "We offer email support for all plans, with priority support for Business plan users. You can reach us at support@reactifysoftwaretechnologies.com.np."
   },
   "contact": {
     "title": "Contact Us",
@@ -372,7 +389,12 @@
     "formSubjectPlaceholder": "How can we help?",
     "formMessage": "Message",
     "formMessagePlaceholder": "Tell us more about your inquiry...",
-    "formSubmit": "Send Message"
+    "formSubmit": "Send Message",
+    "formSubmitting": "Sending…",
+    "formSuccess": "Your message has been sent successfully. Our team will review your inquiry and contact you if a response is required.",
+    "formError": "Unable to send your message right now. Please try again later or call us directly.",
+    "formInvalidEmail": "Please enter a valid email address.",
+    "formRequired": "Please fill in all required fields."
   },
   "blog": {
     "title": "Blog",
@@ -1004,5 +1026,9 @@
     "plans": "Plans",
     "reports": "Reports",
     "logout": "Sign out"
+  },
+  "metadata": {
+    "title": "Reactify Cheque Printer System — Cheque Printing Software for Nepal",
+    "description": "Print Nepalese bank cheques accurately from your browser. Bank-specific templates for 10 major Nepalese banks, amount-in-words in English and Nepali, calibration, print history and a 24-hour free trial. Built by Reactify Software Technologies Pvt. Ltd."
   }
 }

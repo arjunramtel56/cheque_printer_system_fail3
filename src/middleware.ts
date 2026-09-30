@@ -11,6 +11,7 @@ const publicRoutes = [
   "/login",
   "/register",
   "/forgot-password",
+  "/reset-password",
   "/about",
   "/features",
   "/pricing",
@@ -80,8 +81,10 @@ export async function middleware(request: NextRequest) {
 
   // Redirect locale-less paths (e.g. "/", "/login", "/admin") to the
   // user's preferred locale — cookie first, then browser language.
+  // Query string must survive (e.g. /reset-password?token=…).
   if (!hasLocale) {
     const target = new URL(`/${locale}${pathname === "/" ? "" : pathname}`, request.url);
+    target.search = request.nextUrl.search;
     return NextResponse.redirect(target);
   }
 
@@ -98,8 +101,13 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // If user is on auth page but already logged in, redirect to dashboard
-  if (token && authRoutes.some((route) => pathWithoutLocale.startsWith(route))) {
+  // If a logged-in user opens the login page, send them to their dashboard.
+  // NOTE: /register is deliberately excluded — "Start Free Trial" must always
+  // open the registration panel, never silently land on an existing session's
+  // dashboard (which reads as if another account was auto-signed-in). Creating
+  // a trial account never re-authenticates anyone: the register flow hands
+  // off to /login, so sessions can only change via explicit credentials.
+  if (token && pathWithoutLocale.startsWith("/login")) {
     const dashboardPath =
       token.role === "ADMIN" || token.role === "SUPER_ADMIN"
         ? `/${locale}/admin`

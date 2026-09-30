@@ -13,7 +13,9 @@ export async function registerUser(prevState: any, formData: FormData) {
       return { error: validated.error.errors[0].message };
     }
 
-    const { name: fullName, email, company, phone, password } = validated.data;
+    const { name: fullName, company, phone, password } = validated.data;
+    // Case-insensitive uniqueness: emails are stored lowercase.
+    const email = validated.data.email.trim().toLowerCase();
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -21,9 +23,6 @@ export async function registerUser(prevState: any, formData: FormData) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-
-    const trialExpires = new Date();
-    trialExpires.setDate(trialExpires.getDate() + 14);
 
     let trialPlan = await prisma.plan.findUnique({ where: { name: "trial" } });
     if (!trialPlan) {
@@ -39,8 +38,8 @@ export async function registerUser(prevState: any, formData: FormData) {
       });
     }
 
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + trialPlan.durationDays);
+    const now = new Date();
+    const endDate = new Date(now.getTime() + trialPlan.durationDays * 24 * 60 * 60 * 1000);
 
     await prisma.user.create({
       data: {
@@ -51,11 +50,11 @@ export async function registerUser(prevState: any, formData: FormData) {
         phone: phone || null,
         role: "TRIAL_USER",
         status: "ACTIVE",
-        trialExpires,
+        trialExpires: endDate,
         subscription: {
           create: {
             planId: trialPlan.id,
-            startDate: new Date(),
+            startDate: now,
             endDate,
             isActive: true,
           },

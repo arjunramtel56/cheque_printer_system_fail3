@@ -50,7 +50,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
     }
 
-    const { name, email, password, company, phone } = result.data;
+    const { name, password, company, phone } = result.data;
+    // Emails are stored lowercase so uniqueness is case-insensitive and
+    // login lookups match regardless of the case the visitor types.
+    const email = result.data.email.trim().toLowerCase();
 
     const existingUser = await prisma.user.findUnique({
       where: { email },

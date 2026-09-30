@@ -74,6 +74,7 @@ model User {
    auditLogs      AuditLog[]
    payments       Payment[]
    reviews        Payment[] @relation("PaymentReviewer")
+   passwordResetTokens PasswordResetToken[]
 
   @@index([email])
   @@index([role])
@@ -334,4 +335,37 @@ model AuditLog {
   @@index([action, createdAt])
   @@index([entity])
   @@index([createdAt])
+}
+
+// ─── Password Reset ───────────────────────────────────────────────────
+
+/// One-time, time-limited password reset tokens. Only the SHA-256 hash of
+/// the token is stored; the raw token exists solely in the reset link.
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Contact-form submissions (public /api/contact endpoint).
+model SupportTicket {
+  id        String    @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    String    @default("OPEN")
+  ipAddress String?
+  createdAt DateTime  @default(now())
+
+  @@index([status, createdAt])
+  @@index([email])
 }

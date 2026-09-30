@@ -1,29 +1,34 @@
 /**
  * Server-side source of truth for subscription pricing.
  *
- * The marketing copy in siteConfig.pricing shows introductory first-month
- * offers (NPR 39 / NPR 59). The amounts actually charged and stored on
- * Payment records come from the Plan table (this module), so a tampered
- * client can never pay less than the configured price.
+ * SINGLE SOURCE OF TRUTH: these are the exact amounts charged and stored on
+ * Payment records. The marketing UI (landing page, /pricing, subscription
+ * page) and siteConfig.pricing display the same values — when pricing
+ * changes, update this module and the UI copy together.
  *
- * Duration pricing model:
- *   - first month: introductory offer (introPrice)
- *   - 3 / 6 / 12 months: regular monthly price x months, as configured below
+ * Duration pricing model (flat per-duration prices, matching the advertised
+ * NPR amounts):
+ *   standard: 1 month NPR 39 (introductory), 3 months NPR 99,
+ *             6 months NPR 179, 12 months NPR 299
+ *   business: 1 month NPR 59 (introductory), 3 months NPR 149,
+ *             6 months NPR 269, 12 months NPR 499
  *
- * Regular monthly prices live here (single source). When the business
- * changes pricing, update PLAN_PRICING and the seed script together.
+ * The client never sends an amount — the API recomputes it here.
  */
 
 export const PLAN_PRICING = {
   standard: {
-    /** Introductory first-month offer (matches marketing "NPR 39"). */
-    introPrice: 39,
-    /** Regular per-month price used for 3/6/12-month durations. */
-    monthlyPrice: 99,
+    /** Flat amounts by duration in months. */
+    1: 39,
+    3: 99,
+    6: 179,
+    12: 299,
   },
   business: {
-    introPrice: 59,
-    monthlyPrice: 149,
+    1: 59,
+    3: 149,
+    6: 269,
+    12: 499,
   },
 } as const;
 
@@ -37,8 +42,7 @@ export function getAmountDue(planName: string, durationMonths: number): number |
   if (!VALID_DURATIONS.includes(durationMonths as (typeof VALID_DURATIONS)[number])) {
     return null;
   }
-  // 1 month = introductory offer; longer durations use the regular monthly rate.
-  return durationMonths <= 1 ? pricing.introPrice : pricing.monthlyPrice * durationMonths;
+  return pricing[durationMonths as 1 | 3 | 6 | 12] ?? null;
 }
 
 /** Is this plan one of the paid plans handled by the manual Fonepay flow? */
