@@ -604,10 +604,10 @@ export async function answerQuestion(
     }
   }
 
-  // 5) Trial-role discipline: surface the trial note once, keep answers equal otherwise.
-  if (ctx.isTrial && best.intent.id === "history-save") {
-    // already covered inside the answer text
-  }
+  // 5) Trial-role discipline: the trial limitation is stated inside the
+  //    history-save answer itself; all other answers are identical for trial
+  //    and paid users (the knowledge base holds no user-specific data).
+  void ctx;
 
   return { ...answer, text };
 }
