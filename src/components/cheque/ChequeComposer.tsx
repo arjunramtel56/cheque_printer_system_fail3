@@ -1,76 +1,128 @@
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { ChequePrintLayout } from "./ChequePrintLayout";
 import { amountToWords, formatAmount } from "@/lib/amount-to-words";
 import { useToast } from "@/providers/toast-provider";
-import { Printer, Save, Banknote, FileCog } from "lucide-react";
+import { Printer, Save, FileCog } from "lucide-react";
 
+/**
+ * Shared cheque composer for the User and Trial panels.
+ *
+ * Controls are limited to what the print pipeline actually implements:
+ *  - Bank template selection (from the database; nothing is auto-selected and
+ *    printing stays blocked until a bank template is chosen).
+ *  - Field inputs, A/C PAYEE ONLY crossing and the working calibration panel.
+ *
+ * Removed on purpose (they never affected output): "Printing Method"
+ * (A4 carrier — fallback/direct) and "Feed Direction" (0°/90°) — both were
+ * stored in state but never read by the preview or print layout. Orientation
+ * is fixed internally to portrait A4 (the only implemented page geometry) and
+ * amount formatting follows the app locale from the global language switcher.
+ */
 type FormState = {
   payeeName: string;
   chequeDate: string;
   amountFigure: string;
   amountWords: string;
   chequeNumber: string;
-  orientation: "PORTRAIT" | "LANDSCAPE";
-  language: "en" | "ne";
   offsetXmm: number;
   offsetYmm: number;
   bankTemplate: string;
-  printingMethod: string;
-  feedDirection: string;
   memo: string;
   accountPayeeOnly: boolean;
   fontSize: number;
   scale: number;
 };
 
+interface BankOption {
+  id: string;
+  name: string;
+  code: string;
+  isActive: boolean;
+  templates: Array<{
+    id: string;
+    name: string;
+    chequeWidth: number;
+    chequeHeight: number;
+    isDefault: boolean;
+  }>;
+}
+
 interface ChequeComposerProps {
   userRole?: "TRIAL_USER" | "USER" | "ADMIN" | "SUPER_ADMIN";
 }
 
+const EMPTY_FORM: FormState = {
+  payeeName: "",
+  chequeDate: new Date().toISOString().slice(0, 10),
+  amountFigure: "",
+  amountWords: "",
+  chequeNumber: "",
+  offsetXmm: 0,
+  offsetYmm: 0,
+  bankTemplate: "",
+  memo: "",
+  accountPayeeOnly: true,
+  fontSize: 12,
+  scale: 100,
+};
+
 export function ChequeComposer({ userRole }: ChequeComposerProps) {
   const t = useTranslations("cheque");
+  const locale = useLocale() as "en" | "ne";
   const { showToast } = useToast();
   const printRef = useRef<HTMLDivElement>(null);
 
-  const [form, setForm] = useState<FormState>({
-    payeeName: "",
-    chequeDate: new Date().toISOString().slice(0, 10),
-    amountFigure: "",
-    amountWords: "",
-    chequeNumber: "",
-    orientation: "PORTRAIT",
-    language: "en",
-    offsetXmm: 0,
-    offsetYmm: 0,
-    bankTemplate: "Siddhartha Bank Limited — calibrated",
-    printingMethod: "A4 carrier — fallback",
-    feedDirection: "Long Edge First (0°)",
-    memo: "",
-    accountPayeeOnly: true,
-    fontSize: 12,
-    scale: 100,
-  });
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [banks, setBanks] = useState<BankOption[]>([]);
+  const [banksLoading, setBanksLoading] = useState(true);
 
   const isTrial = userRole === "TRIAL_USER";
   const numericAmount = useMemo(() => Number(form.amountFigure) || 0, [form.amountFigure]);
 
   const autoWords = useMemo(
-    () => (numericAmount > 0 ? amountToWords(numericAmount, form.language) : ""),
-    [numericAmount, form.language]
+    () => (numericAmount > 0 ? amountToWords(numericAmount, locale) : ""),
+    [numericAmount, locale]
   );
+
+  const selectedBank = banks.find((b) => b.id === form.bankTemplate);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/banks");
+        if (!res.ok) throw new Error("Failed to fetch banks");
+        const data: BankOption[] = await res.json();
+        if (!cancelled) setBanks(Array.isArray(data) ? data : []);
+      } catch {
+        if (!cancelled) setBanks([]);
+      } finally {
+        if (!cancelled) setBanksLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
   function handlePrint() {
+    if (!form.bankTemplate) {
+      showToast(t("selectBankTemplateRequired"), "warning");
+      return;
+    }
     document.documentElement.classList.remove("dark");
     window.print();
   }
 
-  const canPrint = !!form.payeeName && numericAmount > 0;
+  // Printing requires an explicit bank template selection plus the mandatory
+  // cheque fields — the server-side schema remains the source of truth.
+  const canPrint = !!form.bankTemplate && !!form.payeeName && numericAmount > 0;
 
   const handleSaveToHistory = () => {
     if (isTrial) {
@@ -87,6 +139,10 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
   };
 
   function saveCalibration() {
+    if (!form.bankTemplate) {
+      showToast(t("selectBankTemplateRequired"), "warning");
+      return;
+    }
     const templateKey = form.bankTemplate;
     const calib = {
       x: form.offsetXmm,
@@ -98,8 +154,12 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
     showToast("Calibration profile saved!", "success");
   }
 
-  function loadTemplate(templateId: string) {
-    const saved = localStorage.getItem(`calib_${templateId}`);
+  function loadTemplate(templateKey: string) {
+    if (!templateKey) {
+      setForm((f) => ({ ...f, offsetXmm: 0, offsetYmm: 0, scale: 100, fontSize: 12 }));
+      return;
+    }
+    const saved = localStorage.getItem(`calib_${templateKey}`);
     if (saved) {
       const calib = JSON.parse(saved);
       setForm((f) => ({
@@ -135,26 +195,7 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
           </h2>
           <button
             className="text-sm text-slate-500 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-md"
-            onClick={() =>
-              setForm({
-                payeeName: "",
-                chequeDate: new Date().toISOString().slice(0, 10),
-                amountFigure: "",
-                amountWords: "",
-                chequeNumber: "",
-                orientation: "PORTRAIT",
-                language: "en",
-                offsetXmm: 0,
-                offsetYmm: 0,
-                bankTemplate: "Siddhartha Bank Limited — calibrated",
-                printingMethod: "A4 carrier — fallback",
-                feedDirection: "Long Edge First (0°)",
-                memo: "",
-                accountPayeeOnly: true,
-                fontSize: 12,
-                scale: 100,
-              })
-            }
+            onClick={() => setForm(EMPTY_FORM)}
           >
             {t("clear")}
           </button>
@@ -169,44 +210,20 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
             value={form.bankTemplate}
             onChange={handleBankChange}
           >
-            <option value="Siddhartha Bank Limited — calibrated">
-              Siddhartha Bank Limited — calibrated
-            </option>
-            <option value="Nabil Bank — standard">Nabil Bank — standard</option>
-            <option value="NIC Asia — custom">NIC Asia — custom</option>
+            <option value="">{t("selectBankTemplate")}</option>
+            {banks.map((bank) => (
+              <option key={bank.id} value={bank.id}>
+                {bank.name}
+              </option>
+            ))}
           </select>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            {t("bankTemplateHelper")}
+            {banksLoading
+              ? t("loadingBanks")
+              : banks.length === 0
+                ? t("noBanksAvailable")
+                : t("bankTemplateHelper")}
           </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-              {t("printingMethod")}
-            </label>
-            <select
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2.5 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              value={form.printingMethod}
-              onChange={(e) => update("printingMethod", e.target.value)}
-            >
-              <option>A4 carrier — fallback</option>
-              <option>A4 carrier — direct</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-              {t("feedDirection")}
-            </label>
-            <select
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2.5 bg-white dark:bg-slate-700 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              value={form.feedDirection}
-              onChange={(e) => update("feedDirection", e.target.value)}
-            >
-              <option>{t("longEdge")}</option>
-              <option>{t("shortEdge")}</option>
-            </select>
-          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2 text-center text-xs">
@@ -327,32 +344,6 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
             </div>
           </div>
         </label>
-
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm">
-            {t("orientation")}
-            <select
-              className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              value={form.orientation}
-              onChange={(e) => update("orientation", e.target.value as "PORTRAIT" | "LANDSCAPE")}
-            >
-              <option value="PORTRAIT">{t("portrait")}</option>
-              <option value="LANDSCAPE">{t("landscape")}</option>
-            </select>
-          </label>
-
-          <label className="block text-sm">
-            {t("language")}
-            <select
-              className="mt-1 w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              value={form.language}
-              onChange={(e) => update("language", e.target.value as "en" | "ne")}
-            >
-              <option value="en">English</option>
-              <option value="ne">नेपाली</option>
-            </select>
-          </label>
-        </div>
 
         <details
           className="bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600 p-3"
@@ -476,12 +467,18 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
           <button
             onClick={handlePrint}
             disabled={!canPrint}
+            title={!form.bankTemplate ? t("selectBankTemplateRequired") : undefined}
             className="flex-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <Printer size={16} />
             {t("print")}
           </button>
         </div>
+        {!form.bankTemplate && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+            {t("selectBankTemplateRequired")}
+          </p>
+        )}
         {isTrial && (
           <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
             Trial users cannot save to history. Upgrade to unlock this feature.
@@ -498,10 +495,10 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
             amountFigure={numericAmount}
             amountWords={form.amountWords || autoWords || "—"}
             chequeNumber={form.chequeNumber}
-            orientation={form.orientation}
+            orientation="PORTRAIT"
             offsetXmm={form.offsetXmm}
             offsetYmm={form.offsetYmm}
-            language={form.language}
+            language={locale}
             accountPayeeOnly={form.accountPayeeOnly}
             memo={form.memo}
             isTrial={isTrial}

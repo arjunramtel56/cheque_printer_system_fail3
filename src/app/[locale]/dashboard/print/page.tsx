@@ -88,9 +88,6 @@ export default function PrintPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedChequeId, setSavedChequeId] = useState<string | null>(null);
-  const [printingMethod, setPrintingMethod] = useState("A4 carrier — fallback");
-  const [feedDirection, setFeedDirection] = useState("Long edge first (0°)");
-  const [orientation, setOrientation] = useState<"PORTRAIT" | "LANDSCAPE">("PORTRAIT");
 
   const lang = locale as "en" | "ne";
 
@@ -142,7 +139,6 @@ export default function PrintPage() {
     loadRecentPayees();
     loadUserSettings();
   }, []);
-
   useEffect(() => {
     if (selectedBankId && !selectedTemplateId && selectedBank) {
       const defaultTemplate =
@@ -168,11 +164,8 @@ export default function PrintPage() {
       if (!res.ok) throw new Error("Failed to fetch banks");
       const data = await res.json();
       setBanks(data);
-
-      const firstBank = data[0];
-      if (firstBank) {
-        setSelectedBankId(firstBank.id);
-      }
+      // No auto-selection: the user must explicitly choose a bank template
+      // before printing (kept in sync with ChequeComposer).
     } catch (err: any) {
       setError(err.message);
     }
@@ -215,6 +208,10 @@ export default function PrintPage() {
   }
 
   async function saveChequeDraft(): Promise<string | null> {
+    if (!selectedBankId) {
+      setError("Please select a bank template before printing.");
+      return null;
+    }
     if (!selectedTemplateId || !payeeName || !amount || !chequeDate) {
       setError("Please fill in all required fields");
       return null;
@@ -385,35 +382,21 @@ export default function PrintPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-1 block text-sm font-semibold text-slate-700">
-                    <span className="flex items-center gap-2">
-                      <Settings size={16} className="text-slate-400" />
-                      {t_feedDirection}
-                    </span>
-                  </label>
-                  <select
-                    value={feedDirection}
-                    onChange={(e) => setFeedDirection(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
-                  >
-                    <option>Long edge first (0°)</option>
-                    <option>Short edge first (90°)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-semibold text-slate-700">
-                    {t_printingMethod}
-                  </label>
-                  <select
-                    value={printingMethod}
-                    onChange={(e) => setPrintingMethod(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
-                  >
-                    <option>A4 carrier — fallback</option>
-                    <option>A4 carrier — direct</option>
-                  </select>
+              <div>
+                <label className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <span className="flex items-center gap-2">
+                    <Settings size={16} className="text-slate-400" />
+                    Print Profile
+                  </span>
+                </label>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  A4 portrait · cheque{" "}
+                  {selectedBank?.templates.find((t) => t.id === selectedTemplateId)?.chequeWidth ??
+                    "190.5"}{" "}
+                  ×{" "}
+                  {selectedBank?.templates.find((t) => t.id === selectedTemplateId)?.chequeHeight ??
+                    "88.9"}{" "}
+                  mm
                 </div>
               </div>
 
@@ -588,6 +571,3 @@ export default function PrintPage() {
     </main>
   );
 }
-
-const t_feedDirection = "Feed Direction";
-const t_printingMethod = "Printing Method";
