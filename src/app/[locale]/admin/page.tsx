@@ -1,7 +1,15 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Banknote, LayoutTemplate, BarChart3, TrendingUp, DollarSign } from "lucide-react";
+import {
+  Users,
+  Banknote,
+  LayoutTemplate,
+  BarChart3,
+  TrendingUp,
+  DollarSign,
+  Clock,
+} from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 
@@ -16,27 +24,28 @@ export default async function AdminDashboardPage() {
     totalPrints: 0,
     totalBanks: 0,
     totalTemplates: 0,
+    /** Sum of APPROVED payment amounts — actual verified revenue. */
     totalRevenue: 0,
+    pendingPayments: 0,
     activeSubscriptions: 0,
     recentAuditLogs: [] as any[],
   };
 
   try {
+    const approvedRevenue = await prisma.payment.aggregate({
+      _sum: { amount: true },
+      where: { status: "APPROVED" },
+    });
     stats = {
       totalUsers: await prisma.user.count(),
       totalCheques: await prisma.chequeEntry.count(),
       totalPrints: await prisma.printHistory.count(),
-      totalBanks: await prisma.bank.count(),
-      totalTemplates: await prisma.bankTemplate.count(),
-      totalRevenue:
-        Number(
-          (
-            await prisma.plan.aggregate({
-              _sum: { price: true },
-              where: { isActive: true },
-            })
-          )._sum?.price
-        ) || 0,
+      totalBanks: await prisma.bank.count({ where: { isActive: true } }),
+      totalTemplates: await prisma.bankTemplate.count({ where: { isActive: true } }),
+      totalRevenue: Number(approvedRevenue._sum?.amount) || 0,
+      pendingPayments: await prisma.payment.count({
+        where: { status: "PENDING_VERIFICATION" },
+      }),
       activeSubscriptions: await prisma.subscription.count({
         where: { isActive: true },
       }),
@@ -123,7 +132,18 @@ export default async function AdminDashboardPage() {
             <div className="text-2xl font-bold">
               NPR {Number(stats.totalRevenue).toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">{t("fromPlans")}</p>
+            <p className="text-xs text-muted-foreground">{t("fromApprovedPayments")}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">{t("pendingPayments")}</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.pendingPayments}</div>
+            <p className="text-xs text-muted-foreground">{t("awaitingVerification")}</p>
           </CardContent>
         </Card>
       </div>

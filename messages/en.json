@@ -498,7 +498,8 @@
     "reports": "Reports",
     "reportsPlaceholder": "Print reports and analytics will appear here.",
     "security": "Security",
-    "securityPlaceholder": "Password change and security settings will appear here."
+    "securityPlaceholder": "Password change and security settings will appear here.",
+    "trialHoursLeft": "{hours}h left"
   },
   "subscription": {
     "title": "Subscription",
@@ -671,7 +672,8 @@
       "phone": "Phone",
       "email": "Email",
       "actions": "Actions"
-    }
+    },
+    "actions": "Actions"
   },
   "templates": {
     "title": "Cheque Templates",
@@ -744,7 +746,10 @@
       "chequesPrinted": "Cheques Printed",
       "trialDaysLeft": "Trial Days Left",
       "activeTemplates": "Active Templates"
-    }
+    },
+    "fromApprovedPayments": "From approved payments",
+    "pendingPayments": "Pending Payments",
+    "awaitingVerification": "Awaiting verification"
   },
   "admin_users": {
     "title": "Users",
@@ -828,7 +833,8 @@
     "saveError": "Failed to save template",
     "loading": "Loading templates...",
     "templatesCount": "{count} template(s)",
-    "version": "v{version}"
+    "version": "v{version}",
+    "inactive": "Inactive"
   },
   "admin_audit": {
     "title": "Audit Log",
@@ -922,7 +928,9 @@
     "noDescription": "No description",
     "months": "month(s)",
     "cancel": "Cancel",
-    "total": "total"
+    "total": "total",
+    "pending": "Pending",
+    "searchPlaceholder": "Search by user or reference…"
   },
   "admin_plans": {
     "title": "Plans",

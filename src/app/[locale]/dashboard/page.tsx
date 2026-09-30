@@ -13,8 +13,10 @@ export default async function DashboardPage() {
   let chequeCount = 0;
   let recentCheques: any[] = [];
   let subscription: any = null;
-  let trialInfo: { daysLeft: number; printsLeft: number; isTrial: boolean } = {
+  let activeTemplateCount = 0;
+  let trialInfo: { daysLeft: number; hoursLeft: number; printsLeft: number; isTrial: boolean } = {
     daysLeft: 0,
+    hoursLeft: 0,
     printsLeft: 0,
     isTrial: false,
   };
@@ -31,15 +33,21 @@ export default async function DashboardPage() {
       include: { template: { include: { bank: true } } },
     });
 
+    // Real count of active bank templates available to the user.
+    activeTemplateCount = await prisma.bankTemplate.count({
+      where: { isActive: true, bank: { isActive: true } },
+    });
+
     subscription = await prisma.subscription.findFirst({
       where: { userId: user?.id, isActive: true },
       include: { plan: true },
     });
 
     if (subscription && user?.role === "TRIAL_USER") {
-      const daysLeft = Math.ceil(
-        (new Date(subscription.endDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000)
-      );
+      const msLeft = new Date(subscription.endDate).getTime() - Date.now();
+      // Show fractional trials as hours so a 24-hour trial never reads "365".
+      const daysLeft = Math.floor(msLeft / (24 * 60 * 60 * 1000));
+      const hoursLeft = Math.max(0, Math.ceil(msLeft / (60 * 60 * 1000)));
       const printsUsed = await prisma.printHistory.count({
         where: { userId: user?.id },
       });
@@ -47,6 +55,7 @@ export default async function DashboardPage() {
       const printsLeft = limit > 0 ? Math.max(0, limit - printsUsed) : 0;
       trialInfo = {
         daysLeft: daysLeft > 0 ? daysLeft : 0,
+        hoursLeft,
         printsLeft,
         isTrial: true,
       };
@@ -63,12 +72,16 @@ export default async function DashboardPage() {
     },
     {
       title: t("stats.trialDaysLeft"),
-      value: trialInfo.isTrial ? trialInfo.daysLeft.toString() : "—",
+      value: trialInfo.isTrial
+        ? trialInfo.daysLeft > 0
+          ? trialInfo.daysLeft.toString()
+          : t("trialHoursLeft", { hours: trialInfo.hoursLeft })
+        : "—",
       icon: AlertTriangle,
     },
     {
       title: t("stats.activeTemplates"),
-      value: "3",
+      value: activeTemplateCount.toString(),
       icon: CreditCard,
     },
     {
