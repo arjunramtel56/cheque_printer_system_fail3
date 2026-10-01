@@ -3,10 +3,16 @@ import { getTranslations } from "next-intl/server";
 
 export default async function AssistantPage() {
   const t = await getTranslations("sidebar");
+  const td = await getTranslations("dashboard_ui");
+
   return (
-    <main className="p-6">
-      <h1 className="mb-4 text-2xl font-bold">{t("assistant")}</h1>
+    <div className="space-y-6">
+      {/* Page header — consistent with other dashboard pages */}
+      <div className="flex flex-col gap-1">
+        <h2 className="text-2xl font-bold">{t("assistant")}</h2>
+        <p className="text-sm text-muted-foreground">{td("assistantDescription")}</p>
+      </div>
       <ChequeAssistant />
-    </main>
+    </div>
   );
 }

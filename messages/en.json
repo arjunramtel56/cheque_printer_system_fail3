@@ -456,6 +456,7 @@
     "select": "Select"
   },
   "dashboard_ui": {
+    "assistantDescription": "Ask about cheque printing, troubleshooting, supported printing methods, and your plan — focused help for this system.",
     "welcome": "Welcome back, {name}",
     "trialActive": "TRIAL ACTIVE: {count} prints left",
     "stats": {
@@ -598,6 +599,7 @@
   },
   "history": {
     "title": "Print History",
+    "description": "A record of the cheques you have printed, newest first. Only you can see your own history.",
     "table": {
       "date": "Date",
       "payee": "Payee",
@@ -607,6 +609,13 @@
       "action": "Action"
     },
     "printed": "PRINTED",
+    "searchPlaceholder": "Search by payee or bank…",
+    "loading": "Loading print history…",
+    "loadError": "Could not load print history",
+    "loadErrorDesc": "Something went wrong while fetching your print history. Please try again.",
+    "retry": "Retry",
+    "noSearchResults": "No matching prints",
+    "noSearchResultsDesc": "No print records match your search. Try a different payee or bank name.",
     "noPrintHistory": "No print history",
     "noHistoryDesc": "Your printed cheques will appear here."
   },

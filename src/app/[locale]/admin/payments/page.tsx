@@ -238,9 +238,7 @@ export default function AdminPaymentsPage() {
               </select>
             </div>
             <div>
-              <Label htmlFor="search">
-                {t("search") !== t("searchPlaceholder") ? t("search") : t("search")}
-              </Label>
+              <Label htmlFor="search">{t("search")}</Label>
               <div className="relative mt-1">
                 <Search
                   size={16}
