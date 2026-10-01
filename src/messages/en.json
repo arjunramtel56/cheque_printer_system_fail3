@@ -150,8 +150,7 @@
     "faqA4": "We never ask for bank passwords or online-banking credentials. You only enter the payee name, amount and date that get printed on your own cheque leaf.",
     "paymentsTitle": "Easy local payments",
     "paymentsNote": "Pay securely with Fonepay QR — upload your payment proof for quick activation.",
-    "demoBankName": "Reactify Software Technologies Pvt. Ltd.",
-    "demoBankBranch": "Kathmandu, Nepal",
+    "demoBankName": "Nepal Commercial Bank Limited",
     "demoDateLabel": "Date",
     "demoDateDay": "Day",
     "demoDateMonth": "Month",
@@ -160,7 +159,7 @@
     "demoPayeeName": "Reactify Software Technologies Pvt. Ltd.",
     "demoOrBearer": "Or Bearer",
     "demoSumLabel": "the sum of",
-    "demoSignature": "Authorised Signature(s) — Demo Only",
+    "demoSignature": "Authorised Signature",
     "demoNoLabel": "No."
   },
   "footer": {
@@ -429,6 +428,7 @@
     "preview": "Cheque Preview",
     "livePreview": "Live Preview",
     "previewHint": "What you see in the preview is what will be printed.",
+    "amountWordsLockedHint": "Auto-generated from the amount — it cannot be edited, so the figures and words always match.",
     "accountPayee": "Print A/C PAYEE ONLY",
     "accountPayeeHelper": "Adds the crossing, centred on the cheque width.",
     "advancedCalibration": "Advanced Print Calibration",
@@ -933,7 +933,7 @@
     "searchPlaceholder": "Search by user or reference…"
   },
   "admin_plans": {
-    "title": "Plans",
+    "title": "Subscription Plans",
     "addPlan": "Add Plan",
     "addNewPlan": "Add New Plan",
     "editPlan": "Edit Plan",

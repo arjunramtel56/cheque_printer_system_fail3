@@ -97,15 +97,13 @@ export function DemoChequePreview({ compact = false }: { compact?: boolean }) {
             DEMO — NOT VALID FOR PAYMENT
           </div>
           <div className="aspect-[190.5/88.9] w-full p-[4%] text-[#1f2937]">
-            {/* Header row: bank identity left, date boxes right */}
-            <div className="flex items-start justify-between gap-[3%]">
-              <div className="min-w-0">
-                <div className="text-[clamp(7px,1.7vw,12px)] font-extrabold uppercase leading-tight tracking-wide text-[#334155]">
-                  {t("demoBankName")}
-                </div>
-                <div className="mt-[2px] text-[clamp(5px,1.2vw,9px)] uppercase tracking-[0.18em] text-[#64748b]">
-                  {t("demoBankBranch")}
-                </div>
+            {/* Header row: bank name left, A/C PAYEE ONLY centered, date right — one line */}
+            <div className="flex items-start justify-between gap-[2%]">
+              <div className="whitespace-nowrap text-[clamp(6px,1.15vw,10px)] font-extrabold uppercase leading-tight tracking-wide text-[#334155]">
+                {t("demoBankName")}
+              </div>
+              <div className="flex-1 whitespace-nowrap px-[1%] pt-[2px] text-center text-[clamp(4px,0.9vw,6px)] font-extrabold uppercase leading-[1.4] tracking-widest text-[#b91c1c]">
+                A/C PAYEE ONLY
               </div>
               {/* Date: label + DAY / MONTH / YEAR digit boxes filled with today's date */}
               <div className="flex shrink-0 items-start gap-[2%]">
@@ -152,12 +150,6 @@ export function DemoChequePreview({ compact = false }: { compact?: boolean }) {
                 </div>
               </div>
             </div>
-            {/* A/C PAYEE crossing — left-aligned, like Nepalese leaves */}
-            <div className="mt-[3%] flex">
-              <div className="border-[2.5px] border-[#b91c1c] px-[5%] py-[1px] text-[clamp(6px,1.5vw,10px)] font-extrabold uppercase tracking-widest text-[#b91c1c]">
-                A/C PAYEE
-              </div>
-            </div>
             {/* Payee line */}
             <div className="mt-[5%] flex items-end gap-[2%]">
               <span className="shrink-0 text-[clamp(5px,1.3vw,9px)] text-[#475569]">
@@ -170,7 +162,8 @@ export function DemoChequePreview({ compact = false }: { compact?: boolean }) {
                 {t("demoOrBearer")}
               </span>
             </div>
-            {/* Amount in words line — live from the same formatter as the real pipeline */}
+            {/* Amount band: "the sum of" words line extending toward the right with the
+                figure box at the right edge — mirrors a standard cheque amount section */}
             <div className="mt-[3%] flex items-end gap-[2%]">
               <span className="shrink-0 text-[clamp(5px,1.3vw,9px)] text-[#475569]">
                 {t("demoSumLabel")}
@@ -178,28 +171,30 @@ export function DemoChequePreview({ compact = false }: { compact?: boolean }) {
               <div className="flex-1 truncate border-b border-[#94a3b8] pb-[1px] text-[clamp(6px,1.5vw,10px)] font-semibold text-[#1f2937]">
                 {words ?? "—"}
               </div>
-            </div>
-            {/* Bottom row: figure box left, signatures + number right */}
-            <div className="mt-[4%] flex items-end justify-between gap-[3%]">
               <div
-                className={`${boxWidthClass} rounded-[3px] border border-[#64748b] bg-white px-2 py-[2px] text-[clamp(7px,1.8vw,12px)] font-bold text-[#1f2937]`}
+                className={`${boxWidthClass} shrink-0 rounded-[3px] border border-[#64748b] bg-white px-2 py-[2px] text-center text-[clamp(7px,1.8vw,12px)] font-bold text-[#1f2937]`}
               >
-                {formatted ? `NPR ${formatted}` : "—"}
+                {formatted ?? "—"}
               </div>
-              <div className="flex items-end gap-[6%]">
-                <div className="text-center">
-                  <div className="mx-auto w-[clamp(36px,8vw,64px)] border-t border-[#64748b]" />
-                  <div className="mt-[2px] text-[clamp(4px,0.95vw,7px)] uppercase tracking-wide text-[#64748b]">
-                    {t("demoSignature")}
-                  </div>
+            </div>
+            {/* Bottom row: cheque number bottom-left, authorised signature boxes right */}
+            <div className="mt-[4%] flex items-end justify-between gap-[3%]">
+              <div className="text-[clamp(5px,1.2vw,9px)] uppercase tracking-widest text-[#475569]">
+                {t("demoNoLabel")}{" "}
+                <span className="font-bold tracking-wider text-[#1f2937]">000001</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="flex gap-[clamp(6px,1.2vw,10px)]">
+                  {[1, 2].map((n) => (
+                    <div
+                      key={`sig${n}`}
+                      aria-hidden="true"
+                      className="h-[clamp(11px,2.4vw,17px)] w-[clamp(32px,7vw,56px)] flex-none border border-[#64748b] bg-transparent"
+                    />
+                  ))}
                 </div>
-                <div className="text-center">
-                  <div className="text-[clamp(5px,1.2vw,9px)] uppercase tracking-wide text-[#475569]">
-                    {t("demoNoLabel")}
-                  </div>
-                  <div className="text-[clamp(7px,1.7vw,12px)] font-bold tracking-wider text-[#1f2937]">
-                    000001
-                  </div>
+                <div className="mt-[2px] text-[clamp(4px,0.95vw,7px)] uppercase tracking-wide text-[#64748b]">
+                  {t("demoSignature")}
                 </div>
               </div>
             </div>

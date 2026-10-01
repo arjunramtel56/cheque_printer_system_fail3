@@ -296,12 +296,14 @@ export function ChequeComposer({ userRole }: ChequeComposerProps) {
             {t("amountWords")}
           </label>
           <textarea
-            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-slate-900 dark:text-white h-20 resize-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            readOnly
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700/80 px-3 py-2.5 text-slate-900 dark:text-white h-20 resize-none cursor-default focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             placeholder="Generated from the amount"
-            value={form.amountWords || autoWords}
-            onChange={(e) => update("amountWords", e.target.value)}
+            value={form.amountWords || autoWords || "—"}
           />
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t("previewHint")}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            {t("amountWordsLockedHint")}
+          </p>
         </div>
 
         <div>
