@@ -118,14 +118,43 @@ export default async function DashboardPage() {
 
   const isTrial = user?.role === "TRIAL_USER";
 
+  // Static lookup so every status resolves to an existing translated label.
+  const statusLabels: Record<string, string> = {
+    DRAFT: tStatus("status.draft"),
+    READY: tStatus("status.ready"),
+    PRINTED: tStatus("status.printed"),
+    CANCELLED: tStatus("status.cancelled"),
+  };
+
   return (
     <div className="space-y-6">
-      {isTrial && trialInfo.isTrial && trialInfo.daysLeft <= 7 && trialInfo.daysLeft > 0 && (
+      {dataError && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-destructive" />
+            <div>
+              <p className="font-semibold">{t("loadError")}</p>
+              <p className="mt-1 text-muted-foreground">{t("loadErrorDesc")}</p>
+              <Link href="/dashboard">
+                <span className="mt-2 inline-block rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-accent">
+                  {t("retry")}
+                </span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isTrial && trialInfo.isTrial && !trialInfo.expired && trialInfo.hoursLeft <= 48 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-400" />
             <div>
-              <p className="font-semibold">{t("trialEndingSoon", { days: trialInfo.daysLeft })}</p>
+              <p className="font-semibold">
+                {trialInfo.hoursLeft <= 24
+                  ? t("trialEndingSoonHours", { hours: trialInfo.hoursLeft })
+                  : t("trialEndingSoon", { days: trialInfo.daysLeft })}
+              </p>
               <p className="mt-1">{t("upgradeToContinue")}</p>
               <Link href="/dashboard/subscription">
                 <span className="mt-2 inline-block rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
@@ -137,7 +166,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {isTrial && trialInfo.isTrial && trialInfo.daysLeft <= 0 && (
+      {isTrial && trialInfo.isTrial && trialInfo.expired && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 text-red-600 dark:text-red-400" />
@@ -188,9 +217,10 @@ export default async function DashboardPage() {
         <table className="w-full text-left text-sm text-foreground">
           <thead className="bg-muted text-muted-foreground font-medium">
             <tr>
-              <th className="px-6 py-3">{t("table.user")}</th>
-              <th className="px-6 py-3">{t("table.action")}</th>
-              <th className="px-6 py-3">{t("table.time")}</th>
+              <th className="px-6 py-3">{t("table.payee")}</th>
+              <th className="px-6 py-3">{t("table.bank")}</th>
+              <th className="px-6 py-3">{t("table.date")}</th>
+              <th className="px-6 py-3">{t("table.status")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -200,20 +230,23 @@ export default async function DashboardPage() {
                   <td className="px-6 py-4 font-medium text-sm">
                     {cheque.payeeName || cheque.accountHolder || "—"}
                   </td>
-                  <td className="px-6 py-4 text-sm">
-                    <span className="bg-muted text-muted-foreground px-2 py-1 rounded text-xs font-bold">
-                      CHEQUE_CREATED
-                    </span>
+                  <td className="px-6 py-4 text-sm text-muted-foreground">
+                    {cheque.template?.bank?.name || "—"}
                   </td>
                   <td className="px-6 py-4 text-muted-foreground text-xs">
-                    {new Date(cheque.createdAt).toLocaleString()}
+                    {new Date(cheque.chequeDate).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                    <span className="bg-muted text-muted-foreground px-2 py-1 rounded text-xs font-bold uppercase">
+                      {statusLabels[cheque.status] ?? cheque.status}
+                    </span>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={3} className="px-6 py-8 text-center text-muted-foreground">
-                  {t("noRecentActivity")}
+                <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
+                  {dataError ? t("loadError") : t("noRecentActivity")}
                 </td>
               </tr>
             )}

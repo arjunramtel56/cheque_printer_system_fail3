@@ -490,9 +490,10 @@
     "recentActivity": "Recent Activity",
     "noRecentActivity": "No recent activity.",
     "table": {
-      "user": "User",
-      "action": "Action",
-      "time": "Time"
+      "payee": "Payee",
+      "bank": "Bank",
+      "date": "Date",
+      "status": "Status"
     },
     "viewTemplates": "View Templates",
     "printHistory": "Print History",
@@ -501,7 +502,11 @@
     "reportsPlaceholder": "Print reports and analytics will appear here.",
     "security": "Security",
     "securityPlaceholder": "Password change and security settings will appear here.",
-    "trialHoursLeft": "{hours}h left"
+    "trialHoursLeft": "{hours}h left",
+    "loadError": "Could not load your dashboard",
+    "loadErrorDesc": "Something went wrong while loading your data. Please try again.",
+    "retry": "Retry",
+    "trialEndingSoonHours": "Your trial period ends in {hours} hour(s)."
   },
   "subscription": {
     "title": "Subscription",
@@ -573,7 +578,23 @@
     "saveChanges": "Save Changes",
     "personalInfo": "Personal Information",
     "companyName": "Your company name",
-    "phonePlaceholder": "+977 9743836026"
+    "phonePlaceholder": "+977 9743836026",
+    "loading": "Loading profile…",
+    "loadError": "Could not load your profile",
+    "loadErrorDesc": "Something went wrong while fetching your profile. Please try again.",
+    "retry": "Retry",
+    "nameTooShort": "Name must be at least 2 characters.",
+    "updateError": "Could not update your profile.",
+    "updateSuccess": "Profile updated successfully.",
+    "trialBadge": "Trial",
+    "paidBadge": "Paid",
+    "saving": "Saving…",
+    "accountDetails": "Account details",
+    "role": "Role",
+    "status": "Status",
+    "registered": "Registered",
+    "emailLocked": "Email is your login identifier and cannot be changed.",
+    "networkError": "Network problem — please try again."
   },
   "settings": {
     "title": "Settings",
@@ -645,7 +666,14 @@
     "deleteConfirm": "Are you sure you want to delete this cheque?",
     "deleteError": "Failed to delete cheque",
     "exportError": "Failed to export PDF",
-    "deleteSuccess": "Cheque deleted successfully"
+    "deleteSuccess": "Cheque deleted successfully",
+    "loading": "Loading cheques…",
+    "loadError": "Could not load your cheques",
+    "loadErrorDesc": "Something went wrong while fetching your cheques. Please try again.",
+    "retry": "Retry",
+    "searchPlaceholder": "Search payee, bank, amount…",
+    "noSearchResults": "No matching cheques",
+    "noSearchResultsDesc": "No cheques match your search."
   },
   "payees": {
     "title": "Saved Payees",
@@ -724,7 +752,14 @@
     "widthPlaceholder": "Width (mm)",
     "fontSize": "Font size",
     "deleteConfirm": "Are you sure you want to delete \"{name}\"? This cannot be undone.",
-    "deleteError": "Failed to delete template"
+    "deleteError": "Failed to delete template",
+    "loadError": "Could not load bank templates",
+    "loadErrorDesc": "Something went wrong while fetching the template list. Please try again.",
+    "retry": "Retry",
+    "searchPlaceholder": "Search bank or template…",
+    "noSearchResults": "No matching banks",
+    "noSearchResultsDesc": "No bank or template matches your search.",
+    "summary": "{banks} banks · {templates} templates"
   },
   "admin_ui": {
     "title": "Admin Dashboard",
