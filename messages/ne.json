@@ -661,10 +661,10 @@
       "actions": "कार्यहरू"
     },
     "status": {
-      "printed": "PRINTED",
-      "cancelled": "CANCELLED",
-      "ready": "READY",
-      "draft": "DRAFT"
+      "printed": "प्रिन्ट गरिएको",
+      "cancelled": "रद्द गरिएको",
+      "ready": "तयार",
+      "draft": "मस्यौदा"
     },
     "deleteConfirm": "के तपाईंले यो चेक मेटाउन चाहनुहुन्छ?",
     "deleteError": "चेक मेटाउन सकिएन",

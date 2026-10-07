@@ -1,9 +1,12 @@
 import { ChequeAssistant } from "@/components/assistant/ChequeAssistant";
 import { getTranslations } from "next-intl/server";
 
-export default async function AssistantPage() {
-  const t = await getTranslations("sidebar");
-  const td = await getTranslations("dashboard_ui");
+export default async function AssistantPage({ params }: { params: Promise<{ locale: string }> }) {
+  // Resolve the locale from the route instead of relying on the layout's
+  // request-locale store, which is not guaranteed to be set yet.
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "sidebar" });
+  const td = await getTranslations({ locale, namespace: "dashboard_ui" });
 
   return (
     <div className="space-y-6">

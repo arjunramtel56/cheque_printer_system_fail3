@@ -661,10 +661,10 @@
       "actions": "Actions"
     },
     "status": {
-      "printed": "PRINTED",
-      "cancelled": "CANCELLED",
-      "ready": "READY",
-      "draft": "DRAFT"
+      "printed": "Printed",
+      "cancelled": "Cancelled",
+      "ready": "Ready",
+      "draft": "Draft"
     },
     "deleteConfirm": "Are you sure you want to delete this cheque?",
     "deleteError": "Failed to delete cheque",

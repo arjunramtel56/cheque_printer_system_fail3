@@ -13,10 +13,14 @@ import { describePrismaError } from "@/lib/prisma-errors";
 import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 
-export default async function DashboardPage() {
-  const t = await getTranslations("dashboard_ui");
+export default async function DashboardPage({ params }: { params: Promise<{ locale: string }> }) {
+  // Next.js renders a layout and its page concurrently, so the locale pinned
+  // by the layout is not guaranteed to be set when this runs. Resolve it from
+  // the route params so a Nepali visitor never gets English labels.
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "dashboard_ui" });
   // Cheque status labels already exist - reuse them instead of duplicating keys.
-  const tStatus = await getTranslations("cheques");
+  const tStatus = await getTranslations({ locale, namespace: "cheques" });
   const session = await auth();
   const user = session?.user as any;
 

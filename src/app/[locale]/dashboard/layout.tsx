@@ -6,15 +6,23 @@ import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { siteConfig } from "@/lib/config";
 import { getTranslations } from "next-intl/server";
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
 
   if (!session?.user) {
-    redirect("/en/login");
+    // Keep the visitor in the locale they were browsing, not always English.
+    redirect(`/${locale}/login`);
   }
 
   const user = session.user as any;
-  const t = await getTranslations("dashboard_ui");
+  const t = await getTranslations({ locale, namespace: "dashboard_ui" });
 
   const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
 
