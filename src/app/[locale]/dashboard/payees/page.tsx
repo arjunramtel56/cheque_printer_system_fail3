@@ -33,6 +33,7 @@ export default function PayeesPage() {
   const { showToast } = useToast();
   const [payees, setPayees] = useState<Payee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPayee, setEditingPayee] = useState<Payee | null>(null);
 
@@ -52,6 +53,7 @@ export default function PayeesPage() {
 
   async function fetchPayees() {
     setIsLoading(true);
+    setLoadError(false);
     try {
       const res = await fetch("/api/payees");
       if (!res.ok) throw new Error("failed");
@@ -59,6 +61,8 @@ export default function PayeesPage() {
       setPayees(data);
     } catch (error) {
       console.error("Error fetching payees:", error);
+      // An empty table must not be indistinguishable from a failed request.
+      setLoadError(true);
     } finally {
       setIsLoading(false);
     }
@@ -158,6 +162,14 @@ export default function PayeesPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">{t("loading")}</div>
+          ) : loadError ? (
+            <div className="p-8 text-center">
+              <p className="text-destructive">{t("loadError")}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t("loadErrorDesc")}</p>
+              <Button variant="outline" className="mt-3" onClick={fetchPayees}>
+                {t("retry")}
+              </Button>
+            </div>
           ) : payees.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

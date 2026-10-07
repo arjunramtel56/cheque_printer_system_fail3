@@ -43,6 +43,7 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [banks, setBanks] = useState<Bank[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -61,6 +62,7 @@ export default function SettingsPage() {
   }, []);
 
   async function fetchSettings() {
+    setLoadError(false);
     try {
       const res = await fetch("/api/settings");
       if (!res.ok) throw new Error("failed");
@@ -77,6 +79,8 @@ export default function SettingsPage() {
       });
     } catch (error) {
       console.error("Error fetching settings:", error);
+      // Never present default values as if they were the saved settings.
+      setLoadError(true);
     } finally {
       setIsLoading(false);
     }
@@ -123,6 +127,23 @@ export default function SettingsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">{t("loading")}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold">{t("title")}</h2>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-destructive">{t("loadError")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t("loadErrorDesc")}</p>
+            <Button variant="outline" className="mt-4" onClick={fetchSettings}>
+              {t("retry")}
+            </Button>
           </CardContent>
         </Card>
       </div>
