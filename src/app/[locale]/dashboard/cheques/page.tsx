@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FileText, Printer, Download, Trash2, Search } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { useToast } from "@/providers/toast-provider";
 
@@ -28,7 +28,6 @@ interface ChequeEntry {
 
 export default function ChequesPage() {
   const t = useTranslations("cheques");
-  const locale = useLocale() as "en" | "ne";
   const router = useRouter();
   const { showToast } = useToast();
   const [cheques, setCheques] = useState<ChequeEntry[]>([]);
@@ -104,6 +103,14 @@ export default function ChequesPage() {
     );
   }, [cheques, search]);
 
+  // Static lookup so each status renders an existing translated label.
+  const statusLabels: Record<string, string> = {
+    DRAFT: t("status.draft"),
+    READY: t("status.ready"),
+    PRINTED: t("status.printed"),
+    CANCELLED: t("status.cancelled"),
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -118,9 +125,7 @@ export default function ChequesPage() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={
-                  locale === "ne" ? "पाउने/बैंक/रकम खोज्नुहोस्…" : "Search payee, bank, amount…"
-                }
+                placeholder={t("searchPlaceholder")}
                 className="w-56 pl-10"
               />
             </div>
@@ -135,19 +140,16 @@ export default function ChequesPage() {
       {isLoading ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            {locale === "ne" ? "लोड हुँदै…" : "Loading…"}
+            {t("loading")}
           </CardContent>
         </Card>
       ) : loadError ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-destructive">
-              {locale === "ne"
-                ? "चेक लोड गर्न सकिएन। कृपया फेरि प्रयास गर्नुहोस्।"
-                : "Could not load your cheques. Please try again."}
-            </p>
+            <p className="text-destructive">{t("loadError")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t("loadErrorDesc")}</p>
             <Button variant="outline" className="mt-3" onClick={fetchCheques}>
-              {locale === "ne" ? "फेरि प्रयास" : "Retry"}
+              {t("retry")}
             </Button>
           </CardContent>
         </Card>
@@ -167,6 +169,13 @@ export default function ChequesPage() {
                   </tr>
                 </thead>
                 <tbody>
+                  {filtered.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                        {t("noSearchResults")}
+                      </td>
+                    </tr>
+                  )}
                   {filtered.map((cheque) => (
                     <tr key={cheque.id} className="border-b">
                       <td className="px-4 py-3 font-medium">
@@ -189,7 +198,7 @@ export default function ChequesPage() {
                                 : "bg-muted text-muted-foreground"
                           }`}
                         >
-                          {cheque.status}
+                          {statusLabels[cheque.status] ?? cheque.status}
                         </span>
                       </td>
                       <td className="px-4 py-3">
