@@ -7,6 +7,7 @@ import { timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { isRateLimited, clientIp } from "@/lib/rate-limit";
+import { describePrismaError, isPrismaDuplicate, isPrismaUnavailable } from "@/lib/prisma-errors";
 
 /** Length-safe, timing-resistant comparison with a small constant delay. */
 async function secretMatches(provided: string, expected: string): Promise<boolean> {
@@ -139,14 +140,23 @@ export async function POST(request: NextRequest) {
       { message: "Admin account created successfully.", userId: user.id },
       { status: 201 }
     );
-  } catch (error: any) {
-    console.error("[ADMIN_BOOTSTRAP_ERROR]", error);
-    if (error.code === "P2002") {
+  } catch (error) {
+    console.error("[ADMIN_BOOTSTRAP_ERROR]", describePrismaError(error), error);
+
+    if (isPrismaDuplicate(error)) {
       return NextResponse.json(
         { error: "A user with this email already exists." },
         { status: 409 }
       );
     }
+
+    if (isPrismaUnavailable(error)) {
+      return NextResponse.json(
+        { error: "Admin bootstrap is unavailable right now. Please try again later." },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json({ error: "Internal server error." }, { status: 500 });
   }
 }

@@ -1,12 +1,22 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Printer, FileText, Clock, CreditCard, AlertTriangle } from "lucide-react";
+import {
+  Printer,
+  FileText,
+  Clock,
+  LayoutTemplate,
+  CalendarClock,
+  AlertTriangle,
+} from "lucide-react";
+import { describePrismaError } from "@/lib/prisma-errors";
 import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 
 export default async function DashboardPage() {
   const t = await getTranslations("dashboard_ui");
+  // Cheque status labels already exist - reuse them instead of duplicating keys.
+  const tStatus = await getTranslations("cheques");
   const session = await auth();
   const user = session?.user as any;
 
@@ -14,79 +24,94 @@ export default async function DashboardPage() {
   let recentCheques: any[] = [];
   let subscription: any = null;
   let activeTemplateCount = 0;
-  let trialInfo: { daysLeft: number; hoursLeft: number; printsLeft: number; isTrial: boolean } = {
-    daysLeft: 0,
-    hoursLeft: 0,
-    printsLeft: 0,
-    isTrial: false,
-  };
+  let dataError = false;
+  let trialInfo: {
+    daysLeft: number;
+    hoursLeft: number;
+    printsLeft: number;
+    isTrial: boolean;
+    expired: boolean;
+  } = { daysLeft: 0, hoursLeft: 0, printsLeft: 0, isTrial: false, expired: false };
 
-  try {
-    chequeCount = await prisma.chequeEntry.count({
-      where: { userId: user?.id },
-    });
+  const userId = user?.id as string | undefined;
 
-    recentCheques = await prisma.chequeEntry.findMany({
-      where: { userId: user?.id },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      include: { template: { include: { bank: true } } },
-    });
+  if (!userId) {
+    // With no id, Prisma silently drops the `userId` filter and would count
+    // every cheque in the system. Refuse to query rather than risk showing
+    // another account's data.
+    dataError = true;
+  } else {
+    try {
+      chequeCount = await prisma.chequeEntry.count({ where: { userId } });
 
-    // Real count of active bank templates available to the user.
-    activeTemplateCount = await prisma.bankTemplate.count({
-      where: { isActive: true, bank: { isActive: true } },
-    });
-
-    subscription = await prisma.subscription.findFirst({
-      where: { userId: user?.id, isActive: true },
-      include: { plan: true },
-    });
-
-    if (subscription && user?.role === "TRIAL_USER") {
-      const msLeft = new Date(subscription.endDate).getTime() - Date.now();
-      // Show fractional trials as hours so a 24-hour trial never reads "365".
-      const daysLeft = Math.floor(msLeft / (24 * 60 * 60 * 1000));
-      const hoursLeft = Math.max(0, Math.ceil(msLeft / (60 * 60 * 1000)));
-      const printsUsed = await prisma.printHistory.count({
-        where: { userId: user?.id },
+      recentCheques = await prisma.chequeEntry.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        include: { template: { include: { bank: true } } },
       });
-      const limit = subscription.plan.chequeLimit > 0 ? subscription.plan.chequeLimit : 0;
-      const printsLeft = limit > 0 ? Math.max(0, limit - printsUsed) : 0;
-      trialInfo = {
-        daysLeft: daysLeft > 0 ? daysLeft : 0,
-        hoursLeft,
-        printsLeft,
-        isTrial: true,
-      };
+
+      // Real count of active bank templates available to the user.
+      activeTemplateCount = await prisma.bankTemplate.count({
+        where: { isActive: true, bank: { isActive: true } },
+      });
+
+      subscription = await prisma.subscription.findFirst({
+        where: { userId, isActive: true },
+        include: { plan: true },
+      });
+
+      if (subscription && user?.role === "TRIAL_USER") {
+        // Measure the raw remaining time: flooring to whole days reports a
+        // fresh 24-hour trial as "0 days left", which used to trip the
+        // expired banner the moment someone signed up.
+        const rawMsLeft = new Date(subscription.endDate).getTime() - Date.now();
+        const msLeft = Math.max(0, rawMsLeft);
+        const hoursLeft = Math.ceil(msLeft / (60 * 60 * 1000));
+        const daysLeft = Math.floor(msLeft / (24 * 60 * 60 * 1000));
+        const printsUsed = await prisma.printHistory.count({ where: { userId } });
+        const limit = subscription.plan.chequeLimit > 0 ? subscription.plan.chequeLimit : 0;
+        const printsLeft = limit > 0 ? Math.max(0, limit - printsUsed) : 0;
+        trialInfo = {
+          daysLeft,
+          hoursLeft,
+          printsLeft,
+          isTrial: true,
+          expired: rawMsLeft <= 0,
+        };
+      }
+    } catch (error) {
+      // Never render fabricated zeros: an unreachable database is an error
+      // state, not an empty account.
+      console.error("[DASHBOARD_DATA_ERROR]", describePrismaError(error), error);
+      dataError = true;
     }
-  } catch {
-    // Database not available, show placeholder data
   }
 
   const stats = [
     {
       title: t("stats.chequesPrinted"),
-      value: chequeCount.toString(),
+      value: dataError ? "—" : chequeCount.toString(),
       icon: FileText,
     },
     {
       title: t("stats.trialDaysLeft"),
-      value: trialInfo.isTrial
-        ? trialInfo.daysLeft > 0
-          ? trialInfo.daysLeft.toString()
-          : t("trialHoursLeft", { hours: trialInfo.hoursLeft })
-        : "—",
-      icon: AlertTriangle,
+      value:
+        trialInfo.isTrial && !dataError
+          ? trialInfo.daysLeft > 0
+            ? trialInfo.daysLeft.toString()
+            : t("trialHoursLeft", { hours: trialInfo.hoursLeft })
+          : "—",
+      icon: CalendarClock,
     },
     {
       title: t("stats.activeTemplates"),
-      value: activeTemplateCount.toString(),
-      icon: CreditCard,
+      value: dataError ? "—" : activeTemplateCount.toString(),
+      icon: LayoutTemplate,
     },
     {
       title: t("printsLeftTrial"),
-      value: trialInfo.isTrial ? trialInfo.printsLeft.toString() : "—",
+      value: trialInfo.isTrial && !dataError ? trialInfo.printsLeft.toString() : "—",
       icon: Printer,
     },
   ];

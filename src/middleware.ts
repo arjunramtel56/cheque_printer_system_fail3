@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { getSessionToken } from "@/lib/auth-token";
 
 const locales = ["en", "ne"] as const;
 const defaultLocale = "en";
@@ -58,10 +58,7 @@ function preferredLocale(request: NextRequest): string {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-  });
+  const token = await getSessionToken(request);
 
   // Allow public static assets
   if (

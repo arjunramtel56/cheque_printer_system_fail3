@@ -41,7 +41,9 @@ export default function LoginPage() {
         ? t("accountExpired")
         : errorParam === "OAuthAccountNotLinked"
           ? t("oauthAccountNotLinked")
-          : ""
+          : errorParam === "Configuration"
+            ? t("serviceUnavailable")
+            : ""
   );
   const [loading, setLoading] = useState(false);
 
@@ -70,7 +72,12 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError(t("invalidCredentials"));
+        // Auth.js answers "Configuration" when the credentials callback throws
+        // on the server (an unreachable database, for example). That is an
+        // outage, not a bad password, and must not be blamed on the user.
+        setError(
+          result.error === "Configuration" ? t("serviceUnavailable") : t("invalidCredentials")
+        );
         setLoading(false);
         return;
       }

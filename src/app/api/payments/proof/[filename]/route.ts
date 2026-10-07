@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { getSessionToken } from "@/lib/auth-token";
 import { prisma } from "@/lib/prisma";
 import { readFileSync, existsSync } from "fs";
 import { join, basename } from "path";
@@ -20,7 +20,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ filename: string }> }
 ) {
-  const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
+  const token = await getSessionToken(request);
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

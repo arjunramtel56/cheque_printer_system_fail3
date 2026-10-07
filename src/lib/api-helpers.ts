@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { getSessionToken } from "@/lib/auth-token";
 import type { NextRequest } from "next/server";
 
 export async function getAuthenticatedUserId(request: NextRequest): Promise<string | null> {
-  const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
+  const token = await getSessionToken(request);
   return token?.id as string | null;
 }
 
 export async function getAuthenticatedUser(request: NextRequest) {
-  const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
+  const token = await getSessionToken(request);
   if (!token) return null;
 
   return {

@@ -288,6 +288,7 @@
     "verificationSent": "Check your email for a verification link.",
     "twoFactorCode": "Enter your 2FA code",
     "verifyCode": "Verify code",
+    "serviceUnavailable": "Service temporarily unavailable. Please try again in a moment.",
     "invalidCredentials": "Invalid email or password",
     "accountSuspended": "Your account has been suspended.",
     "accountExpired": "Your account has expired.",

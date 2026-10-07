@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations";
 import { isRateLimited, clientIp } from "@/lib/rate-limit";
+import { describePrismaError, isPrismaDuplicate, isPrismaUnavailable } from "@/lib/prisma-errors";
 
 export async function POST(request: Request) {
   try {
@@ -116,20 +117,25 @@ export async function POST(request: Request) {
       { message: "Account created successfully", userId: user.id },
       { status: 201 }
     );
-  } catch (error: any) {
-    console.error("[REGISTER_ERROR]", error);
-    if (error.code === "P2002") {
+  } catch (error) {
+    // The Prisma code is logged for operators (with connection strings
+    // redacted); users only ever receive a safe, non-technical message.
+    console.error("[REGISTER_ERROR]", describePrismaError(error), error);
+
+    if (isPrismaDuplicate(error)) {
       return NextResponse.json({ error: "Email already registered" }, { status: 409 });
     }
-    // Infrastructure failures (DB unreachable / schema missing) get their own
-    // safe message so on-call can distinguish them from bugs; the full
-    // Prisma code stays in the server log above.
-    if (error.code === "P1001" || error.code === "P2021" || error.code === "P2022") {
+
+    // Infrastructure failures (database unreachable, credentials rejected,
+    // schema not applied) are a 503 with their own message so a broken
+    // deployment is distinguishable from a bug in this route.
+    if (isPrismaUnavailable(error)) {
       return NextResponse.json(
         { error: "Unable to create your account right now. Please try again later." },
         { status: 503 }
       );
     }
+
     return NextResponse.json(
       { error: "Internal server error. Please try again." },
       { status: 500 }
