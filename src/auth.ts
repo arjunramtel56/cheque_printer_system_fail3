@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { isRateLimited } from "@/lib/rate-limit";
+import { isTrialExpired } from "@/lib/trial";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   // Explicit secret: Auth.js v5 resolves AUTH_SECRET from the environment,
@@ -41,13 +42,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!isValid) return null;
 
-        // Check trial expiry for TRIAL_USER role
-        let trialExpired = false;
-        if (user.role === "TRIAL_USER" && user.trialExpires) {
-          if (new Date(user.trialExpires) < new Date()) {
-            trialExpired = true;
-          }
-        }
+        // The trial clock travels as a timestamp, never as a pre-computed
+        // boolean: a sealed "trialExpired" would keep reporting whatever was
+        // true at sign-in for the whole session, so a trial that lapses
+        // mid-session would never be enforced.
+        const trialExpires = user.trialExpires ? new Date(user.trialExpires).toISOString() : null;
 
         return {
           id: user.id,
@@ -55,7 +54,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           role: user.role,
           status: user.status,
-          trialExpired,
+          trialExpires,
         };
       },
     }),
@@ -70,16 +69,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = (user as any).role;
         token.status = (user as any).status;
         token.id = user.id;
-        token.trialExpired = (user as any).trialExpired ?? false;
+        // Stored as the trial end timestamp so expiry is evaluated per
+        // request. `trialExpired` is still read as a fallback for sessions
+        // that were minted before this claim existed.
+        token.trialExpiresAt = (user as any).trialExpires ?? null;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
+        const trialExpiresAt = (token.trialExpiresAt as string | null) ?? null;
+
         (session.user as any).role = token.role;
         (session.user as any).status = token.status;
         (session.user as any).id = token.id;
-        (session.user as any).trialExpired = token.trialExpired ?? false;
+        (session.user as any).trialExpiresAt = trialExpiresAt;
+        // Derived per read rather than copied from the token, so it cannot go
+        // stale while the session lives.
+        (session.user as any).trialExpired = isTrialExpired({
+          role: token.role as string,
+          status: token.status as string,
+          trialExpiresAt,
+          legacyTrialExpired: token.trialExpired as boolean,
+        });
       }
       return session;
     },

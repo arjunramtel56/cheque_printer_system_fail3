@@ -38,6 +38,11 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
   } = { daysLeft: 0, hoursLeft: 0, printsLeft: 0, isTrial: false, expired: false };
 
   const userId = user?.id as string | undefined;
+  // The banner must describe the account as it is now, not as it was at
+  // sign-in: a trial user whose payment is approved is promoted to USER
+  // mid-session, and the session cookie goes on claiming TRIAL_USER until the
+  // next login.
+  let isTrial = user?.role === "TRIAL_USER";
 
   if (!userId) {
     // With no id, Prisma silently drops the `userId` filter and would count
@@ -60,12 +65,18 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
         where: { isActive: true, bank: { isActive: true } },
       });
 
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      });
+      isTrial = dbUser?.role === "TRIAL_USER";
+
       subscription = await prisma.subscription.findFirst({
         where: { userId, isActive: true },
         include: { plan: true },
       });
 
-      if (subscription && user?.role === "TRIAL_USER") {
+      if (subscription && isTrial) {
         // Measure the raw remaining time: flooring to whole days reports a
         // fresh 24-hour trial as "0 days left", which used to trip the
         // expired banner the moment someone signed up.
@@ -119,8 +130,6 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
       icon: Printer,
     },
   ];
-
-  const isTrial = user?.role === "TRIAL_USER";
 
   // Static lookup so every status resolves to an existing translated label.
   const statusLabels: Record<string, string> = {

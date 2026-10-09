@@ -4,7 +4,9 @@ import DashboardSidebar from "@/components/dashboard-sidebar";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { siteConfig } from "@/lib/config";
+import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
+import { getFreshAccess } from "@/lib/access";
 
 export default async function DashboardLayout({
   children,
@@ -22,9 +24,38 @@ export default async function DashboardLayout({
   }
 
   const user = session.user as any;
+
+  // Every panel access rule is evaluated against the database on each request
+  // rather than against the claims sealed into the session cookie at sign-in,
+  // which freeze for the life of the session. That is what lets a suspension, a
+  // promotion to a paid account, or a trial that lapses mid-session take effect
+  // immediately instead of at the next login.
+  //
+  // A failed read is not treated as a denial: the pages render their own error
+  // state, and nobody should be locked out of the panel by a database outage.
+  const access = user?.id ? await getFreshAccess(user.id).catch(() => null) : null;
+
+  if (access?.blocked) {
+    redirect(`/${locale}/login?error=account_${access.blocked}`);
+  }
+
+  if (access?.trialExpired) {
+    // The renewal page lives under /dashboard, so it has to be exempt from the
+    // redirect it would otherwise trigger on itself — otherwise it is
+    // unreachable for exactly the users who need it. Middleware forwards the
+    // path because a layout is never given it.
+    const pathname = headers().get("x-pathname") ?? "";
+    const subscriptionPath = `/${locale}/dashboard/subscription`;
+
+    if (!pathname.startsWith(subscriptionPath)) {
+      redirect(`${subscriptionPath}?error=trial_expired`);
+    }
+  }
+
+  const role = access?.role ?? (user?.role as string);
   const t = await getTranslations({ locale, namespace: "dashboard_ui" });
 
-  const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -51,7 +82,7 @@ export default async function DashboardLayout({
               <ThemeToggle />
               <LanguageSwitcher />
               <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                {user.role === "TRIAL_USER" ? t("trialBadge") : user.role}
+                {role === "TRIAL_USER" ? t("trialBadge") : role}
               </span>
             </div>
           </div>

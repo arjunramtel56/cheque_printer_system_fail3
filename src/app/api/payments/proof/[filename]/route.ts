@@ -3,6 +3,8 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSessionToken } from "@/lib/auth-token";
+import { getFreshAccess } from "@/lib/access";
+import { isAccountBlocked } from "@/lib/trial";
 import { prisma } from "@/lib/prisma";
 import { readFileSync, existsSync } from "fs";
 import { join, basename } from "path";
@@ -41,7 +43,17 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const role = token.role as string | undefined;
+  // Read the role from the database: the token still claims whatever the user
+  // was at sign-in, so a revoked admin would keep read access to every proof
+  // file until their session expired. Falls back to the sealed claim if the
+  // read fails rather than turning an outage into a lockout.
+  const fresh = await getFreshAccess(token.id as string).catch(() => null);
+
+  if (fresh && isAccountBlocked(fresh.status)) {
+    return NextResponse.json({ error: "Account unavailable" }, { status: 403 });
+  }
+
+  const role = fresh?.role ?? (token.role as string | undefined);
   const isPrivileged = role === "ADMIN" || role === "SUPER_ADMIN";
   if (payment.userId !== token.id && !isPrivileged) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

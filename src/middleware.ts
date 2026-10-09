@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSessionToken } from "@/lib/auth-token";
+import { isAccountBlocked } from "@/lib/trial";
 
 const locales = ["en", "ne"] as const;
 const defaultLocale = "en";
@@ -26,9 +27,6 @@ const publicRoutes = [
 ];
 const authRoutes = ["/login", "/register", "/forgot-password", "/reset-password", "/verify-email"];
 const adminRoutes = ["/admin"];
-
-// Trial-restricted routes (require active trial or paid subscription)
-const protectedUserRoutes = ["/dashboard"];
 
 function parseLocaleCookie(request: NextRequest): string | null {
   try {
@@ -132,23 +130,28 @@ export async function middleware(request: NextRequest) {
   }
 
   // Check suspended/expired users
-  if (token && (token.status === "SUSPENDED" || token.status === "EXPIRED")) {
-    const loginUrl = new URL(`/${locale}/login`, request.url);
-    loginUrl.searchParams.set("error", "account_" + token.status.toLowerCase());
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // Check trial expiry for trial users
-  if (token && token.role === "TRIAL_USER" && token.trialExpired === true) {
-    // Redirect trial users whose trial has expired to subscription/upgrade page
-    if (protectedUserRoutes.some((route) => pathWithoutLocale.startsWith(route))) {
-      const subUrl = new URL(`/${locale}/dashboard/subscription`, request.url);
-      subUrl.searchParams.set("error", "trial_expired");
-      return NextResponse.redirect(subUrl);
+  if (token) {
+    const blocked = isAccountBlocked(token.status as string);
+    if (blocked) {
+      const loginUrl = new URL(`/${locale}/login`, request.url);
+      loginUrl.searchParams.set("error", `account_${blocked}`);
+      return NextResponse.redirect(loginUrl);
     }
   }
 
-  return NextResponse.next();
+  // Trial expiry is deliberately NOT decided here. The middleware runs on the
+  // edge, where the database is unreachable, and the only claims available are
+  // the ones sealed into the session cookie at sign-in — so it would have to
+  // judge a trial that may have lapsed mid-session, or a trial user who has
+  // since been promoted to a paid USER, on stale information. The dashboard
+  // layout applies that rule from the database on every request instead.
+  //
+  // The rendered path is forwarded so server components (which are never given
+  // it) can tell which page they are rendering — the layout needs that to
+  // exempt the renewal page from its own redirect.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {

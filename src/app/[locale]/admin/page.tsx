@@ -13,8 +13,15 @@ import {
 import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 
-export default async function AdminDashboardPage() {
-  const t = await getTranslations("admin_ui");
+export default async function AdminDashboardPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  // Resolve the locale from the route instead of relying on the layout's
+  // request-locale store, which is not guaranteed to be set yet.
+  const t = await getTranslations({ locale, namespace: "admin_ui" });
   const session = await auth();
   const user = session?.user as any;
 
