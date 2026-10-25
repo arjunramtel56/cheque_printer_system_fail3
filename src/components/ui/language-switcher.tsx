@@ -4,6 +4,7 @@ import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { useTransition } from "react";
+import { useTranslations } from "next-intl";
 
 const LANGUAGE_LABELS: Record<string, { flag: string; label: string }> = {
   en: { flag: "🇬🇧", label: "EN" },
@@ -17,6 +18,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations("languageSwitcher");
 
   const switchLanguage = (newLocale: string) => {
     // Persist the choice for middleware (bare-path redirects) and future visits.
@@ -45,10 +47,10 @@ export function LanguageSwitcher({ className }: { className?: string }) {
       type="button"
       onClick={() => switchLanguage(otherLocale)}
       disabled={isPending}
-      aria-label={otherLocale === "ne" ? "Switch to Nepali" : "नेपालीमा सार्नुहोस्"}
-      title={otherLocale === "ne" ? "Switch to Nepali" : "नेपालीमा सार्नुहोस्"}
+      aria-label={otherLocale === "ne" ? t("switchToNepali") : t("switchToEnglish")}
+      title={otherLocale === "ne" ? t("switchToNepali") : t("switchToEnglish")}
       className={cn(
-        "flex items-center gap-1 rounded-lg border border-input bg-background px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50",
+        "flex items-center gap-1 rounded-lg border border-input bg-background px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-colors disabled:opacity-50",
         className
       )}
     >

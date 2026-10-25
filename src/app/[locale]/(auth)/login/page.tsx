@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Card,
   CardContent,
@@ -23,8 +25,6 @@ export default function LoginPage() {
   const router = useRouter();
   const i18nRouter = useI18nRouter();
   const searchParams = useSearchParams();
-  // The i18n router prefixes the current locale itself, so callback URLs must
-  // be locale-less (middleware passes locale-prefixed pathnames).
   const rawCallback = searchParams.get("callbackUrl");
   const callbackUrl =
     rawCallback && rawCallback.startsWith("/")
@@ -51,7 +51,6 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
 
-    // Client-side validation (server remains the source of truth).
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
       setError(t("fillAllFields"));
@@ -72,9 +71,6 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        // Auth.js answers "Configuration" when the credentials callback throws
-        // on the server (an unreachable database, for example). That is an
-        // outage, not a bad password, and must not be blamed on the user.
         setError(
           result.error === "Configuration" ? t("serviceUnavailable") : t("invalidCredentials")
         );
@@ -101,14 +97,8 @@ export default function LoginPage() {
       </CardHeader>
       <form onSubmit={handleSubmit} noValidate>
         <CardContent className="space-y-4">
-          {error && (
-            <div
-              role="alert"
-              className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
-            >
-              {error}
-            </div>
-          )}
+          {error && <Alert variant="destructive" title={error} />}
+
           <div className="space-y-2">
             <Label htmlFor="email">{t("email")}</Label>
             <Input
@@ -120,8 +110,10 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              aria-required
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="password">{t("password")}</Label>
             <Input
@@ -133,21 +125,38 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              aria-required
             />
           </div>
         </CardContent>
+
         <CardFooter className="flex flex-col space-y-4">
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? t("signingIn") : t("signIn")}
+            {loading ? (
+              <div className="flex items-center justify-center gap-2">
+                <Spinner size="sm" />
+                {t("signingIn")}
+              </div>
+            ) : (
+              t("signIn")
+            )}
           </Button>
+
           <p className="text-center text-sm">
-            <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+            <Link
+              href="/forgot-password"
+              className="text-primary hover:underline focus-visible:outline-none focus-visible:text-primary/80"
+            >
               {t("forgotPassword")}
             </Link>
           </p>
+
           <p className="text-center text-sm text-muted-foreground">
             {t("dontHaveAccount")}{" "}
-            <Link href="/register" className="text-primary hover:underline">
+            <Link
+              href="/register"
+              className="text-primary hover:underline focus-visible:outline-none focus-visible:text-primary/80"
+            >
               {t("signUp")}
             </Link>
           </p>

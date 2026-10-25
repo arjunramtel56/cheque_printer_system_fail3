@@ -19,20 +19,11 @@ export default async function DashboardLayout({
   const session = await auth();
 
   if (!session?.user) {
-    // Keep the visitor in the locale they were browsing, not always English.
     redirect(`/${locale}/login`);
   }
 
   const user = session.user as any;
 
-  // Every panel access rule is evaluated against the database on each request
-  // rather than against the claims sealed into the session cookie at sign-in,
-  // which freeze for the life of the session. That is what lets a suspension, a
-  // promotion to a paid account, or a trial that lapses mid-session take effect
-  // immediately instead of at the next login.
-  //
-  // A failed read is not treated as a denial: the pages render their own error
-  // state, and nobody should be locked out of the panel by a database outage.
   const access = user?.id ? await getFreshAccess(user.id).catch(() => null) : null;
 
   if (access?.blocked) {
@@ -40,10 +31,6 @@ export default async function DashboardLayout({
   }
 
   if (access?.trialExpired) {
-    // The renewal page lives under /dashboard, so it has to be exempt from the
-    // redirect it would otherwise trigger on itself — otherwise it is
-    // unreachable for exactly the users who need it. Middleware forwards the
-    // path because a layout is never given it.
     const pathname = headers().get("x-pathname") ?? "";
     const subscriptionPath = `/${locale}/dashboard/subscription`;
 
@@ -57,38 +44,67 @@ export default async function DashboardLayout({
 
   const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
 
+  const getRoleBadge = () => {
+    switch (role) {
+      case "TRIAL_USER":
+        return {
+          label: t("trialBadge"),
+          className: "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-200",
+        };
+      case "SUPER_ADMIN":
+        return {
+          label: "SUPER ADMIN",
+          className: "bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-200",
+        };
+      case "ADMIN":
+        return {
+          label: "ADMIN",
+          className: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-200",
+        };
+      default:
+        return {
+          label: t("paidBadge"),
+          className: "bg-green-100 text-green-800 dark:bg-green-950/60 dark:text-green-200",
+        };
+    }
+  };
+
+  const roleBadge = getRoleBadge();
+
   return (
-    <div className="flex h-screen overflow-hidden">
-      <DashboardSidebar role={user.role} />
-      <main className="flex-1 overflow-y-auto">
-        <header className="flex h-14 items-center border-b px-6">
-          <div className="flex flex-1 items-center justify-between">
-            <div className="flex items-center gap-4">
-              <img
-                src={siteConfig.logo}
-                alt={siteConfig.company}
-                className="logo-image h-7 w-auto"
-              />
-              <div>
-                <h1 className="text-lg font-semibold">
-                  {isAdmin ? t("adminPanel") : t("dashboard")}
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  {t("welcomeHeader", { name: user.name ?? "" })}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <ThemeToggle />
-              <LanguageSwitcher />
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                {role === "TRIAL_USER" ? t("trialBadge") : role}
-              </span>
-            </div>
+    <div className="flex h-screen flex-col overflow-hidden">
+      <header className="flex h-14 items-center justify-between border-b bg-card px-4 shadow-sm sm:px-6">
+        <div className="flex items-center gap-4">
+          <img src={siteConfig.logo} alt={siteConfig.company} className="logo-image h-7 w-auto" />
+          <div>
+            <h1 className="text-lg font-semibold text-navy-700 dark:text-navy-200">
+              {isAdmin ? t("adminPanel") : t("dashboard")}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {t("welcomeHeader", { name: user.name ?? "" })}
+            </p>
           </div>
-        </header>
-        <div className="p-6">{children}</div>
-      </main>
+        </div>
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <LanguageSwitcher />
+          <span
+            className={
+              "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium " +
+              roleBadge.className
+            }
+          >
+            {roleBadge.label}
+          </span>
+        </div>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        <DashboardSidebar role={user.role} />
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-6">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

@@ -3,112 +3,169 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+  /* Professional navy / blue / cyan palette */
+  --color-navy-50: hsl(220 30% 97%);
+  --color-navy-100: hsl(220 30% 93%);
+  --color-navy-200: hsl(218 33% 85%);
+  --color-navy-300: hsl(216 33% 72%);
+  --color-navy-400: hsl(214 35% 55%);
+  --color-navy-500: hsl(213 36% 42%);
+  --color-navy-600: hsl(212 38% 33%);
+  --color-navy-700: hsl(211 40% 24%);
+  --color-navy-800: hsl(210 42% 16%);
+  --color-navy-900: hsl(209 44% 10%);
+  --color-navy-950: hsl(222 84% 4.9%);
+
+  --color-blue-50: hsl(210 100% 97%);
+  --color-blue-100: hsl(210 98% 93%);
+  --color-blue-200: hsl(208 90% 83%);
+  --color-blue-300: hsl(206 85% 70%);
+  --color-blue-400: hsl(204 80% 55%);
+  --color-blue-500: hsl(202 80% 45%);
+  --color-blue-600: hsl(200 80% 38%);
+  --color-blue-700: hsl(198 80% 31%);
+  --color-blue-800: hsl(196 80% 26%);
+  --color-blue-900: hsl(194 80% 22%);
+
+  --color-cyan-50: hsl(188 100% 97%);
+  --color-cyan-100: hsl(188 95% 90%);
+  --color-cyan-200: hsl(188 80% 80%);
+  --color-cyan-300: hsl(188 70% 65%);
+  --color-cyan-400: hsl(188 70% 50%);
+  --color-cyan-500: hsl(188 70% 38%);
+  --color-cyan-600: hsl(188 70% 31%);
+  --color-cyan-700: hsl(188 70% 26%);
+  --color-cyan-800: hsl(188 70% 22%);
+  --color-cyan-900: hsl(188 70% 18%);
+
+  /* Core semantic tokens — light mode */
   --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(222.2 84% 4.9%);
+  --color-foreground: hsl(212 40% 8%);
   --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(222.2 84% 4.9%);
-  --color-primary: hsl(221.2 83.2% 53.3%);
-  --color-primary-foreground: hsl(210 40% 98%);
-  --color-secondary: hsl(210 40% 96.1%);
-  --color-secondary-foreground: hsl(222.2 47.4% 11.2%);
-  --color-muted: hsl(210 40% 96.1%);
-  --color-muted-foreground: hsl(215.4 16.3% 46.9%);
-  --color-accent: hsl(210 40% 96.1%);
-  --color-accent-foreground: hsl(222.2 47.4% 11.2%);
+  --color-card-foreground: hsl(212 40% 8%);
+
+  --color-primary: hsl(200 80% 38%);
+  --color-primary-foreground: hsl(0 0% 100%);
+
+  --color-secondary: hsl(210 20% 96%);
+  --color-secondary-foreground: hsl(212 40% 10%);
+
+  --color-accent: hsl(188 70% 93%);
+  --color-accent-foreground: hsl(200 80% 26%);
+
+  --color-muted: hsl(210 20% 96%);
+  --color-muted-foreground: hsl(214 30% 45%);
+
+  --color-border: hsl(214 32% 90%);
+  --color-input: hsl(214 32% 90%);
+  --color-ring: hsl(200 80% 38%);
+
   --color-destructive: hsl(0 84.2% 60.2%);
   --color-destructive-foreground: hsl(210 40% 98%);
-  --color-border: hsl(214.3 31.8% 91.4%);
-  --color-input: hsl(214.3 31.8% 91.4%);
-  --color-ring: hsl(221.2 83.2% 53.3%);
+
+  --color-success: hsl(142 76.6% 33.3%);
+  --color-success-foreground: hsl(0 0% 100%);
+
+  --color-warning: hsl(38.7 92.1% 50%);
+  --color-warning-foreground: hsl(212 40% 8%);
+
   --radius: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
+/* ===== DARK MODE ===== */
+:root.dark {
+  color-scheme: dark;
+
+  --color-background: hsl(210 20% 6%);
+  --color-foreground: hsl(210 20% 96%);
+  --color-card: hsl(210 24% 10%);
+  --color-card-foreground: hsl(210 20% 96%);
+
+  --color-primary: hsl(200 100% 58%);
+  --color-primary-foreground: hsl(212 90% 8%);
+
+  --color-secondary: hsl(210 24% 14%);
+  --color-secondary-foreground: hsl(210 20% 93%);
+
+  --color-accent: hsl(188 70% 22%);
+  --color-accent-foreground: hsl(200 80% 90%);
+
+  --color-muted: hsl(210 24% 14%);
+  --color-muted-foreground: hsl(215 20% 65%);
+
+  --color-border: hsl(215 28% 22%);
+  --color-input: hsl(215 28% 22%);
+  --color-ring: hsl(200 100% 58%);
+
+  --color-destructive: hsl(0 84.2% 60%);
+  --color-destructive-foreground: hsl(210 40% 98%);
+
+  --color-success: hsl(142 70% 45%);
+  --color-success-foreground: hsl(210 20% 10%);
+
+  --color-warning: hsl(38.7 92.1% 55%);
+  --color-warning-foreground: hsl(212 40% 8%);
 }
 
 @layer base {
   html {
-    color-scheme: light;
-    background-color: var(--color-background);
+    scroll-behavior: smooth;
   }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: "Inter", ui-sans, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
   * {
     border-color: var(--color-border);
   }
-  body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+
+  /* Focus-visible ring — consistent across components */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
+
+  /* Links */
+  a {
+    @apply text-primary underline-offset-4 hover:underline;
+    color: var(--color-primary);
+  }
+
+  /* Logo images keep their aspect ratio */
   .logo-image {
     max-width: 200px;
     height: auto;
     width: auto;
   }
+
+  /* Card base */
+  .card-lift {
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      border-color 0.2s ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Table base */
+  table th,
+  table td {
+    @apply px-4 py-3 text-sm;
+  }
 }
 
-:root.dark {
-  color-scheme: dark;
-  --color-background: hsl(222.2 84% 4.9%);
-  --color-foreground: hsl(0 0% 97%);
-  --color-card: hsl(223 47% 11%);
-  --color-card-foreground: hsl(0 0% 97%);
-  --color-primary: hsl(217.2 92.2% 59.2%);
-  --color-primary-foreground: hsl(210 40% 98%);
-  --color-secondary: hsl(217.2 32.6% 17.5%);
-  --color-secondary-foreground: hsl(210 40% 98%);
-  --color-muted: hsl(217.2 32.6% 17.5%);
-  --color-muted-foreground: hsl(215.4 16.3% 71.1%);
-  --color-accent: hsl(217.2 32.6% 17.5%);
-  --color-accent-foreground: hsl(210 40% 98%);
-  --color-destructive: hsl(0 62.8% 50%);
-  --color-destructive-foreground: hsl(210 40% 98%);
-  --color-border: hsl(215.4 16.3% 24.9%);
-  --color-input: hsl(215.4 16.3% 24.9%);
-  --color-ring: hsl(217.2 92.2% 59.2%);
-  --color-slate-50: hsl(210 40% 96.1%);
-  --color-slate-100: hsl(210 40% 90.2%);
-  --color-slate-200: hsl(210 40% 80.4%);
-  --color-slate-300: hsl(210 40% 66.7%);
-  --color-slate-400: hsl(210 40% 52.2%);
-  --color-slate-500: hsl(210 40% 44.9%);
-  --color-slate-600: hsl(210 40% 36.1%);
-  --color-slate-700: hsl(210 40% 27.5%);
-  --color-slate-800: hsl(210 40% 18.9%);
-  --color-slate-900: hsl(210 40% 10.2%);
-  --color-slate-950: hsl(210 40% 4.9%);
-  --color-blue-50: hsl(217.2 92.2% 96.3%);
-  --color-blue-100: hsl(217.2 92.2% 89.8%);
-  --color-blue-200: hsl(217.2 92.2% 77.3%);
-  --color-blue-300: hsl(217.2 92.2% 64.7%);
-  --color-blue-400: hsl(217.2 92.2% 52.2%);
-  --color-blue-500: hsl(217.2 92.2% 39.8%);
-  --color-blue-600: hsl(217.2 92.2% 31.6%);
-  --color-blue-700: hsl(217.2 92.2% 23.5%);
-  --color-blue-800: hsl(217.2 92.2% 15.3%);
-  --color-blue-900: hsl(217.2 92.2% 7.1%);
-  --color-green-50: hsl(142.1 76.6% 96.7%);
-  --color-green-100: hsl(142.1 76.6% 90.4%);
-  --color-green-700: hsl(142.1 76.6% 33.3%);
-  --color-green-900: hsl(142.1 76.6% 20.6%);
-  --color-amber-50: hsl(38.7 92.1% 96.5%);
-  --color-amber-100: hsl(38.7 92.1% 90.2%);
-  --color-amber-200: hsl(38.7 92.1% 76.9%);
-  --color-amber-300: hsl(38.7 92.1% 63.7%);
-  --color-amber-500: hsl(38.7 92.1% 49.8%);
-  --color-amber-600: hsl(38.7 92.1% 41.6%);
-  --color-amber-700: hsl(38.7 92.1% 33.3%);
-  --color-amber-800: hsl(38.7 92.1% 25.1%);
-  --color-amber-900: hsl(38.7 92.1% 16.9%);
-  --color-red-50: hsl(0 84.2% 98%);
-  --color-red-500: hsl(0 84.2% 50.2%);
-  --color-red-600: hsl(0 84.2% 41.2%);
-  --color-red-700: hsl(0 84.2% 33.3%);
-  --color-yellow-50: hsl(48 91.6% 96.5%);
-  --color-yellow-100: hsl(48 91.6% 90.2%);
-  --color-yellow-400: hsl(48 91.6% 64.7%);
-  --color-yellow-600: hsl(48 91.6% 41.2%);
-  --color-yellow-700: hsl(48 91.6% 33.3%);
-}
-
+/* ===== PRINT STYLES ===== */
 @media print {
   @page {
-    size: A4;
+    size: A4 portrait;
     margin: 0;
   }
 
@@ -144,4 +201,107 @@
     margin: 0 !important;
     padding: 0 !important;
   }
+}
+
+/* ===== MARKETING ANIMATIONS ===== */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes marketing-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-fade-up {
+    animation: marketing-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes marketing-float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+  .animate-float {
+    animation: marketing-float 6s ease-in-out infinite;
+  }
+
+  @keyframes marketing-glow {
+    0%,
+    100% {
+      opacity: 0.5;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.85;
+      transform: scale(1.06);
+    }
+  }
+  .animate-glow {
+    animation: marketing-glow 10s ease-in-out infinite;
+  }
+
+  .anim-delay-75 {
+    animation-delay: 75ms;
+  }
+  .anim-delay-150 {
+    animation-delay: 150ms;
+  }
+  .anim-delay-200 {
+    animation-delay: 200ms;
+  }
+  .anim-delay-300 {
+    animation-delay: 300ms;
+  }
+}
+
+/* Scroll-reveal */
+.reveal-pending {
+  opacity: 0;
+  transform: translateY(18px);
+}
+.reveal-in {
+  animation: marketing-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Gradient headline text */
+.text-gradient {
+  background-image: linear-gradient(90deg, var(--color-primary), #0ea5e8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+:root.dark .text-gradient {
+  background-image: linear-gradient(90deg, var(--color-primary), #38bdf8);
+}
+
+/* Faint engineering-grid backdrop */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, hsl(200 70% 50% / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(200 70% 50% / 0.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 25%, black 40%, transparent 78%);
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 25%, black 40%, transparent 78%);
+}
+:root.dark .bg-grid {
+  background-image:
+    linear-gradient(to right, hsl(0 0% 100% / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(0 0% 100% / 0.06) 1px, transparent 1px);
+}
+
+/* Soft hover lift for marketing cards */
+.card-lift:hover {
+  border-color: hsl(200 70% 50% / 0.3);
+  box-shadow: 0 14px 34px -14px hsl(200 70% 50% / 0.2);
+}
+:root.dark .card-lift:hover {
+  border-color: hsl(200 100% 58% / 0.4);
+  box-shadow: 0 14px 34px -14px hsl(0 0% 0% / 0.5);
 }

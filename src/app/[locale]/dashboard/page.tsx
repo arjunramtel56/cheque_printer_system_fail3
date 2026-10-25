@@ -1,6 +1,9 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Printer,
   FileText,
@@ -14,12 +17,8 @@ import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 
 export default async function DashboardPage({ params }: { params: Promise<{ locale: string }> }) {
-  // Next.js renders a layout and its page concurrently, so the locale pinned
-  // by the layout is not guaranteed to be set when this runs. Resolve it from
-  // the route params so a Nepali visitor never gets English labels.
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "dashboard_ui" });
-  // Cheque status labels already exist - reuse them instead of duplicating keys.
   const tStatus = await getTranslations({ locale, namespace: "cheques" });
   const session = await auth();
   const user = session?.user as any;
@@ -38,16 +37,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
   } = { daysLeft: 0, hoursLeft: 0, printsLeft: 0, isTrial: false, expired: false };
 
   const userId = user?.id as string | undefined;
-  // The banner must describe the account as it is now, not as it was at
-  // sign-in: a trial user whose payment is approved is promoted to USER
-  // mid-session, and the session cookie goes on claiming TRIAL_USER until the
-  // next login.
   let isTrial = user?.role === "TRIAL_USER";
 
   if (!userId) {
-    // With no id, Prisma silently drops the `userId` filter and would count
-    // every cheque in the system. Refuse to query rather than risk showing
-    // another account's data.
     dataError = true;
   } else {
     try {
@@ -60,7 +52,6 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
         include: { template: { include: { bank: true } } },
       });
 
-      // Real count of active bank templates available to the user.
       activeTemplateCount = await prisma.bankTemplate.count({
         where: { isActive: true, bank: { isActive: true } },
       });
@@ -77,9 +68,6 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
       });
 
       if (subscription && isTrial) {
-        // Measure the raw remaining time: flooring to whole days reports a
-        // fresh 24-hour trial as "0 days left", which used to trip the
-        // expired banner the moment someone signed up.
         const rawMsLeft = new Date(subscription.endDate).getTime() - Date.now();
         const msLeft = Math.max(0, rawMsLeft);
         const hoursLeft = Math.ceil(msLeft / (60 * 60 * 1000));
@@ -96,8 +84,6 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
         };
       }
     } catch (error) {
-      // Never render fabricated zeros: an unreachable database is an error
-      // state, not an empty account.
       console.error("[DASHBOARD_DATA_ERROR]", describePrismaError(error), error);
       dataError = true;
     }
@@ -131,7 +117,6 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
     },
   ];
 
-  // Static lookup so every status resolves to an existing translated label.
   const statusLabels: Record<string, string> = {
     DRAFT: tStatus("status.draft"),
     READY: tStatus("status.ready"),
@@ -142,68 +127,46 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
   return (
     <div className="space-y-6">
       {dataError && (
-        <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 text-destructive" />
-            <div>
-              <p className="font-semibold">{t("loadError")}</p>
-              <p className="mt-1 text-muted-foreground">{t("loadErrorDesc")}</p>
-              <Link href="/dashboard">
-                <span className="mt-2 inline-block rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-accent">
-                  {t("retry")}
-                </span>
-              </Link>
-            </div>
-          </div>
-        </div>
+        <Alert
+          variant="destructive"
+          title={t("loadError")}
+          action={
+            <Link href="/dashboard">
+              <span className="ml-2 text-sm font-medium underline">{t("retry")}</span>
+            </Link>
+          }
+        >
+          <p className="mt-1 text-sm">{t("loadErrorDesc")}</p>
+        </Alert>
       )}
 
       {isTrial && trialInfo.isTrial && !trialInfo.expired && trialInfo.hoursLeft <= 48 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-400" />
-            <div>
-              <p className="font-semibold">
-                {trialInfo.hoursLeft <= 24
-                  ? t("trialEndingSoonHours", { hours: trialInfo.hoursLeft })
-                  : t("trialEndingSoon", { days: trialInfo.daysLeft })}
-              </p>
-              <p className="mt-1">{t("upgradeToContinue")}</p>
-              <Link href="/dashboard/subscription">
-                <span className="mt-2 inline-block rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-                  {t("upgradeNow")}
-                </span>
-              </Link>
-            </div>
-          </div>
-        </div>
+        <Alert variant="warning" title={t("trialEndingSoon", { days: trialInfo.daysLeft })}>
+          <p className="mt-1">{t("upgradeToContinue")}</p>
+          <Link href="/dashboard/subscription" className="mt-2 inline-block">
+            <Button size="sm" variant="outline">
+              {t("upgradeNow")}
+            </Button>
+          </Link>
+        </Alert>
       )}
 
       {isTrial && trialInfo.isTrial && trialInfo.expired && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 text-red-600 dark:text-red-400" />
-            <div>
-              <p className="font-semibold">{t("trialExpired")}</p>
-              <p className="mt-1">{t("upgradeToContinue")}</p>
-              <Link href="/dashboard/subscription">
-                <span className="mt-2 inline-block rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-                  {t("upgradeNow")}
-                </span>
-              </Link>
-            </div>
-          </div>
-        </div>
+        <Alert variant="destructive" title={t("trialExpired")}>
+          <p className="mt-1">{t("upgradeToContinue")}</p>
+          <Link href="/dashboard/subscription" className="mt-2 inline-block">
+            <Button size="sm">{t("upgradeNow")}</Button>
+          </Link>
+        </Alert>
       )}
 
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">{t("overview")}</h2>
-        <Link
-          href="/dashboard/cheques/new"
-          className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <Printer className="mr-2 h-4 w-4" />
-          {t("printNewCheque")}
+        <h2 className="text-2xl font-bold text-navy-700 dark:text-navy-200">{t("overview")}</h2>
+        <Link href={`/${locale}/dashboard/cheques/new`}>
+          <Button size="lg" className="shadow-md shadow-primary/20">
+            <Printer className="mr-2 h-4 w-4" />
+            {t("printNewCheque")}
+          </Button>
         </Link>
       </div>
 
@@ -214,84 +177,90 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
+              <stat.icon className="h-4 w-4 text-navy-500 dark:text-navy-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="text-2xl font-bold text-navy-800 dark:text-navy-200">
+                {stat.value}
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-border">
-          <h3 className="font-bold text-foreground">{t("recentActivity")}</h3>
-        </div>
-        <table className="w-full text-left text-sm text-foreground">
-          <thead className="bg-muted text-muted-foreground font-medium">
-            <tr>
-              <th className="px-6 py-3">{t("table.payee")}</th>
-              <th className="px-6 py-3">{t("table.bank")}</th>
-              <th className="px-6 py-3">{t("table.date")}</th>
-              <th className="px-6 py-3">{t("table.status")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {recentCheques.length > 0 ? (
-              recentCheques.map((cheque) => (
-                <tr key={cheque.id}>
-                  <td className="px-6 py-4 font-medium text-sm">
-                    {cheque.payeeName || cheque.accountHolder || "—"}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
-                    {cheque.template?.bank?.name || "—"}
-                  </td>
-                  <td className="px-6 py-4 text-muted-foreground text-xs">
-                    {new Date(cheque.chequeDate).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    <span className="bg-muted text-muted-foreground px-2 py-1 rounded text-xs font-bold uppercase">
-                      {statusLabels[cheque.status] ?? cheque.status}
-                    </span>
-                  </td>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-navy-700 dark:text-navy-200">{t("recentActivity")}</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="px-4 py-3 text-left font-medium">{t("table.payee")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("table.bank")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("table.date")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("table.status")}</th>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
-                  {dataError ? t("loadError") : t("noRecentActivity")}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {recentCheques.length > 0 ? (
+                  recentCheques.map((cheque) => (
+                    <tr key={cheque.id} className="hover:bg-muted/30">
+                      <td className="px-4 py-3 font-medium">
+                        {cheque.payeeName || cheque.accountHolder || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {cheque.template?.bank?.name || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-sm">
+                        {new Date(cheque.chequeDate).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-block rounded-full bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+                          {statusLabels[cheque.status] ?? cheque.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                      {dataError ? t("loadError") : t("noRecentActivity")}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>{t("quickActions")}</CardTitle>
+          <CardTitle className="text-navy-700 dark:text-navy-200">{t("quickActions")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Link
-              href="/dashboard/cheques/new"
-              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 w-full"
+              href={`/${locale}/dashboard/cheques/new`}
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              <Printer className="mr-2 h-4 w-4" />
+              <Printer className="h-4 w-4" />
               {t("createNew")}
             </Link>
             <Link
-              href="/dashboard/templates"
-              className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-3 text-sm font-medium shadow-sm hover:bg-accent w-full"
+              href={`/${locale}/dashboard/templates`}
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-3 text-sm font-medium shadow-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              <FileText className="mr-2 h-4 w-4" />
+              <FileText className="h-4 w-4" />
               {t("viewTemplates")}
             </Link>
             <Link
-              href="/dashboard/history"
-              className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-3 text-sm font-medium shadow-sm hover:bg-accent w-full"
+              href={`/${locale}/dashboard/history`}
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-3 text-sm font-medium shadow-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              <Clock className="mr-2 h-4 w-4" />
+              <Clock className="h-4 w-4" />
               {t("printHistory")}
             </Link>
           </div>

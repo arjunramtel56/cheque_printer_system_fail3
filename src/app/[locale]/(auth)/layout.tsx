@@ -17,7 +17,7 @@ import { LanguageSwitcher } from "@/components/ui/language-switcher";
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="flex items-center justify-between px-4 py-3 sm:px-6">
+      <header className="flex items-center justify-between border-b px-4 py-3 sm:px-6">
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"

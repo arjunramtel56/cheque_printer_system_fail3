@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Card,
   CardContent,
@@ -19,9 +21,6 @@ import { useTranslations } from "next-intl";
 /**
  * Forgot-password page. Calls POST /api/auth/forgot-password. The API
  * responds identically for known and unknown emails (no enumeration).
- *
- * The dev-only reset link comes back only outside production (the API has
- * no email infrastructure yet); in production builds it is never rendered.
  */
 export default function ForgotPasswordPage() {
   const t = useTranslations("auth");
@@ -29,8 +28,6 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
-  // The API only returns resetUrl outside production; this state stays
-  // empty in production builds, so the link can never leak.
   const isProduction = process.env.NODE_ENV === "production";
   const [devResetUrl, setDevResetUrl] = useState("");
 
@@ -79,14 +76,11 @@ export default function ForgotPasswordPage() {
         <CardTitle className="text-2xl font-bold">{t("forgotPasswordQuestion")}</CardTitle>
         <CardDescription>{t("enterEmail")}</CardDescription>
       </CardHeader>
+
       {submitted ? (
         <CardContent className="space-y-4 text-center">
-          <div
-            role="status"
-            className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900 dark:border-green-900/50 dark:bg-green-950/40 dark:text-green-100"
-          >
-            {t("resetLinkSent")}
-          </div>
+          <Alert variant="success" title={t("resetLinkSent")} />
+
           {!isProduction && devResetUrl ? (
             <p className="break-all text-xs text-muted-foreground">
               Development only — reset link:{" "}
@@ -95,6 +89,7 @@ export default function ForgotPasswordPage() {
               </a>
             </p>
           ) : null}
+
           <Link href="/login">
             <Button variant="outline" className="w-full">
               {t("backToLogin")}
@@ -104,14 +99,8 @@ export default function ForgotPasswordPage() {
       ) : (
         <form onSubmit={handleSubmit} noValidate>
           <CardContent className="space-y-4">
-            {error && (
-              <div
-                role="alert"
-                className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
-              >
-                {error}
-              </div>
-            )}
+            {error && <Alert variant="destructive" title={error} />}
+
             <div className="space-y-2">
               <Label htmlFor="email">{t("email")}</Label>
               <Input
@@ -124,18 +113,31 @@ export default function ForgotPasswordPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
+                aria-required
               />
             </div>
           </CardContent>
+
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "…" : t("sendResetLink")}
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <Spinner size="sm" />
+                  {t("sending")}
+                </div>
+              ) : (
+                t("sendResetLink")
+              )}
             </Button>
+
             <p className="text-center text-sm text-muted-foreground">
-              <Link href="/login" className="text-primary hover:underline">
+              <Link
+                href="/login"
+                className="text-primary hover:underline focus-visible:outline-none focus-visible:text-primary/80"
+              >
                 {t("backToLogin")}
               </Link>
-            </p>{" "}
+            </p>
           </CardFooter>
         </form>
       )}

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Card,
   CardContent,
@@ -60,16 +62,10 @@ export default function RegisterPage() {
         <CardTitle className="text-2xl font-bold">{t("createAccount")}</CardTitle>
         <CardDescription>{t("startFreeTrial")}</CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <CardContent className="space-y-4">
-          {error && (
-            <div
-              role="alert"
-              className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
-            >
-              {error}
-            </div>
-          )}
+          {error && <Alert variant="destructive" title={error} />}
+
           <div className="space-y-2">
             <Label htmlFor="fullName">{t("fullName")} *</Label>
             <Input
@@ -79,8 +75,10 @@ export default function RegisterPage() {
               required
               minLength={2}
               disabled={loading}
+              aria-required
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="email">{t("email")} *</Label>
             <Input
@@ -90,8 +88,11 @@ export default function RegisterPage() {
               placeholder="name@example.com"
               required
               disabled={loading}
+              autoComplete="email"
+              aria-required
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="company">{t("company")}</Label>
             <Input
@@ -101,10 +102,12 @@ export default function RegisterPage() {
               disabled={loading}
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="phone">{t("phone")}</Label>
             <Input id="phone" name="phone" placeholder={t("phonePlaceholder")} disabled={loading} />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="password">{t("password")} *</Label>
             <Input
@@ -115,8 +118,11 @@ export default function RegisterPage() {
               required
               minLength={8}
               disabled={loading}
+              autoComplete="new-password"
+              aria-required
             />
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">{t("confirmPassword")} *</Label>
             <Input
@@ -127,16 +133,30 @@ export default function RegisterPage() {
               required
               minLength={8}
               disabled={loading}
+              autoComplete="new-password"
+              aria-required
             />
           </div>
         </CardContent>
+
         <CardFooter className="flex flex-col space-y-4">
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? t("creatingAccount") : t("createAccountBtn")}
+            {loading ? (
+              <div className="flex items-center justify-center gap-2">
+                <Spinner size="sm" />
+                {t("creatingAccount")}
+              </div>
+            ) : (
+              t("createAccountBtn")
+            )}
           </Button>
+
           <p className="text-center text-sm text-muted-foreground">
             {t("alreadyHaveAccount")}{" "}
-            <Link href="/login" className="text-primary hover:underline">
+            <Link
+              href="/login"
+              className="text-primary hover:underline focus-visible:outline-none focus-visible:text-primary/80"
+            >
               {t("signIn")}
             </Link>
           </p>
@@ -146,7 +166,6 @@ export default function RegisterPage() {
   );
 }
 
-/** Maps known API error messages to translated copy; unknown messages pass through. */
 function mapRegisterError(apiError: string, t: ReturnType<typeof useTranslations>): string {
   if (/already/i.test(apiError)) return t("emailAlreadyRegistered");
   if (/name/i.test(apiError)) return t("fullNameRequired");

@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Card,
   CardContent,
@@ -18,7 +20,7 @@ import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 
 /**
- * Password-reset landing page (/reset-password?token=…).
+ * Password-reset landing page (/reset-password?token=...).
  *
  * One-time token flow: on success the token is consumed server-side and the
  * user is sent to login. Unknown/expired tokens produce the same neutral
@@ -99,12 +101,7 @@ export default function ResetPasswordPage() {
 
       {tokenMissing ? (
         <CardContent className="space-y-4 text-center">
-          <div
-            role="alert"
-            className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
-          >
-            {t("resetInvalidToken")}
-          </div>
+          <Alert variant="destructive" title={t("resetInvalidToken")} />
           <Link href="/forgot-password">
             <Button variant="outline" className="w-full">
               {t("forgotPasswordQuestion")}
@@ -113,12 +110,7 @@ export default function ResetPasswordPage() {
         </CardContent>
       ) : success ? (
         <CardContent className="space-y-4 text-center">
-          <div
-            role="status"
-            className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900 dark:border-green-900/50 dark:bg-green-950/40 dark:text-green-100"
-          >
-            {t("resetSuccessMessage")}
-          </div>
+          <Alert variant="success" title={t("resetSuccessMessage")} />
           <Link href="/login">
             <Button className="w-full">{t("signIn")}</Button>
           </Link>
@@ -126,14 +118,8 @@ export default function ResetPasswordPage() {
       ) : (
         <form onSubmit={handleSubmit} noValidate>
           <CardContent className="space-y-4">
-            {error && (
-              <div
-                role="alert"
-                className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
-              >
-                {error}
-              </div>
-            )}
+            {error && <Alert variant="destructive" title={error} />}
+
             <div className="space-y-2">
               <Label htmlFor="password">{t("newPasswordLabel")}</Label>
               <Input
@@ -147,8 +133,10 @@ export default function ResetPasswordPage() {
                 required
                 minLength={8}
                 disabled={loading}
+                aria-required
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
               <Input
@@ -162,15 +150,30 @@ export default function ResetPasswordPage() {
                 required
                 minLength={8}
                 disabled={loading}
+                aria-required
               />
             </div>
+
+            <p className="text-xs text-muted-foreground">{t("passwordRequirements")}</p>
           </CardContent>
+
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "…" : t("resetYourPassword")}
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <Spinner size="sm" />
+                  {t("resetting")}
+                </div>
+              ) : (
+                t("resetYourPassword")
+              )}
             </Button>
+
             <p className="text-center text-sm text-muted-foreground">
-              <Link href="/login" className="text-primary hover:underline">
+              <Link
+                href="/login"
+                className="text-primary hover:underline focus-visible:outline-none focus-visible:text-primary/80"
+              >
                 {t("backToLogin")}
               </Link>
             </p>

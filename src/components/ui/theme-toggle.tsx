@@ -56,7 +56,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         aria-label={t("menuLabel")}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+        className="flex h-9 w-9 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-colors"
       >
         {currentIcon}
       </button>
@@ -65,7 +65,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         <div
           role="menu"
           aria-label={t("menuLabel")}
-          className="absolute right-0 z-50 mt-2 w-36 rounded-lg bg-popover border border-border shadow-lg"
+          className="absolute right-0 z-50 mt-2 w-36 rounded-lg border bg-popover shadow-lg outline-none"
         >
           {THEME_OPTIONS.map((option) => (
             <button
@@ -78,9 +78,9 @@ export function ThemeToggle({ className }: { className?: string }) {
                 setOpen(false);
               }}
               className={cn(
-                "flex w-full items-center gap-2 px-4 py-2 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg hover:bg-accent hover:text-accent-foreground",
+                "flex w-full items-center gap-2 px-4 py-2 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:outline-none",
                 themeMode === option.value
-                  ? "text-accent-foreground font-medium bg-accent/60"
+                  ? "bg-accent text-accent-foreground font-medium"
                   : "text-popover-foreground"
               )}
             >
