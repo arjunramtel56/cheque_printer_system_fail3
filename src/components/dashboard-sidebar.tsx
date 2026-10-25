@@ -57,7 +57,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
   return (
     <aside
       className={cn(
-        "flex h-screen flex-col border-r bg-card transition-all duration-300",
+        "flex h-full flex-col border-r bg-card transition-all duration-300",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -65,10 +65,17 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
         {!collapsed && (
           <img src={siteConfig.logo} alt={siteConfig.company} className="logo-image h-8 w-auto" />
         )}
-        <button onClick={() => setCollapsed(!collapsed)} className="rounded-md p-1 hover:bg-accent">
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className={cn(
+            "rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          )}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
       </div>
+
       <nav className="flex-1 space-y-1 p-2">
         {navItems.map((item) => {
           const Icon = iconMap[item.icon] || LayoutDashboard;
@@ -79,7 +86,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
               key={item.href}
               href={href}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 isActive
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
@@ -87,17 +94,18 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
               )}
               title={collapsed ? t(item.labelKey) : undefined}
             >
-              <Icon size={18} />
+              <Icon size={18} className={cn(isActive ? "" : "text-navy-400")} />
               {!collapsed && <span>{t(item.labelKey)}</span>}
             </Link>
           );
         })}
       </nav>
+
       <div className="border-t p-2">
         <button
           onClick={() => signOut({ callbackUrl: `/${locale}/login` })}
           className={cn(
-            "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+            "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             collapsed && "justify-center px-2"
           )}
           title={collapsed ? t("logout") : undefined}
