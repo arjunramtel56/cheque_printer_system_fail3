@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LayoutTemplate, Plus, Search } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
+import { LayoutTemplate, Search, Plus, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 
@@ -73,7 +75,7 @@ export default function TemplatesPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold">{t("title")}</h2>
+          <h2 className="text-2xl font-bold text-navy-700 dark:text-navy-200">{t("title")}</h2>
           {!isLoading && !loadError && banks.length > 0 && (
             <p className="mt-1 text-sm text-muted-foreground">
               {t("summary", { banks: banks.length, templates: templateCount })}
@@ -95,22 +97,25 @@ export default function TemplatesPage() {
               />
             </div>
           )}
-          <Button variant="outline" onClick={() => router.push("/dashboard/print")}>
-            <Plus size={16} className="mr-2" />
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/print")}
+            className="gap-2"
+          >
+            <Plus size={16} />
             {t("newCheque")}
           </Button>
         </div>
       </div>
 
       {isLoading ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            {t("loading")}
-          </CardContent>
-        </Card>
+        <div className="py-12 text-center">
+          <Spinner size="lg" />
+        </div>
       ) : loadError ? (
         <Card>
           <CardContent className="py-12 text-center">
+            <AlertTriangle className="mx-auto mb-3 h-12 w-12 text-destructive" />
             <p className="text-destructive">{t("loadError")}</p>
             <p className="mt-1 text-sm text-muted-foreground">{t("loadErrorDesc")}</p>
             <Button variant="outline" className="mt-3" onClick={fetchTemplates}>
@@ -119,18 +124,17 @@ export default function TemplatesPage() {
           </CardContent>
         </Card>
       ) : banks.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <LayoutTemplate className="mx-auto h-12 w-12 text-muted-foreground" />
-            <p className="mt-3 text-muted-foreground">{t("noTemplates")}</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={LayoutTemplate}
+          title={t("noTemplates")}
+          description={t("noTemplatesDesc")}
+        />
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-            <p className="mt-3 font-medium">{t("noSearchResults")}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{t("noSearchResultsDesc")}</p>
+            <h3 className="mt-4 text-lg font-semibold">{t("noSearchResults")}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{t("noSearchResultsDesc")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -153,26 +157,23 @@ export default function TemplatesPage() {
                     {bank.templates.map((template) => (
                       <div
                         key={template.id}
-                        className="flex items-center justify-between rounded-lg border border-border p-3"
+                        className="flex items-center justify-between rounded-lg border p-3"
                       >
-                        <div className="min-w-0">
-                          <p className="flex flex-wrap items-center gap-2 font-medium">
-                            <span className="truncate">{template.name}</span>
-                            {template.isDefault && (
-                              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
-                                {t("default")}
-                              </span>
-                            )}
-                            {!template.isActive && (
-                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800 dark:bg-amber-950/60 dark:text-amber-200">
-                                {t("inactive")}
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {template.chequeWidth}mm × {template.chequeHeight}mm · v
-                            {template.version}
-                          </p>
+                        <div>
+                          <div className="flex items-center gap-3">
+                            <LayoutTemplate className="h-5 w-5 text-navy-400" />
+                            <div>
+                              <p className="font-medium text-navy-700 dark:text-navy-200">
+                                {template.name}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {template.chequeWidth}mm × {template.chequeHeight}mm · v
+                                {template.version}
+                                {template.isDefault && ` · ${t("default")}`}
+                                {!template.isActive && ` · ${t("inactive")}`}
+                              </p>
+                            </div>
+                          </div>
                         </div>
                         <Button
                           variant="outline"

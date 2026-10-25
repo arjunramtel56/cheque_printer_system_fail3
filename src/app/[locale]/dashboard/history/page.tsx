@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Clock, Search, AlertTriangle, RotateCw, Printer } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
+import { Clock, Search, AlertTriangle, RotateCw, Printer, FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 interface HistoryRow {
@@ -26,11 +28,6 @@ interface HistoryRow {
   };
 }
 
-/**
- * Print-history list for the signed-in user only.
- * Data comes from /api/print-history, which scopes every query to the
- * session user, so other users' records are never reachable here.
- */
 export default function HistoryPage() {
   const t = useTranslations("history");
   const [rows, setRows] = useState<HistoryRow[]>([]);
@@ -88,13 +85,11 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
       <div className="flex flex-col gap-1">
-        <h2 className="text-2xl font-bold">{t("title")}</h2>
+        <h2 className="text-2xl font-bold text-navy-700 dark:text-navy-200">{t("title")}</h2>
         <p className="text-sm text-muted-foreground">{t("description")}</p>
       </div>
 
-      {/* Search — only useful once there are a few rows */}
       {rows.length > 3 && (
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -109,18 +104,16 @@ export default function HistoryPage() {
       )}
 
       {isLoading ? (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            {t("loading")}
-          </CardContent>
-        </Card>
+        <div className="py-12 text-center">
+          <Spinner size="lg" />
+        </div>
       ) : loadError ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <AlertTriangle className="h-12 w-12 text-amber-500" />
             <h3 className="text-lg font-semibold">{t("loadError")}</h3>
             <p className="text-sm text-muted-foreground">{t("loadErrorDesc")}</p>
-            <Button onClick={fetchHistory} variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={fetchHistory}>
               <RotateCw className="mr-2 h-4 w-4" />
               {t("retry")}
             </Button>
@@ -143,13 +136,17 @@ export default function HistoryPage() {
                 <tbody>
                   {filtered.map((item) => (
                     <tr key={item.id} className="border-b transition-colors hover:bg-muted/30">
-                      <td className="px-4 py-3 whitespace-nowrap">{formatDate(item.printedAt)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        {formatDate(item.printedAt)}
+                      </td>
                       <td className="px-4 py-3 font-medium">
                         {item.cheque.payeeName || item.cheque.accountHolder}
                       </td>
-                      <td className="px-4 py-3">{item.cheque.template.bank.name}</td>
-                      <td className="px-4 py-3 text-right">
-                        {formatAmount(item.cheque.amountNumber)}
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {item.cheque.template.bank.name}
+                      </td>
+                      <td className="px-4 py-3 text-right text-sm">
+                        NPR {formatAmount(item.cheque.amountNumber)}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-950/60 dark:text-green-200">
@@ -166,21 +163,13 @@ export default function HistoryPage() {
           </CardContent>
         </Card>
       ) : search ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">{t("noSearchResults")}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">{t("noSearchResultsDesc")}</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Search}
+          title={t("noSearchResults")}
+          description={t("noSearchResultsDesc")}
+        />
       ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Clock className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">{t("noPrintHistory")}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">{t("noHistoryDesc")}</p>
-          </CardContent>
-        </Card>
+        <EmptyState icon={Clock} title={t("noPrintHistory")} description={t("noHistoryDesc")} />
       )}
     </div>
   );
