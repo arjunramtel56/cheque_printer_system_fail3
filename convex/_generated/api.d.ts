@@ -8,9 +8,13 @@
  * @module
  */
 
+import type * as cheques from "../cheques.js";
+
 import type { ApiFromModules, FilterApi, FunctionReference } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  cheques: typeof cheques;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.
