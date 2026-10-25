@@ -34,17 +34,45 @@ requires `ADMIN_BOOTSTRAP_SECRET`. Admin credentials are never hard-coded.
 
 ## Environment variables actually read by the code
 
-| Variable                 | Used by                                                              |
-| ------------------------ | -------------------------------------------------------------------- |
-| `DATABASE_URL`           | `prisma/schema.prisma` — PostgreSQL connection string                |
-| `AUTH_SECRET`            | Auth.js session/JWT signing (`src/auth.ts`, middleware, API helpers) |
-| `ADMIN_BOOTSTRAP_SECRET` | `/api/admin/bootstrap`, `prisma/bootstrap-admin.ts`                  |
-| `NEXT_PUBLIC_APP_URL`    | `src/lib/config.ts`                                                  |
-| `ENABLE_CALIBRATION`     | optional; exposes `/dev/calibration` in production                   |
+### Required (all environments)
+
+| Variable              | Used by                                                              |
+| --------------------- | -------------------------------------------------------------------- |
+| `DATABASE_URL`        | `prisma/schema.prisma` — PostgreSQL connection string (pooled)       |
+| `DIRECT_DATABASE_URL` | `prisma/schema.prisma` — direct (non-pooler) host for CLI steps      |
+| `AUTH_SECRET`         | Auth.js session/JWT signing (`src/auth.ts`, middleware, API helpers) |
+
+### Production-only
+
+| Variable                 | Used by                                             |
+| ------------------------ | --------------------------------------------------- |
+| `ADMIN_BOOTSTRAP_SECRET` | `/api/admin/bootstrap`, `prisma/bootstrap-admin.ts` |
+
+### Optional
+
+| Variable              | Used by                                                     |
+| --------------------- | ----------------------------------------------------------- |
+| `NEXT_PUBLIC_APP_URL` | `src/lib/config.ts` — application URL for links/OAuth       |
+| `ENABLE_CALIBRATION`  | `/middleware.ts` — exposes `/dev/calibration` in production |
 
 `AUTH_URL`, `AUTH_TRUST_HOST`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`,
-`ENCRYPTION_KEY`, `DIRECT_DATABASE_URL` and the `EMAIL_*` variables are **not**
-read anywhere in this codebase. Do not add them.
+`ENCRYPTION_KEY` and the `EMAIL_*` variables are **not** read anywhere in this
+codebase. Do not add them — they only cause confusion and may mask configuration
+bugs.
+
+### Environment separation
+
+Vercel environment variables are scoped per-environment. Set each variable in
+the Vercel dashboard under **Settings → Environment Variables** for the correct
+environment:
+
+- **Production** — production database, production `AUTH_SECRET`
+- **Preview** — separate preview/staging database, its own `AUTH_SECRET`
+- **Development** — local dev `.env.local` (gitignored)
+
+> ⚠️ Vercel environment variables only reach a deployment after a **new
+> deployment** is created. Changing a variable and redeploying the same
+> production build will **not** pick up the change — trigger a new deployment.
 
 ## Database strategy (important)
 
@@ -77,8 +105,41 @@ host for the app's runtime `DATABASE_URL` in a serverless environment, with
 Neon's `channel_binding=require` parameter is not supported by Prisma and must
 be removed.
 
-> Vercel environment variables only reach a deployment after a **new
-> deployment** is created.
+## Deployment checklist
+
+1. **Set environment variables** in Vercel → Settings → Environment Variables for **all three**
+   environments (Production, Preview, Development). Required: `DATABASE_URL`, `DIRECT_DATABASE_URL`,
+   `AUTH_SECRET`. Production also needs `ADMIN_BOOTSTRAP_SECRET`.
+
+2. **Create a new deployment** in Vercel after setting variables. Existing
+   deployments do not receive new environment variable values — a fresh
+   deployment is required.
+
+3. **Apply the database schema** once to the production database (this is a
+   one-time step; the Vercel build does **not** run `db push` automatically):
+
+```bash
+# 1. Inspect first - never modify blindly
+DATABASE_URL="<direct-url>" npx prisma db execute --stdin <<'SQL'
+SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
+SQL
+
+# 2. Create what is missing (additive; aborts rather than dropping data)
+DIRECT_DATABASE_URL="<direct-url>" npm run db:push:prod
+
+# 3. Idempotent seed: plans, banks, bank templates, system settings
+DATABASE_URL="<direct-url>" npm run db:seed
+```
+
+4. **Bootstrap the admin account** via `POST /api/admin/bootstrap` (or
+   `npm run db:bootstrap-admin`), using `ADMIN_BOOTSTRAP_SECRET` set in the
+   Production environment. Admin credentials are never hard-coded.
+
+5. **Verify** with the health endpoint:
+
+```bash
+curl https://your-app.vercel.app/api/health
+```
 
 ## Project Structure
 

@@ -19,6 +19,7 @@
     "db:seed": "npx tsx prisma/seed.ts",
     "db:bootstrap-admin": "npx tsx prisma/bootstrap-admin.ts",
     "db:studio": "prisma studio",
+    "health": "node -e \"fetch('http://localhost:3000/api/health').then(r=>r.json()).then(d=>console.log(JSON.stringify(d,null,2))).catch(()=>process.exit(1))\"",
     "prepare": "husky"
   },
   "lint-staged": {

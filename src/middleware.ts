@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSessionToken } from "@/lib/auth-token";
 import { isAccountBlocked } from "@/lib/trial";
+import { validateEnv } from "@/lib/env";
 
 const locales = ["en", "ne"] as const;
 const defaultLocale = "en";
@@ -56,18 +57,44 @@ function preferredLocale(request: NextRequest): string {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = await getSessionToken(request);
 
-  // Allow public static assets
+  // Static assets, API routes (except health), and sitemap/robots skip env
+  // validation — they don't touch the database.
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/images") ||
     pathname.startsWith("/logos") ||
-    pathname.startsWith("/api") ||
-    pathname.includes("favicon.ico")
+    pathname.includes("favicon.ico") ||
+    pathname.includes("sitemap.xml") ||
+    pathname.includes("robots.txt")
   ) {
     return NextResponse.next();
   }
+
+  // Validate required environment variables on every non-static request.
+  // Fails fast with a clear error rather than letting requests trickle into
+  // Prisma with a missing/invalid DATABASE_URL or AUTH_SECRET.
+  const env = validateEnv();
+  if (!env.ok) {
+    // API routes get a JSON error response.
+    if (pathname.startsWith("/api/")) {
+      if (pathname.startsWith("/api/health")) {
+        return NextResponse.json({ status: "unhealthy", issues: env.errors }, { status: 503 });
+      }
+      return NextResponse.json(
+        { error: "Service configuration error", issues: env.errors },
+        { status: 503 }
+      );
+    }
+    // Pages get a redirect to a maintenance-style response via a custom
+    // error page is ideal; for now, return a 503 with a simple message.
+    return new NextResponse(JSON.stringify({ status: "unhealthy", issues: env.errors }), {
+      status: 503,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  const token = await getSessionToken(request);
 
   const firstSegment = pathname.split("/")[1] ?? "";
   const hasLocale = (locales as readonly string[]).includes(firstSegment);
@@ -156,6 +183,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|images|logos|robots.txt|sitemap.xml|api/auth).*)",
+    "/((?!_next/static|_next/image|favicon.ico|images|logos|robots.txt|sitemap.xml|api/health|api/auth).*)",
   ],
 };
