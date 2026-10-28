@@ -21,7 +21,7 @@
     "db:studio": "prisma studio",
     "health": "node -e \"fetch('http://localhost:3000/api/health').then(r=>r.json()).then(d=>console.log(JSON.stringify(d,null,2))).catch(()=>process.exit(1))\"",
     "prepare": "husky",
-    "postinstall": "prisma skills sync || exit 0"
+
   },
   "lint-staged": {
     "*.{ts,tsx}": [
