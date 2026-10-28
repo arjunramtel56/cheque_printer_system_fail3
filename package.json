@@ -20,7 +20,8 @@
     "db:bootstrap-admin": "npx tsx prisma/bootstrap-admin.ts",
     "db:studio": "prisma studio",
     "health": "node -e \"fetch('http://localhost:3000/api/health').then(r=>r.json()).then(d=>console.log(JSON.stringify(d,null,2))).catch(()=>process.exit(1))\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "prisma skills sync || exit 0"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -47,6 +48,7 @@
     "@radix-ui/react-tabs": "^1.1.21",
     "@radix-ui/react-toast": "^1.2.23",
     "@react-pdf/renderer": "^4.9.0",
+    "@supabase/server": "^1.9.2",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
     "@tailwindcss/postcss": "^4.3.3",
