@@ -20,16 +20,30 @@ import { siteConfig } from "@/lib/config";
 import { Link, useRouter as useI18nRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 
+/**
+ * Only root-relative paths may be used as post-login redirect targets.
+ *
+ * A plain `startsWith("/")` accepts protocol-relative tricks such as
+ * `//evil.com` or `/\evil.com`, which browsers resolve off-origin. Anything
+ * that is not a same-site relative path falls back to /dashboard.
+ */
+function sanitizeCallbackUrl(raw: string | null): string {
+  if (!raw) return "/dashboard";
+  if (!raw.startsWith("/")) return "/dashboard";
+  // Reject protocol-relative/protocol-escaping prefixes.
+  if (raw.startsWith("//") || raw.startsWith("/\\")) return "/dashboard";
+  if (raw.includes(":")) return "/dashboard";
+  const stripped = raw.replace(/^\/(en|ne)(?=\/|$)/, "") || "/";
+  return stripped;
+}
+
 export default function LoginPage() {
   const t = useTranslations("auth");
   const router = useRouter();
   const i18nRouter = useI18nRouter();
   const searchParams = useSearchParams();
   const rawCallback = searchParams.get("callbackUrl");
-  const callbackUrl =
-    rawCallback && rawCallback.startsWith("/")
-      ? rawCallback.replace(/^\/(en|ne)(?=\/|$)/, "") || "/"
-      : "/dashboard";
+  const callbackUrl = sanitizeCallbackUrl(rawCallback);
   const errorParam = searchParams.get("error");
 
   const [email, setEmail] = useState("");

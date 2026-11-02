@@ -76,19 +76,22 @@ export async function middleware(request: NextRequest) {
   // Prisma with a missing/invalid DATABASE_URL or AUTH_SECRET.
   const env = validateEnv();
   if (!env.ok) {
+    // Full diagnostics only in non-production; production responses stay
+    // generic so a misconfiguration doesn't also tell an attacker exactly
+    // which runtime variable is missing.
+    const exposeDetails = process.env.NODE_ENV !== "production";
+    const issues = exposeDetails ? env.errors : ["Service configuration error"];
+
     // API routes get a JSON error response.
     if (pathname.startsWith("/api/")) {
       if (pathname.startsWith("/api/health")) {
-        return NextResponse.json({ status: "unhealthy", issues: env.errors }, { status: 503 });
+        return NextResponse.json({ status: "unhealthy", issues }, { status: 503 });
       }
-      return NextResponse.json(
-        { error: "Service configuration error", issues: env.errors },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: "Service configuration error", issues }, { status: 503 });
     }
     // Pages get a redirect to a maintenance-style response via a custom
     // error page is ideal; for now, return a 503 with a simple message.
-    return new NextResponse(JSON.stringify({ status: "unhealthy", issues: env.errors }), {
+    return new NextResponse(JSON.stringify({ status: "unhealthy", issues }), {
       status: 503,
       headers: { "content-type": "application/json" },
     });

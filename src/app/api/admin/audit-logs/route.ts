@@ -32,17 +32,30 @@ export async function GET(request: NextRequest) {
         take: 500,
       });
 
+      // Audit-log fields carry user-typed strings (names, notes, ticket
+      // text). A sheet application executes cells that start with = + - @ or
+      // TAB/CR as formulas — neutralize any leading delimiter with a single
+      // quote so the content stays inert but readable.
+      const csvCell = (value: string): string => {
+        const quoted = `"${value.replace(/"/g, '""')}"`;
+        const first = value.charAt(0);
+        if (first && ["=", "+", "-", "@", "\t", "\r"].includes(first)) {
+          return `"'${quoted}`;
+        }
+        return quoted;
+      };
+
       const csvLines = [
         "Date,User,Action,Entity,Entity ID,Details",
-        ...logs.map((log) =>
+        ...logs.map((log: (typeof logs)[number]) =>
           [
-            `"${log.createdAt.toISOString()}"`,
-            `"${log.user?.name || "System"}"`,
-            `"${log.action}"`,
-            `"${log.entity}"`,
-            `"${log.entityId || ""}"`,
-            `"${(log.details || "").toString().replace(/"/g, '""')}"`,
-          ].join(","),
+            csvCell(log.createdAt.toISOString()),
+            csvCell(log.user?.name || "System"),
+            csvCell(log.action),
+            csvCell(log.entity),
+            csvCell(log.entityId || ""),
+            csvCell((log.details || "").toString()),
+          ].join(",")
         ),
       ];
 

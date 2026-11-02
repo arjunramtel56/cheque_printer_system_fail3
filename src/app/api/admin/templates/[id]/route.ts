@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/api-helpers";
+import { isValidBackgroundUrl } from "@/lib/validations";
 
 async function checkAdmin(request: NextRequest) {
   const user = await getAuthenticatedUser(request);
@@ -29,6 +30,13 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const { name, chequeWidth, chequeHeight, isDefault, isActive, backgroundUrl, fields } = body;
+
+    if (backgroundUrl && !isValidBackgroundUrl(backgroundUrl)) {
+      return NextResponse.json(
+        { error: "Invalid background image URL. Use https:// or an app path starting with /." },
+        { status: 400 }
+      );
+    }
 
     const template = await prisma.bankTemplate.update({
       where: { id },

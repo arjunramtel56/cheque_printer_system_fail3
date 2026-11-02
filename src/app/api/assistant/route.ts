@@ -6,6 +6,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { answerQuestion } from "@/lib/assistant/knowledge";
+import { isAccountBlocked } from "@/lib/trial";
 
 /**
  * Deterministic cheque-assistant endpoint.
@@ -58,8 +59,9 @@ export async function POST(req: NextRequest) {
   const role = String((session.user as any).role ?? "USER");
   const status = (session.user as any).status as string | undefined;
 
-  // 2) Account-state gate (kept from the old route)
-  if (status === "EXPIRED" || status === "SUSPENDED") {
+  // 2) Account-state gate (kept from the old route, via the shared helper so
+  //    every blocked state (SUSPENDED/EXPIRED) is enforced consistently).
+  if (isAccountBlocked(status)) {
     return NextResponse.json(
       { error: "Your account is inactive. Please contact support.", requiresUpgrade: true },
       { status: 403 }
@@ -100,6 +102,12 @@ export async function POST(req: NextRequest) {
     });
     if (!dbUser) {
       return NextResponse.json({ error: "Account not found." }, { status: 403 });
+    }
+    if (isAccountBlocked(dbUser.status)) {
+      return NextResponse.json(
+        { error: "Your account is inactive. Please contact support.", requiresUpgrade: true },
+        { status: 403 }
+      );
     }
     isTrial = dbUser.role === "TRIAL_USER";
   } catch {

@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { isRateLimited } from "@/lib/rate-limit";
+import { isRateLimited, clientIp } from "@/lib/rate-limit";
 import { isTrialExpired } from "@/lib/trial";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -22,10 +22,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!credentials?.email || !credentials?.password) return null;
 
         // Brute-force protection: max 10 failed sign-in attempts per
-        // email+IP pair per 10 minutes.
-        const ip =
-          (request as Request | undefined)?.headers?.get("x-forwarded-for")?.split(",")[0].trim() ??
-          "local";
+        // email+IP pair per 10 minutes. clientIp only honours proxy headers
+        // when they come from a trusted hop (see rate-limit.ts).
+        const ip = clientIp(request as Request | undefined);
         if (isRateLimited(`login:${credentials.email}:${ip}`, 10, 10 * 60 * 1000)) {
           return null;
         }

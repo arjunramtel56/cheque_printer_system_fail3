@@ -21,9 +21,21 @@ import { describePrismaError, isPrismaUnavailable } from "@/lib/prisma-errors";
 export async function GET() {
   const env = validateEnv();
 
+  // Diagnostic details (which variable failed, which DB host) are exposed to
+  // anonymous callers only in non-production. In production the endpoint
+  // stays truthfully 503s but reports the same generic "configuration"
+  // message — infra fingerprinting aid for attackers is removed.
+  const exposeDetails = process.env.NODE_ENV !== "production";
+
   if (!env.ok) {
     console.error("[HEALTH_CHECK] Environment validation failed:", env.errors);
-    return NextResponse.json({ status: "unhealthy", issues: env.errors }, { status: 503 });
+    return NextResponse.json(
+      {
+        status: "unhealthy",
+        ...(exposeDetails ? { issues: env.errors } : { issues: ["Service configuration error"] }),
+      },
+      { status: 503 }
+    );
   }
 
   const startedAt = Date.now();
@@ -45,8 +57,8 @@ export async function GET() {
         return NextResponse.json(
           {
             status: "unhealthy",
-            issues: ["Database unavailable"],
-            dbHost: env.dbHost,
+            issues: [exposeDetails ? "Database unavailable" : "Service unavailable"],
+            ...(exposeDetails ? { dbHost: env.dbHost } : {}),
             responseTimeMs: Date.now() - startedAt,
           },
           { status: 503 }

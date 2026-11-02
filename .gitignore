@@ -25,8 +25,7 @@ coverage/
 .data/
 
 .vercel
+# Never ignore-proof real environment files. Only the example/template is
+# allowed to be tracked; any populated .env*.local must stay out of git.
 .env*
 !.env.example
-!.env.development.local
-!.env.production.local
-!.env.preview.local

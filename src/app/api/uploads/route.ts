@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getAuthenticatedUser } from "@/lib/api-helpers";
 import { prisma } from "@/lib/prisma";
+import { sniffImage } from "@/lib/file-security";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
 import { randomUUID } from "crypto";
@@ -41,16 +42,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Content sniffing: the claimed Content-Type is client-controlled, so the
+    // data's own magic numbers must agree with it before anything is written.
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const sniffed = sniffImage(buffer);
+
+    if (!sniffed) {
+      return NextResponse.json({ error: "File content is not a valid image." }, { status: 400 });
+    }
+
+    if (!allowedTypes.includes(sniffed.type)) {
+      return NextResponse.json(
+        { error: "Invalid file type. Only PNG, JPEG, GIF, WebP allowed." },
+        { status: 400 }
+      );
+    }
+
     const uploadDir = join(process.cwd(), "public", "uploads", "templates");
     if (!existsSync(uploadDir)) {
       mkdirSync(uploadDir, { recursive: true });
     }
 
-    const ext = file.type.split("/")[1];
-    const filename = `tmpl_${randomUUID()}.${ext}`;
+    // Extension comes from the sniffed real type (constant allowlist), never
+    // from the client-supplied mimetype string — a mismatched claim cannot
+    // shape the filename.
+    const filename = `tmpl_${randomUUID()}.${sniffed.ext}`;
     const filepath = join(uploadDir, filename);
 
-    const buffer = Buffer.from(await file.arrayBuffer());
     writeFileSync(filepath, buffer);
 
     const url = `/uploads/templates/${filename}`;

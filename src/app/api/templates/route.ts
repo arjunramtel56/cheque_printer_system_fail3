@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/api-helpers";
+import { isValidBackgroundUrl } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
   const user = await getAuthenticatedUser(request);
@@ -55,6 +56,16 @@ export async function POST(request: NextRequest) {
 
     if (!bankId || !name) {
       return NextResponse.json({ error: "Bank ID and name are required" }, { status: 400 });
+    }
+
+    // Only http(s) URLs or root-relative app paths are accepted (see
+    // isValidBackgroundUrl) — the value is rendered as <img src> and fetched
+    // server-side by the PDF renderer.
+    if (backgroundUrl && !isValidBackgroundUrl(backgroundUrl)) {
+      return NextResponse.json(
+        { error: "Invalid background image URL. Use https:// or an app path starting with /." },
+        { status: 400 }
+      );
     }
 
     const template = await prisma.bankTemplate.create({

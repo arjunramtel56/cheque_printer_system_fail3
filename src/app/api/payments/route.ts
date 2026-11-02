@@ -9,6 +9,7 @@ import { join } from "path";
 import { randomUUID } from "crypto";
 import { VALID_PAYMENT_METHODS } from "@/modules/payments/validations";
 import { getAmountDue, isPaidPlan, VALID_DURATIONS } from "@/lib/pricing";
+import { sniffImage } from "@/lib/file-security";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"];
@@ -140,6 +141,15 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Content sniffing: the claimed type is client-controlled, so the
+      // magic numbers must agree before the file is stored.
+      const buffer = Buffer.from(await proofFile.arrayBuffer());
+      const sniffed = sniffImage(buffer);
+
+      if (!sniffed || !ALLOWED_IMAGE_TYPES.includes(sniffed.type)) {
+        return NextResponse.json({ error: "File content is not a valid image." }, { status: 400 });
+      }
+
       // Store OUTSIDE public/ — proof images are only served through the
       // authenticated /api/payments/proof/[filename] route.
       const uploadDir = join(process.cwd(), ".data", "payment-proofs");
@@ -147,11 +157,11 @@ export async function POST(request: NextRequest) {
         mkdirSync(uploadDir, { recursive: true });
       }
 
-      const ext = (proofFile.type.split("/")[1] || "png").replace(/[^a-z0-9]/gi, "");
-      const filename = `pay_${randomUUID()}.${ext}`;
+      // Extension from the sniffed real type (constant allowlist), never from
+      // the client string or the claimed mime type.
+      const filename = `pay_${randomUUID()}.${sniffed.ext}`;
       const filepath = join(uploadDir, filename);
 
-      const buffer = Buffer.from(await proofFile.arrayBuffer());
       writeFileSync(filepath, buffer);
 
       proofUrl = `/api/payments/proof/${filename}`;
