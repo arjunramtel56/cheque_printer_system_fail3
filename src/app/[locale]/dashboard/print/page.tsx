@@ -147,7 +147,7 @@ export default function PrintPage() {
         setSelectedTemplateId(defaultTemplate.id);
       }
     }
-  }, [selectedBankId, selectedBank]);
+  }, [selectedBankId, selectedBank, selectedTemplateId]);
 
   useEffect(() => {
     if (autoConvert && amount) {

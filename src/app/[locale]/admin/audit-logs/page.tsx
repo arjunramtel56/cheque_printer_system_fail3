@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,13 +43,15 @@ export default function AdminAuditLogsPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  useEffect(() => {
-    fetchAuditLogs();
-  }, []);
+  // Filters are read through a ref so fetchAuditLogs stays identity-stable:
+  // the mount effect runs once, while Search/Refresh always see latest inputs.
+  const filtersRef = useRef({ searchAction, searchEntity, searchUserId, dateFrom, dateTo });
+  filtersRef.current = { searchAction, searchEntity, searchUserId, dateFrom, dateTo };
 
-  async function fetchAuditLogs() {
+  const fetchAuditLogs = useCallback(async () => {
     setIsLoading(true);
     try {
+      const { searchAction, searchEntity, searchUserId, dateFrom, dateTo } = filtersRef.current;
       const params = new URLSearchParams();
       if (searchAction) params.set("action", searchAction);
       if (searchEntity) params.set("entity", searchEntity);
@@ -67,7 +69,11 @@ export default function AdminAuditLogsPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, [fetchAuditLogs]);
 
   async function handleExportCSV() {
     try {

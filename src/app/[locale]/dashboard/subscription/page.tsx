@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,12 +77,7 @@ export default function SubscriptionPage() {
   const [loading, setLoading] = useState(true);
   const [myPayments, setMyPayments] = useState<Payment[]>([]);
 
-  useEffect(() => {
-    fetchTrialInfo();
-    fetchMyPayments();
-  }, []);
-
-  async function fetchTrialInfo() {
+  const fetchTrialInfo = useCallback(async () => {
     try {
       const res = await fetch("/api/trial");
       if (!res.ok) throw new Error("Failed to fetch trial info");
@@ -94,9 +89,9 @@ export default function SubscriptionPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [showToast]);
 
-  async function fetchMyPayments() {
+  const fetchMyPayments = useCallback(async () => {
     try {
       const res = await fetch("/api/payments");
       if (!res.ok) throw new Error("Failed to fetch payments");
@@ -105,7 +100,12 @@ export default function SubscriptionPage() {
     } catch (error) {
       console.error("Error fetching payments:", error);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    fetchTrialInfo();
+    fetchMyPayments();
+  }, [fetchTrialInfo, fetchMyPayments]);
 
   const pricing = siteConfig.pricing;
 

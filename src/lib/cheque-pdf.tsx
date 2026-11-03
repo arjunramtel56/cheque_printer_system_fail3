@@ -34,6 +34,8 @@ export const ChequePDFDocument = (props: ChequePDFProps) => {
           }}
         >
           {backgroundUrl && (
+            // @react-pdf/renderer Image is not a DOM <img>; jsx-a11y alt-text does not apply.
+            // eslint-disable-next-line jsx-a11y/alt-text
             <Image
               src={backgroundUrl}
               style={{
