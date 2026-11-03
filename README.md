@@ -34,31 +34,55 @@ requires `ADMIN_BOOTSTRAP_SECRET`. Admin credentials are never hard-coded.
 
 ## Environment variables actually read by the code
 
+The complete variable-by-variable inventory, the numbered Vercel configuration
+list, and the obsolete-variable list live in [`ENVIRONMENT.md`](ENVIRONMENT.md).
+Summary:
+
 ### Required (all environments)
 
-| Variable              | Used by                                                              |
-| --------------------- | -------------------------------------------------------------------- |
-| `DATABASE_URL`        | `prisma/schema.prisma` — PostgreSQL connection string (pooled)       |
-| `DIRECT_DATABASE_URL` | `prisma/schema.prisma` — direct (non-pooler) host for CLI steps      |
-| `AUTH_SECRET`         | Auth.js session/JWT signing (`src/auth.ts`, middleware, API helpers) |
+| Variable       | Used by                                                                                                                                   |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL` | `prisma/schema.prisma` + `src/lib/env.ts` — Prisma **runtime** connection to Supabase Postgres (transaction pooler, port 6543)            |
+| `AUTH_SECRET`  | Auth.js session/JWT signing (`src/auth.ts`, `src/lib/auth-token.ts`, middleware); validated at startup by `src/lib/env.ts` (min 32 chars) |
+
+### Required only where Prisma CLI runs
+
+| Variable              | Used by                                                                                                                                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DIRECT_DATABASE_URL` | `prisma/schema.prisma` `directUrl` — direct (non-pooler) host for `db push` / `db execute` / `migrate` / `studio`. **Not read at application runtime**; `prisma generate` and the Vercel build do not need it |
 
 ### Production-only
 
-| Variable                 | Used by                                             |
-| ------------------------ | --------------------------------------------------- |
-| `ADMIN_BOOTSTRAP_SECRET` | `/api/admin/bootstrap`, `prisma/bootstrap-admin.ts` |
+| Variable                 | Used by                                                                                                                                                                |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ADMIN_BOOTSTRAP_SECRET` | `/api/admin/bootstrap`, `prisma/bootstrap-admin.ts` — required to create the first admin in Production; optional locally (the endpoint reports a clear error if unset) |
 
 ### Optional
 
-| Variable              | Used by                                                     |
-| --------------------- | ----------------------------------------------------------- |
-| `NEXT_PUBLIC_APP_URL` | `src/lib/config.ts` — application URL for links/OAuth       |
-| `ENABLE_CALIBRATION`  | `/middleware.ts` — exposes `/dev/calibration` in production |
+| Variable              | Used by                                                                                                                           |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_APP_URL` | `src/lib/config.ts` — canonical app URL for links/canonical/OG tags. Set it in Preview and Production (falls back to `localhost`) |
+| `ENABLE_CALIBRATION`  | `src/middleware.ts` — exposes `/dev/calibration` in production (default off; always available in development)                     |
+| `TRUST_PROXY_HEADERS` | `src/lib/rate-limit.ts` — trust `X-Forwarded-*` only when self-hosting behind a reverse proxy; **not** needed on Vercel           |
 
-`AUTH_URL`, `AUTH_TRUST_HOST`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`,
-`ENCRYPTION_KEY` and the `EMAIL_*` variables are **not** read anywhere in this
-codebase. Do not add them — they only cause confusion and may mask configuration
-bugs.
+### Not read anywhere — do not add
+
+`ENCRYPTION_KEY`, `EMAIL_API_KEY`, `EMAIL_FROM`, `NEXT_PUBLIC_APP_NAME`,
+`NEXTAUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST`, `OPENAI_API_KEY`,
+`ADMIN_EMAIL`, `ADMIN_PASSWORD`, and the Supabase **client** keys
+(`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`,
+`SUPABASE_JWKS_URL`, `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) have **no code references** in this
+repository — do not set them in Vercel. They only cause confusion and may mask
+configuration bugs. The Supabase client keys become required only if a Supabase
+browser/server client is actually added (see `.env.example` §5).
+
+One caveat: Auth.js v5 (framework level) still honours a legacy `NEXTAUTH_URL`
+as a redirect base. A stale `NEXTAUTH_URL` in a local `.env` can point login
+callbacks at the wrong port. Do not set `NEXTAUTH_URL` in Vercel; rely on the
+request host.
+
+### Environment separation
 
 ### Environment separation
 
@@ -66,9 +90,16 @@ Vercel environment variables are scoped per-environment. Set each variable in
 the Vercel dashboard under **Settings → Environment Variables** for the correct
 environment:
 
-- **Production** — production database, production `AUTH_SECRET`
-- **Preview** — separate preview/staging database, its own `AUTH_SECRET`
+- **Production** — production Supabase database (`DATABASE_URL`), its own
+  `AUTH_SECRET` and `ADMIN_BOOTSTRAP_SECRET`
+- **Preview** — separate preview/staging database, its **own** `AUTH_SECRET`
+  and `ADMIN_BOOTSTRAP_SECRET` (never share secret values with Production —
+  a preview compromise must not be able to forge production sessions)
 - **Development** — local dev `.env.local` (gitignored)
+
+Mark `AUTH_SECRET` and `ADMIN_BOOTSTRAP_SECRET` as **Sensitive** in Vercel.
+`NEXT_PUBLIC_*` values are inlined at build time — set them **before** the
+build and create a new deployment after changing them.
 
 > ⚠️ Vercel environment variables only reach a deployment after a **new
 > deployment** is created. Changing a variable and redeploying the same
@@ -99,17 +130,22 @@ DATABASE_URL="<direct-url>" npm run db:push:prod
 DATABASE_URL="<direct-url>" npm run db:seed
 ```
 
-Use the **direct** (non-pooler) host for these CLI steps; use the **pooled**
-host for the app's runtime `DATABASE_URL` in a serverless environment, with
+Use the **direct** host (`db.<project-ref>.supabase.co:5432`, stored in
+`DIRECT_DATABASE_URL`) for these CLI steps; use the Supabase **transaction
+pooler** (`aws-0-<region>.pooler.supabase.com:6543`, stored in `DATABASE_URL`)
+for the app's runtime in serverless, with
 `?sslmode=require&pgbouncer=true&connection_limit=1&connect_timeout=15`.
-Neon's `channel_binding=require` parameter is not supported by Prisma and must
-be removed.
+Never pass `channel_binding=require` — Prisma does not support it.
 
 ## Deployment checklist
 
 1. **Set environment variables** in Vercel → Settings → Environment Variables for **all three**
-   environments (Production, Preview, Development). Required: `DATABASE_URL`, `DIRECT_DATABASE_URL`,
-   `AUTH_SECRET`. Production also needs `ADMIN_BOOTSTRAP_SECRET`.
+   environments (Production, Preview, Development). Required: `DATABASE_URL`, `AUTH_SECRET`,
+   `NEXT_PUBLIC_APP_URL`. Production also needs `ADMIN_BOOTSTRAP_SECRET`.
+   `DIRECT_DATABASE_URL` is only needed where Prisma CLI runs (locally) — not on Vercel.
+   Remove unused leftovers if present: `ADMIN_EMAIL`, `ADMIN_PASSWORD`,
+   `NEXT_PUBLIC_APP_NAME`, `NEXTAUTH_*`, `SUPABASE_*` client keys.
+   Full numbered list: [`ENVIRONMENT.md`](ENVIRONMENT.md).
 
 2. **Create a new deployment** in Vercel after setting variables. Existing
    deployments do not receive new environment variable values — a fresh
