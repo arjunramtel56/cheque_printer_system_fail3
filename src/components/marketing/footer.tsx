@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -33,10 +34,13 @@ export function MarketingFooter() {
           {/* Brand */}
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
-              <img
+              <Image
                 src={siteConfig.logo}
                 alt={siteConfig.company}
+                width={120}
+                height={32}
                 className="logo-image h-8 w-auto"
+                unoptimized
               />
             </div>
             <p className="text-sm font-medium">{siteConfig.name}</p>

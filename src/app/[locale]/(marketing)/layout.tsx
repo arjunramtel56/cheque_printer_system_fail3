@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 
 import "@/styles/marketing.css";
 import Link from "next/link";
@@ -17,7 +18,14 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
           <Link href={`/${locale}`} className="flex items-center space-x-2">
-            <img src={siteConfig.logo} alt={siteConfig.company} className="logo-image h-8 w-auto" />
+            <Image
+              src={siteConfig.logo}
+              alt={siteConfig.company}
+              width={120}
+              height={32}
+              className="logo-image h-8 w-auto"
+              unoptimized
+            />
             <span className="hidden text-sm font-medium sm:inline-block">{siteConfig.name}</span>
           </Link>
           <div className="flex items-center gap-2">

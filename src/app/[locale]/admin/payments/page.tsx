@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 
 import { useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
@@ -406,11 +407,14 @@ export default function AdminPaymentsPage() {
                 <div>
                   <Label>{t("paymentProof")}</Label>
                   <div className="mt-2">
-                    <img
+                    <Image
                       src={selectedPayment.proofUrl}
                       alt={t("paymentProof")}
+                      width={400}
+                      height={300}
                       className="max-w-full rounded-lg border"
                       style={{ maxHeight: "300px", objectFit: "contain" }}
+                      unoptimized
                     />
                   </div>
                 </div>

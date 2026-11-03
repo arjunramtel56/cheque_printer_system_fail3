@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
@@ -181,11 +182,14 @@ export default function UserPaymentsPage() {
                     {payment.proofUrl && (
                       <div>
                         <p className="text-sm font-medium">{t("paymentProof")}</p>
-                        <img
+                        <Image
                           src={payment.proofUrl}
                           alt="Payment proof"
+                          width={320}
+                          height={200}
                           className="mt-1 max-w-xs rounded-lg border"
                           style={{ maxHeight: "200px", objectFit: "contain" }}
+                          unoptimized
                         />
                       </div>
                     )}

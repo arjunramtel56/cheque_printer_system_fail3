@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -63,7 +64,14 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
     >
       <div className="flex h-14 items-center justify-between border-b px-4">
         {!collapsed && (
-          <img src={siteConfig.logo} alt={siteConfig.company} className="logo-image h-8 w-auto" />
+          <Image
+            src={siteConfig.logo}
+            alt={siteConfig.company}
+            width={120}
+            height={32}
+            className="logo-image h-8 w-auto"
+            unoptimized
+          />
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}

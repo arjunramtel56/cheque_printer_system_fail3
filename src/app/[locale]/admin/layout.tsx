@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import DashboardSidebar from "@/components/dashboard-sidebar";
@@ -40,7 +41,14 @@ export default async function AdminLayout({
     <div className="flex h-screen flex-col overflow-hidden">
       <header className="flex h-14 items-center justify-between border-b bg-card px-4 shadow-sm sm:px-6">
         <div className="flex items-center gap-4">
-          <img src={siteConfig.logo} alt={siteConfig.company} className="logo-image h-7 w-auto" />
+          <Image
+            src={siteConfig.logo}
+            alt={siteConfig.company}
+            width={120}
+            height={32}
+            className="logo-image h-7 w-auto"
+            unoptimized
+          />
           <div>
             <h1 className="text-lg font-semibold text-navy-700 dark:text-navy-200">
               {t("adminPanel")}

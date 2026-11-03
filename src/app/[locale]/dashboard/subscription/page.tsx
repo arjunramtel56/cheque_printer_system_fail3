@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
@@ -406,13 +407,16 @@ export default function SubscriptionPage() {
 
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{t("scanQR")}</p>
               <div className="bg-white p-4 rounded-xl border-2 border-slate-200 dark:border-slate-600 shadow-sm mb-6">
-                <img
+                <Image
                   src={pricing.fonepay.qrCodeUrl}
                   alt="Fonepay QR Code"
+                  width={192}
+                  height={192}
                   className="w-48 h-48 object-contain"
+                  unoptimized
                   onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none";
-                    (e.target as HTMLImageElement).parentElement!.innerHTML =
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                    (e.currentTarget as HTMLImageElement).parentElement!.innerHTML =
                       '<div class="w-48 h-48 flex items-center justify-center bg-slate-100 dark:bg-slate-700 text-slate-400 text-xs">QR Code Placeholder</div>';
                   }}
                 />

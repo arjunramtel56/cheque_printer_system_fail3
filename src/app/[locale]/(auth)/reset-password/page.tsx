@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -93,7 +94,14 @@ export default function ResetPasswordPage() {
     <Card className="w-full max-w-md">
       <CardHeader className="space-y-1 text-center">
         <div className="flex justify-center mb-4">
-          <img src={siteConfig.logo} alt={siteConfig.company} className="logo-image h-10 w-auto" />
+          <Image
+            src={siteConfig.logo}
+            alt={siteConfig.company}
+            width={120}
+            height={32}
+            className="logo-image h-10 w-auto"
+            unoptimized
+          />
         </div>
         <CardTitle className="text-2xl font-bold">{t("resetYourPassword")}</CardTitle>
         <CardDescription>{t("newPasswordLabel")}</CardDescription>

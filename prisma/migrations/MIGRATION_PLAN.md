@@ -72,7 +72,7 @@ The following are preserved across all operations:
 | Users          | `db push` does not drop tables/columns. Seed uses `upsert` on Plans/Banks/Settings, not Users. |
 | Subscriptions  | No schema changes affect the `Subscription` model.                                             |
 | Bank templates | Seed uses `upsert` on `BankTemplate` by `bankId_name`.                                         |
-| Calibrations   | Stored in Convex (not Prisma); untouched by `db push`.                                         |
+| Calibrations   | Stored in the browser (localStorage per template); no database table.                          |
 | Cheque records | No schema changes affect `ChequeEntry`, `PrintHistory`, or `Payee`.                            |
 | Audit logs     | `AuditLog` is append-only; `db push` never truncates it.                                       |
 

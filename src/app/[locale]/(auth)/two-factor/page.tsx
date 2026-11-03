@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { siteConfig } from "@/lib/config";
 import { Link } from "@/i18n/navigation";
@@ -9,7 +10,14 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md text-center">
         <div className="mb-6 flex justify-center">
-          <img src={siteConfig.logo} alt={siteConfig.company} className="logo-image h-10 w-auto" />
+          <Image
+            src={siteConfig.logo}
+            alt={siteConfig.company}
+            width={120}
+            height={32}
+            className="logo-image h-10 w-auto"
+            unoptimized
+          />
         </div>
         <h1 className="text-2xl font-bold">{t("twoFactor")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{t("twoFactorDescription")}</p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from "react";
 import * as ToastPrimitive from "@radix-ui/react-toast";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
@@ -20,21 +20,26 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const showToast = (message: string, type: Toast["type"] = "info", duration = 3000) => {
-    const toast: Toast = {
-      id: Date.now().toString() + Math.random().toString(36).slice(2),
-      message,
-      type,
-    };
-    setToasts((prev) => [...prev, toast]);
+  const showToast = useCallback(
+    (message: string, type: Toast["type"] = "info", duration = 3000) => {
+      const toast: Toast = {
+        id: Date.now().toString() + Math.random().toString(36).slice(2),
+        message,
+        type,
+      };
+      setToasts((prev) => [...prev, toast]);
 
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== toast.id));
-    }, duration);
-  };
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== toast.id));
+      }, duration);
+    },
+    []
+  );
+
+  const contextValue = useMemo(() => ({ showToast }), [showToast]);
 
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <ToastPrimitive.Provider>
         <ToastPrimitive.Root>
