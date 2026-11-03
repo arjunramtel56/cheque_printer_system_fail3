@@ -141,41 +141,39 @@ export default function DragDropFieldEditor({
     setDraggingId(id);
   }
 
-  function handleMouseMove(e: MouseEvent, id: string) {
-    if (draggingId !== id) return;
-    const containerRect = containerRef.current?.getBoundingClientRect();
-    if (!containerRect) return;
-
-    const x = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-    const y = ((e.clientY - containerRect.top) / containerRect.height) * 100;
-
-    setDraggableFields((prev) => {
-      const updated = prev.map((f) =>
-        f.id === id
-          ? { ...f, x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) }
-          : f
-      );
-      onChange(updated.map((d) => toConfig(d)));
-      return updated;
-    });
-  }
-
-  function handleMouseUp(e: MouseEvent, id: string) {
-    if (draggingId !== id) return;
-    setDraggingId(null);
-  }
-
   useEffect(() => {
     if (!draggingId) return;
-    const handleMove = (e: MouseEvent) => handleMouseMove(e, draggingId);
-    const handleUp = (e: MouseEvent) => handleMouseUp(e, draggingId);
+    const container = containerRef.current;
+    const activeId = draggingId;
+
+    const handleMove = (e: MouseEvent) => {
+      if (!container) return;
+      const containerRect = container.getBoundingClientRect();
+      const x = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+      const y = ((e.clientY - containerRect.top) / containerRect.height) * 100;
+
+      setDraggableFields((prev) => {
+        const updated = prev.map((f) =>
+          f.id === activeId
+            ? { ...f, x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) }
+            : f
+        );
+        onChange(updated.map((d) => toConfig(d)));
+        return updated;
+      });
+    };
+
+    const handleUp = () => {
+      setDraggingId(null);
+    };
+
     document.addEventListener("mousemove", handleMove);
     document.addEventListener("mouseup", handleUp);
     return () => {
       document.removeEventListener("mousemove", handleMove);
       document.removeEventListener("mouseup", handleUp);
     };
-  }, [draggingId]);
+  }, [draggingId, onChange]);
 
   const selectedField = draggableFields.find((f) => f.id === draggingId);
 
