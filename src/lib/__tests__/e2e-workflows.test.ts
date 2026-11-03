@@ -1,6 +1,6 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { spawn, type ChildProcessWithoutNullChecks } from "node:child_process";
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
 import { join } from "node:path";
 import { rmSync } from "node:fs";
@@ -32,7 +32,7 @@ const BOOTSTRAP_SECRET = "test-bootstrap-secret-very-long-and-random";
 let EmbeddedPg: any;
 let instance: any;
 let dbUrl: string;
-let serverProc: ChildProcessWithoutNullChecks | null = null;
+let serverProc: ChildProcessWithoutNullStreams | null = null;
 let baseURL: string;
 
 before(async () => {
@@ -111,8 +111,8 @@ before(async () => {
   // Wait for server to be ready — Next.js first compile can take 2-3 minutes
   let ready = false;
   let serverOutput = "";
-  serverProc.stdout?.on("data", (d) => (serverOutput += d.toString()));
-  serverProc.stderr?.on("data", (d) => (serverOutput += d.toString()));
+  serverProc.stdout?.on("data", (d: Buffer) => (serverOutput += d.toString()));
+  serverProc.stderr?.on("data", (d: Buffer) => (serverOutput += d.toString()));
   for (let i = 0; i < 180 && !ready; i++) {
     try {
       const res = await fetch(`${baseURL}/api/health`);

@@ -15,10 +15,7 @@
     "incremental": true,
     "plugins": [{ "name": "next" }],
     "paths": {
-      "@/*": ["./src/*"],
-      "@/convex": ["./convex"],
-      "@/convex/_generated/api": ["./convex/_generated/api"],
-      "@/convex/_generated/server": ["./convex/_generated/server"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
