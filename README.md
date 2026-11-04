@@ -38,7 +38,7 @@ The complete variable-by-variable inventory, the numbered Vercel configuration
 list, and the obsolete-variable list live in [`ENVIRONMENT.md`](ENVIRONMENT.md).
 Summary:
 
-### Required (all environments)
+### Required at runtime
 
 | Variable       | Used by                                                                                                                                   |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
@@ -47,11 +47,11 @@ Summary:
 
 ### Required only where Prisma CLI runs
 
-| Variable              | Used by                                                                                                                                                                                                       |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DIRECT_DATABASE_URL` | `prisma/schema.prisma` `directUrl` — direct (non-pooler) host for `db push` / `db execute` / `migrate` / `studio`. **Not read at application runtime**; `prisma generate` and the Vercel build do not need it |
+| Variable              | Used by                                                                                                                                                                                                                    |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DIRECT_DATABASE_URL` | `prisma/schema.prisma` `directUrl` — direct (non-pooler) host for `validate` / `db push` / `db execute` / `migrate` / `studio`. **Not read at application runtime**; `prisma generate` and the Vercel build do not need it |
 
-### Production-only
+### Required in Production for admin bootstrap
 
 | Variable                 | Used by                                                                                                                                                                |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -68,21 +68,17 @@ Summary:
 ### Not read anywhere — do not add
 
 `ENCRYPTION_KEY`, `EMAIL_API_KEY`, `EMAIL_FROM`, `NEXT_PUBLIC_APP_NAME`,
-`NEXTAUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST`, `OPENAI_API_KEY`,
-`ADMIN_EMAIL`, `ADMIN_PASSWORD`, and the Supabase **client** keys
-(`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`,
-`SUPABASE_JWKS_URL`, `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXTAUTH_SECRET`, `OPENAI_API_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and the
+Supabase **client** keys (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`,
+`SUPABASE_SECRET_KEY`, `SUPABASE_JWKS_URL`, `NEXT_PUBLIC_SUPABASE_URL`,
 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) have **no code references** in this
-repository — do not set them in Vercel. They only cause confusion and may mask
-configuration bugs. The Supabase client keys become required only if a Supabase
-browser/server client is actually added (see `.env.example` §5).
+repository — do not set them in Vercel. The Supabase client keys become
+required only if a Supabase browser/server client is actually added.
 
-One caveat: Auth.js v5 (framework level) still honours a legacy `NEXTAUTH_URL`
-as a redirect base. A stale `NEXTAUTH_URL` in a local `.env` can point login
-callbacks at the wrong port. Do not set `NEXTAUTH_URL` in Vercel; rely on the
-request host.
-
-### Environment separation
+Auth.js v5 also recognises optional framework-level `AUTH_URL` and
+`AUTH_TRUST_HOST`; neither is required here. Leave them unset and rely on the
+request host. A stale `NEXTAUTH_URL` in a local `.env` can similarly point login
+callbacks at the wrong port; do not set it in Vercel.
 
 ### Environment separation
 
@@ -107,9 +103,11 @@ build and create a new deployment after changing them.
 
 ## Database strategy (important)
 
-**This project has no `prisma/migrations/` directory. The schema is applied with
-`prisma db push`, not `prisma migrate deploy`.** Running `migrate deploy` here
-is wrong and will not create the tables.
+**The schema is applied with `prisma db push`, not `prisma migrate deploy`.**
+A baseline migration exists at `prisma/migrations/0001_initial_schema/` for
+reference, but it is not applied in CI or Vercel (see
+`prisma/migrations/MIGRATION_PLAN.md`). Running `migrate deploy` here is wrong
+and will not create the tables.
 
 Nothing in CI or the Vercel build ever applies the schema, so **a production
 deployment can come up against an empty database** and every auth request will
@@ -132,19 +130,19 @@ DATABASE_URL="<direct-url>" npm run db:seed
 
 Use the **direct** host (`db.<project-ref>.supabase.co:5432`, stored in
 `DIRECT_DATABASE_URL`) for these CLI steps; use the Supabase **transaction
-pooler** (`aws-0-<region>.pooler.supabase.com:6543`, stored in `DATABASE_URL`)
-for the app's runtime in serverless, with
+pooler** (the `*.pooler.supabase.com:6543` host shown by Supabase Connect,
+stored in `DATABASE_URL`) for the app's runtime in serverless, with
 `?sslmode=require&pgbouncer=true&connection_limit=1&connect_timeout=15`.
 Never pass `channel_binding=require` — Prisma does not support it.
 
 ## Deployment checklist
 
 1. **Set environment variables** in Vercel → Settings → Environment Variables for **all three**
-   environments (Production, Preview, Development). Required: `DATABASE_URL`, `AUTH_SECRET`,
-   `NEXT_PUBLIC_APP_URL`. Production also needs `ADMIN_BOOTSTRAP_SECRET`.
-   `DIRECT_DATABASE_URL` is only needed where Prisma CLI runs (locally) — not on Vercel.
-   Remove unused leftovers if present: `ADMIN_EMAIL`, `ADMIN_PASSWORD`,
-   `NEXT_PUBLIC_APP_NAME`, `NEXTAUTH_*`, `SUPABASE_*` client keys.
+   environments (Production, Preview, Development). Required: `DATABASE_URL`, `AUTH_SECRET`.
+   Set `NEXT_PUBLIC_APP_URL` for correct canonical URLs. Production also needs
+   `ADMIN_BOOTSTRAP_SECRET`. `DIRECT_DATABASE_URL` is only needed where Prisma CLI runs
+   (locally) — not on Vercel. Remove unused leftovers if present: `ADMIN_EMAIL`,
+   `ADMIN_PASSWORD`, `NEXT_PUBLIC_APP_NAME`, `NEXTAUTH_*`, `SUPABASE_*` client keys.
    Full numbered list: [`ENVIRONMENT.md`](ENVIRONMENT.md).
 
 2. **Create a new deployment** in Vercel after setting variables. Existing
