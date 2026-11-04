@@ -1,0 +1,9 @@
+# Never upload local secrets, runtime data, or internal audit artifacts.
+.env
+.env.*
+!.env.example
+.data/
+.embedded-pg-data/
+coverage/
+*.log
+AUDIT_REPORT.md

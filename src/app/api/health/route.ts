@@ -1,9 +1,32 @@
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { validateEnv } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { describePrismaError, isPrismaUnavailable } from "@/lib/prisma-errors";
+
+const DB_TIMEOUT_MS = 5_000;
+const REQUIRED_TABLES = ["User", "Subscription", "BankTemplate"] as const;
+
+type RequiredTable = (typeof REQUIRED_TABLES)[number];
+type TableCheckRow = Record<RequiredTable, string | null>;
+
+function withTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Database health check timed out")), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
 
 /**
  * Health check endpoint.
@@ -34,59 +57,74 @@ export async function GET() {
         status: "unhealthy",
         ...(exposeDetails ? { issues: env.errors } : { issues: ["Service configuration error"] }),
       },
-      { status: 503 }
+      { status: 503, headers: { "cache-control": "no-store" } }
     );
   }
 
   const startedAt = Date.now();
 
   try {
-    const latencyMs = await new Promise<number>((resolve) => {
-      const before = Date.now();
-      prisma.$queryRaw`SELECT 1`.finally(() => resolve(Date.now() - before));
-    });
+    const dbStartedAt = Date.now();
+    await withTimeout(prisma.$queryRaw`SELECT 1`, DB_TIMEOUT_MS);
+    const dbLatencyMs = Date.now() - dbStartedAt;
 
-    let dbOk = true;
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-    } catch (error) {
-      dbOk = false;
-      console.error("[HEALTH_CHECK] Database probe failed:", describePrismaError(error));
+    // `SELECT 1` proves the connection works; these checks prove the deployed
+    // schema is actually present. A reachable but uninitialized database must
+    // not be reported as healthy.
+    const rows = await withTimeout(
+      prisma.$queryRaw<TableCheckRow[]>`
+        SELECT
+          to_regclass('public."User"')::text AS "User",
+          to_regclass('public."Subscription"')::text AS "Subscription",
+          to_regclass('public."BankTemplate"')::text AS "BankTemplate"
+      `,
+      DB_TIMEOUT_MS
+    );
 
-      if (isPrismaUnavailable(error)) {
-        return NextResponse.json(
-          {
-            status: "unhealthy",
-            issues: [exposeDetails ? "Database unavailable" : "Service unavailable"],
-            ...(exposeDetails ? { dbHost: env.dbHost } : {}),
-            responseTimeMs: Date.now() - startedAt,
-          },
-          { status: 503 }
-        );
-      }
+    const missingTables = REQUIRED_TABLES.filter((table) => !rows[0]?.[table]);
 
-      throw error;
+    if (missingTables.length > 0) {
+      console.error("[HEALTH_CHECK] Database schema missing required tables:", missingTables);
+      return NextResponse.json(
+        {
+          status: "unhealthy",
+          issues: [
+            exposeDetails
+              ? `Database schema missing required tables: ${missingTables.join(", ")}`
+              : "Service unavailable",
+          ],
+          ...(exposeDetails ? { dbHost: env.dbHost } : {}),
+          responseTimeMs: Date.now() - startedAt,
+        },
+        { status: 503, headers: { "cache-control": "no-store" } }
+      );
     }
 
     return NextResponse.json(
       {
         status: "healthy",
-        dbHost: env.dbHost,
+        database: "ok",
+        schema: "ok",
+        ...(exposeDetails ? { dbHost: env.dbHost } : {}),
         responseTimeMs: Date.now() - startedAt,
-        dbLatencyMs: latencyMs,
+        dbLatencyMs,
       },
-      { status: 200 }
+      { status: 200, headers: { "cache-control": "no-store" } }
     );
   } catch (error) {
-    console.error("[HEALTH_CHECK] Unexpected error:", describePrismaError(error));
+    console.error("[HEALTH_CHECK] Database probe failed:", describePrismaError(error));
+    const issue = isPrismaUnavailable(error)
+      ? "Database unavailable"
+      : "Database schema check failed";
 
     return NextResponse.json(
       {
         status: "unhealthy",
-        issues: ["Unexpected internal error"],
+        issues: [exposeDetails ? issue : "Service unavailable"],
+        ...(exposeDetails ? { dbHost: env.dbHost } : {}),
         responseTimeMs: Date.now() - startedAt,
       },
-      { status: 503 }
+      { status: 503, headers: { "cache-control": "no-store" } }
     );
   }
 }

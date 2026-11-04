@@ -97,6 +97,13 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  // API handlers are not locale-prefixed. Without this, `/api/trial` is
+  // redirected to `/en/api/trial` and never reaches the route handler. Auth
+  // and database failures are handled inside each handler.
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
   const token = await getSessionToken(request);
 
   const firstSegment = pathname.split("/")[1] ?? "";

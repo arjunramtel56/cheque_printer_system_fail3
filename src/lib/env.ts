@@ -6,11 +6,33 @@
  * operators can confirm configuration without leaking credentials.
  */
 
-const POSTGRES_HOST_RE = /postgres(?:ql)?:\/\/[^:]*:[^@]*@([^:\s/?#]+)/;
+const POSTGRES_PROTOCOLS = new Set(["postgres:", "postgresql:"]);
+const PLACEHOLDER_RE = /(YOUR[-_]?PASSWORD|PROJECT[-_]?REF|POOLER[-_]?HOST|<[^>]+>)/i;
 
-function parsePostgresHost(databaseUrl: string): string | null {
-  const match = databaseUrl.match(POSTGRES_HOST_RE);
-  return match ? (match[1] ?? null) : null;
+/**
+ * Parse a PostgreSQL connection string strictly.
+ *
+ * A host-only regex would also match a value such as
+ * `$env:DATABASE_URL="postgresql://…"; npx prisma db push`, even though Prisma
+ * can never use that value. Requiring the whole value to parse as one URL
+ * catches copy/paste mistakes before they reach the database client.
+ */
+function parsePostgresUrl(value: string): URL | null {
+  const trimmed = value.trim();
+
+  // Reject surrounding or internal whitespace, shell separators, and quotes.
+  if (!trimmed || trimmed !== value) return null;
+  if (/\s/.test(trimmed) || /[;"'`]/.test(trimmed)) return null;
+  if (PLACEHOLDER_RE.test(trimmed)) return null;
+
+  try {
+    const url = new URL(trimmed);
+    if (!POSTGRES_PROTOCOLS.has(url.protocol)) return null;
+    if (!url.hostname || !url.username || !url.password) return null;
+    return url;
+  } catch {
+    return null;
+  }
 }
 
 export interface EnvValidation {
@@ -32,7 +54,7 @@ export function validateEnv(): EnvValidation {
   if (!databaseUrl || databaseUrl.trim() === "") {
     errors.push("DATABASE_URL is not set");
   } else {
-    dbHost = parsePostgresHost(databaseUrl);
+    dbHost = parsePostgresUrl(databaseUrl)?.hostname ?? null;
     if (!dbHost) {
       errors.push("DATABASE_URL is not a valid PostgreSQL connection string");
     }

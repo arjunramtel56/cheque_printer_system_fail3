@@ -243,7 +243,7 @@ PowerShell. Health check: `npm run health` -> `GET /api/health`.
 - [ ] Set `NEXT_PUBLIC_APP_URL` - canonical https URL (Production), branch URL (Preview)
 - [ ] Set `ADMIN_BOOTSTRAP_SECRET` - Production (own value, **Sensitive**)
 - [ ] Optionally set `ENABLE_CALIBRATION` (Production only if the calibration tool is needed)
-- [ ] Do **not** set `DIRECT_DATABASE_URL` on Vercel (CLI-only) unless you deliberately run Prisma CLI from there
+- [ ] `DIRECT_DATABASE_URL` is optional on Vercel - set it only if you deliberately run Prisma CLI there; runtime never reads it
 - [ ] Do **not** set `TRUST_PROXY_HEADERS` on Vercel
 - [ ] Do **not** set any `SUPABASE_*` / `NEXT_PUBLIC_SUPABASE_*` client keys - no Supabase JS client exists
 - [ ] Remove unused leftovers if present: `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `NEXT_PUBLIC_APP_NAME`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `ENCRYPTION_KEY`, `EMAIL_*`, `OPENAI_API_KEY`
@@ -280,8 +280,12 @@ in the repository.
   placeholders (`<PASSWORD>`, `<PROJECT-REF>`, empty values).
 - Database passwords and secret keys are never `NEXT_PUBLIC_*`.
 - `src/lib/env.ts` validates `DATABASE_URL` shape and `AUTH_SECRET` length
-  **without logging values**; `/api/health` and middleware expose diagnostic
-  details only in non-production.
+  **without logging values**. The entire `DATABASE_URL` must be one
+  PostgreSQL URL; shell commands, quotes, placeholders, and surrounding
+  whitespace are rejected. `/api/health` returns 200 only when the database is
+  reachable **and** the required tables (`User`, `Subscription`,
+  `BankTemplate`) exist; otherwise it returns 503. Diagnostic details are
+  exposed only in non-production.
 - Admin bootstrap uses a shared secret, never a hard-coded password.
 - Secret values are never printed to application logs by this configuration.
 - Real-secret local files remain gitignored (`.env*` with `!.env.example`).

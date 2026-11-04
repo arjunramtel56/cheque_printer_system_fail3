@@ -175,6 +175,13 @@ DATABASE_URL="<direct-url>" npm run db:seed
 curl https://your-app.vercel.app/api/health
 ```
 
+The deployment is healthy only when the response is `200` with
+`{"status":"healthy","database":"ok","schema":"ok"}`. A `503` means the
+environment is misconfigured, the database is unreachable, or one of the
+required tables (`User`, `Subscription`, `BankTemplate`) is missing. Production
+responses are intentionally generic; inspect the deployment logs for
+`[HEALTH_CHECK]` diagnostics.
+
 ## Project Structure
 
 ```
