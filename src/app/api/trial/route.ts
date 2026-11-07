@@ -13,10 +13,26 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Role, trial clock, plan and the print count all come back in one query.
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
-      include: {
-        subscription: { include: { plan: true } },
+      select: {
+        role: true,
+        trialExpires: true,
+        subscription: {
+          select: {
+            isActive: true,
+            plan: {
+              select: {
+                name: true,
+                description: true,
+                chequeLimit: true,
+                features: true,
+              },
+            },
+          },
+        },
+        _count: { select: { printHistories: true } },
       },
     });
 
@@ -27,10 +43,7 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const trialExpired = dbUser.trialExpires ? new Date(dbUser.trialExpires) < now : false;
 
-    // Count prints used in trial
-    const printsUsed = await prisma.printHistory.count({
-      where: { userId: dbUser.id },
-    });
+    const printsUsed = dbUser._count.printHistories;
 
     const trialPlan = dbUser.subscription?.plan;
     const chequeLimit = trialPlan?.chequeLimit ?? 10;

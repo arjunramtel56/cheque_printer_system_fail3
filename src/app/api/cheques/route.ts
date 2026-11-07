@@ -16,21 +16,38 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const offset = parseInt(searchParams.get("offset") || "0");
+    // Clamp pagination so a caller cannot request the whole table or a
+    // multi-megabyte payload by passing a huge limit.
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "20", 10) || 20, 1), 100);
+    const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10) || 0, 0);
 
     const where: any = { userId: user.id };
     if (status) where.status = status as any;
 
+    // List projection only. Template fields and print histories are not needed
+    // to render the list and made each row much larger than necessary.
     const cheques = await prisma.chequeEntry.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        accountHolder: true,
+        payeeName: true,
+        chequeNumber: true,
+        chequeDate: true,
+        amountNumber: true,
+        amountWords: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        lastPrintedAt: true,
         template: {
-          include: { bank: true, fields: true },
-        },
-        printHistories: {
-          orderBy: { printedAt: "desc" },
-          take: 5,
+          select: {
+            id: true,
+            name: true,
+            chequeWidth: true,
+            chequeHeight: true,
+            bank: { select: { id: true, name: true, code: true } },
+          },
         },
       },
       orderBy: { createdAt: "desc" },

@@ -16,16 +16,16 @@
   --color-navy-900: hsl(209 44% 10%);
   --color-navy-950: hsl(222 84% 4.9%);
 
-  --color-blue-50: hsl(210 100% 97%);
-  --color-blue-100: hsl(210 98% 93%);
-  --color-blue-200: hsl(208 90% 83%);
-  --color-blue-300: hsl(206 85% 70%);
-  --color-blue-400: hsl(204 80% 55%);
-  --color-blue-500: hsl(202 80% 45%);
-  --color-blue-600: hsl(200 80% 38%);
-  --color-blue-700: hsl(198 80% 31%);
-  --color-blue-800: hsl(196 80% 26%);
-  --color-blue-900: hsl(194 80% 22%);
+  --color-blue-50: hsl(214 100% 97%);
+  --color-blue-100: hsl(214 95% 93%);
+  --color-blue-200: hsl(213 94% 86%);
+  --color-blue-300: hsl(213 94% 76%);
+  --color-blue-400: hsl(213 94% 66%);
+  --color-blue-500: hsl(217 91% 60%);
+  --color-blue-600: hsl(221 83% 53%);
+  --color-blue-700: hsl(224 76% 45%);
+  --color-blue-800: hsl(226 71% 38%);
+  --color-blue-900: hsl(228 60% 32%);
 
   --color-cyan-50: hsl(188 100% 97%);
   --color-cyan-100: hsl(188 95% 90%);
@@ -44,21 +44,24 @@
   --color-card: hsl(0 0% 100%);
   --color-card-foreground: hsl(212 40% 8%);
 
-  --color-primary: hsl(200 80% 38%);
+  --color-primary: hsl(221 83% 53%);
   --color-primary-foreground: hsl(0 0% 100%);
 
   --color-secondary: hsl(210 20% 96%);
   --color-secondary-foreground: hsl(212 40% 10%);
 
-  --color-accent: hsl(188 70% 93%);
-  --color-accent-foreground: hsl(200 80% 26%);
+  --color-accent: hsl(214 95% 93%);
+  --color-accent-foreground: hsl(224 76% 40%);
 
   --color-muted: hsl(210 20% 96%);
   --color-muted-foreground: hsl(214 30% 45%);
 
   --color-border: hsl(214 32% 90%);
   --color-input: hsl(214 32% 90%);
-  --color-ring: hsl(200 80% 38%);
+  --color-ring: hsl(221 83% 53%);
+
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(212 40% 8%);
 
   --color-destructive: hsl(0 84.2% 60.2%);
   --color-destructive-foreground: hsl(210 40% 98%);
@@ -83,21 +86,24 @@
   --color-card: hsl(210 24% 10%);
   --color-card-foreground: hsl(210 20% 96%);
 
-  --color-primary: hsl(200 100% 58%);
-  --color-primary-foreground: hsl(212 90% 8%);
+  --color-primary: hsl(217 91% 65%);
+  --color-primary-foreground: hsl(222 84% 5%);
 
   --color-secondary: hsl(210 24% 14%);
   --color-secondary-foreground: hsl(210 20% 93%);
 
-  --color-accent: hsl(188 70% 22%);
-  --color-accent-foreground: hsl(200 80% 90%);
+  --color-accent: hsl(223 40% 22%);
+  --color-accent-foreground: hsl(213 94% 88%);
 
   --color-muted: hsl(210 24% 14%);
   --color-muted-foreground: hsl(215 20% 65%);
 
   --color-border: hsl(215 28% 22%);
   --color-input: hsl(215 28% 22%);
-  --color-ring: hsl(200 100% 58%);
+  --color-ring: hsl(217 91% 65%);
+
+  --color-popover: hsl(210 24% 10%);
+  --color-popover-foreground: hsl(210 20% 96%);
 
   --color-destructive: hsl(0 84.2% 60%);
   --color-destructive-foreground: hsl(210 40% 98%);
@@ -284,8 +290,8 @@
 /* Faint engineering-grid backdrop */
 .bg-grid {
   background-image:
-    linear-gradient(to right, hsl(200 70% 50% / 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(200 70% 50% / 0.06) 1px, transparent 1px);
+    linear-gradient(to right, hsl(221 83% 53% / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(221 83% 53% / 0.06) 1px, transparent 1px);
   background-size: 44px 44px;
   -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 25%, black 40%, transparent 78%);
   mask-image: radial-gradient(ellipse 85% 75% at 50% 25%, black 40%, transparent 78%);
@@ -298,10 +304,10 @@
 
 /* Soft hover lift for marketing cards */
 .card-lift:hover {
-  border-color: hsl(200 70% 50% / 0.3);
-  box-shadow: 0 14px 34px -14px hsl(200 70% 50% / 0.2);
+  border-color: hsl(221 83% 53% / 0.3);
+  box-shadow: 0 14px 34px -14px hsl(221 83% 53% / 0.2);
 }
 :root.dark .card-lift:hover {
-  border-color: hsl(200 100% 58% / 0.4);
+  border-color: hsl(217 91% 65% / 0.4);
   box-shadow: 0 14px 34px -14px hsl(0 0% 0% / 0.5);
 }

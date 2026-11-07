@@ -39,30 +39,49 @@ export default async function AdminDashboardPage({
   };
 
   try {
-    const approvedRevenue = await prisma.payment.aggregate({
-      _sum: { amount: true },
-      where: { status: "APPROVED" },
-    });
-    stats = {
-      totalUsers: await prisma.user.count(),
-      totalCheques: await prisma.chequeEntry.count(),
-      totalPrints: await prisma.printHistory.count(),
-      totalBanks: await prisma.bank.count({ where: { isActive: true } }),
-      totalTemplates: await prisma.bankTemplate.count({ where: { isActive: true } }),
-      totalRevenue: Number(approvedRevenue._sum?.amount) || 0,
-      pendingPayments: await prisma.payment.count({
-        where: { status: "PENDING_VERIFICATION" },
+    // All eight reads are independent. Running them as one batch replaces the
+    // previous sequential waterfall (8 round-trips) with a single await.
+    const [
+      approvedRevenue,
+      totalUsers,
+      totalCheques,
+      totalPrints,
+      totalBanks,
+      totalTemplates,
+      pendingPayments,
+      activeSubscriptions,
+      recentAuditLogs,
+    ] = await Promise.all([
+      prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: { status: "APPROVED" },
       }),
-      activeSubscriptions: await prisma.subscription.count({
-        where: { isActive: true },
-      }),
-      recentAuditLogs: await prisma.auditLog.findMany({
+      prisma.user.count(),
+      prisma.chequeEntry.count(),
+      prisma.printHistory.count(),
+      prisma.bank.count({ where: { isActive: true } }),
+      prisma.bankTemplate.count({ where: { isActive: true } }),
+      prisma.payment.count({ where: { status: "PENDING_VERIFICATION" } }),
+      prisma.subscription.count({ where: { isActive: true } }),
+      prisma.auditLog.findMany({
         orderBy: { createdAt: "desc" },
         take: 10,
         include: {
           user: { select: { id: true, name: true, email: true, role: true } },
         },
       }),
+    ]);
+
+    stats = {
+      totalUsers,
+      totalCheques,
+      totalPrints,
+      totalBanks,
+      totalTemplates,
+      totalRevenue: Number(approvedRevenue._sum?.amount) || 0,
+      pendingPayments,
+      activeSubscriptions,
+      recentAuditLogs,
     };
   } catch {
     // Database not available

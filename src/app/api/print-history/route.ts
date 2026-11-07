@@ -14,15 +14,31 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "50");
-    const offset = parseInt(searchParams.get("offset") || "0");
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "50", 10) || 50, 1), 200);
+    const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10) || 0, 0);
 
     const history = await prisma.printHistory.findMany({
       where: { userId: user.id },
-      include: {
+      select: {
+        id: true,
+        printedAt: true,
+        copies: true,
+        printerName: true,
+        notes: true,
         cheque: {
-          include: {
-            template: { include: { bank: true } },
+          select: {
+            id: true,
+            payeeName: true,
+            accountHolder: true,
+            amountNumber: true,
+            chequeNumber: true,
+            status: true,
+            template: {
+              select: {
+                name: true,
+                bank: { select: { name: true } },
+              },
+            },
           },
         },
       },

@@ -43,36 +43,55 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
     dataError = true;
   } else {
     try {
-      chequeCount = await prisma.chequeEntry.count({ where: { userId } });
+      // One user query returns the role, active subscription and both counts.
+      // The remaining two reads are independent, so they run concurrently.
+      // This replaces seven sequential round-trips with three — the biggest
+      // win on serverless/Postgres deployments where latency dominates.
+      const [dbUser, recent, templateCount] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            role: true,
+            subscription: {
+              where: { isActive: true },
+              select: {
+                endDate: true,
+                plan: { select: { name: true, chequeLimit: true } },
+              },
+            },
+            _count: { select: { chequeEntries: true, printHistories: true } },
+          },
+        }),
+        prisma.chequeEntry.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: {
+            id: true,
+            payeeName: true,
+            accountHolder: true,
+            chequeDate: true,
+            status: true,
+            template: { select: { bank: { select: { name: true } } } },
+          },
+        }),
+        prisma.bankTemplate.count({
+          where: { isActive: true, bank: { isActive: true } },
+        }),
+      ]);
 
-      recentCheques = await prisma.chequeEntry.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        include: { template: { include: { bank: true } } },
-      });
-
-      activeTemplateCount = await prisma.bankTemplate.count({
-        where: { isActive: true, bank: { isActive: true } },
-      });
-
-      const dbUser = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { role: true },
-      });
+      chequeCount = dbUser?._count.chequeEntries ?? 0;
+      recentCheques = recent;
+      activeTemplateCount = templateCount;
       isTrial = dbUser?.role === "TRIAL_USER";
-
-      subscription = await prisma.subscription.findFirst({
-        where: { userId, isActive: true },
-        include: { plan: true },
-      });
+      subscription = dbUser?.subscription ?? null;
 
       if (subscription && isTrial) {
         const rawMsLeft = new Date(subscription.endDate).getTime() - Date.now();
         const msLeft = Math.max(0, rawMsLeft);
         const hoursLeft = Math.ceil(msLeft / (60 * 60 * 1000));
         const daysLeft = Math.floor(msLeft / (24 * 60 * 60 * 1000));
-        const printsUsed = await prisma.printHistory.count({ where: { userId } });
+        const printsUsed = dbUser?._count.printHistories ?? 0;
         const limit = subscription.plan.chequeLimit > 0 ? subscription.plan.chequeLimit : 0;
         const printsLeft = limit > 0 ? Math.max(0, limit - printsUsed) : 0;
         trialInfo = {
@@ -94,6 +113,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
       title: t("stats.chequesPrinted"),
       value: dataError ? "—" : chequeCount.toString(),
       icon: FileText,
+      tone: "bg-blue-500/10 text-blue-600 ring-blue-500/20 dark:text-blue-400",
+      bar: "from-blue-500 to-cyan-400",
     },
     {
       title: t("stats.trialDaysLeft"),
@@ -104,16 +125,22 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
             : t("trialHoursLeft", { hours: trialInfo.hoursLeft })
           : "—",
       icon: CalendarClock,
+      tone: "bg-violet-500/10 text-violet-600 ring-violet-500/20 dark:text-violet-400",
+      bar: "from-violet-500 to-fuchsia-400",
     },
     {
       title: t("stats.activeTemplates"),
       value: dataError ? "—" : activeTemplateCount.toString(),
       icon: LayoutTemplate,
+      tone: "bg-cyan-500/10 text-cyan-600 ring-cyan-500/20 dark:text-cyan-400",
+      bar: "from-cyan-500 to-teal-400",
     },
     {
       title: t("printsLeftTrial"),
       value: trialInfo.isTrial && !dataError ? trialInfo.printsLeft.toString() : "—",
       icon: Printer,
+      tone: "bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400",
+      bar: "from-emerald-500 to-lime-400",
     },
   ];
 
@@ -122,6 +149,13 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
     READY: tStatus("status.ready"),
     PRINTED: tStatus("status.printed"),
     CANCELLED: tStatus("status.cancelled"),
+  };
+
+  const statusStyles: Record<string, string> = {
+    PRINTED: "bg-emerald-500/10 text-emerald-700 ring-emerald-500/20 dark:text-emerald-300",
+    READY: "bg-blue-500/10 text-blue-700 ring-blue-500/20 dark:text-blue-300",
+    DRAFT: "bg-slate-500/10 text-slate-600 ring-slate-500/20 dark:text-slate-300",
+    CANCELLED: "bg-rose-500/10 text-rose-700 ring-rose-500/20 dark:text-rose-300",
   };
 
   return (
@@ -160,27 +194,56 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
         </Alert>
       )}
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-navy-700 dark:text-navy-200">{t("overview")}</h2>
-        <Link href={`/${locale}/dashboard/cheques/new`}>
-          <Button size="lg" className="shadow-md shadow-primary/20">
-            <Printer className="mr-2 h-4 w-4" />
-            {t("printNewCheque")}
-          </Button>
-        </Link>
-      </div>
+      <section className="relative overflow-hidden rounded-2xl border border-navy-800/40 bg-gradient-to-br from-navy-950 via-navy-900 to-primary/70 px-6 py-7 text-white shadow-xl shadow-navy-950/20">
+        <div aria-hidden="true" className="bg-grid absolute inset-0 opacity-[0.14]" />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-cyan-400/20 blur-3xl"
+        />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/80">
+              {t("overview")}
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight">
+              {t("welcomeHeader", { name: user?.name ?? "" })}
+            </h2>
+          </div>
+          <Link href={`/${locale}/dashboard/cheques/new`}>
+            <Button
+              size="lg"
+              variant="secondary"
+              className="w-full shadow-lg shadow-navy-950/30 sm:w-auto"
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              {t("printNewCheque")}
+            </Button>
+          </Link>
+        </div>
+      </section>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <Card key={stat.title}>
+          <Card
+            key={stat.title}
+            className="group relative overflow-hidden border-border/70 bg-card/80 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <span
+              aria-hidden="true"
+              className={`absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r ${stat.bar} opacity-70`}
+            />
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
-              <stat.icon className="h-4 w-4 text-navy-500 dark:text-navy-400" />
+              <span
+                className={`flex h-9 w-9 items-center justify-center rounded-lg ring-1 ${stat.tone}`}
+              >
+                <stat.icon className="h-4 w-4" />
+              </span>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-navy-800 dark:text-navy-200">
+              <div className="text-3xl font-bold tracking-tight text-navy-800 dark:text-navy-100">
                 {stat.value}
               </div>
             </CardContent>
@@ -217,7 +280,12 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
                         {new Date(cheque.chequeDate).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-block rounded-full bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+                            statusStyles[cheque.status] ??
+                            "bg-muted text-muted-foreground ring-border"
+                          }`}
+                        >
                           {statusLabels[cheque.status] ?? cheque.status}
                         </span>
                       </td>

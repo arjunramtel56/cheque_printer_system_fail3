@@ -1,307 +1,51 @@
-"use client";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { describePrismaError } from "@/lib/prisma-errors";
+import { PayeesList, type Payee } from "@/components/dashboard/payees-list";
 
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Plus, Trash2, Edit, Users } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useToast } from "@/providers/toast-provider";
+export default async function PayeesPage() {
+  const session = await auth();
+  const user = session?.user as { id?: string } | undefined;
+  const userId = user?.id;
 
-interface Payee {
-  id: string;
-  name: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  bankAccount?: string;
-  chequeLimit?: string;
-  createdAt: string;
-}
+  let initialPayees: Payee[] = [];
+  let initialError = false;
 
-export default function PayeesPage() {
-  const t = useTranslations("payees");
-  const { showToast } = useToast();
-  const [payees, setPayees] = useState<Payee[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingPayee, setEditingPayee] = useState<Payee | null>(null);
-
-  const [formData, setFormData] = useState({
-    name: "",
-    address: "",
-    phone: "",
-    email: "",
-    bankAccount: "",
-    chequeLimit: "",
-  });
-
-  useEffect(() => {
-    fetchPayees();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function fetchPayees() {
-    setIsLoading(true);
-    setLoadError(false);
+  if (!userId) {
+    initialError = true;
+  } else {
     try {
-      const res = await fetch("/api/payees");
-      if (!res.ok) throw new Error("failed");
-      const data = await res.json();
-      setPayees(data);
-    } catch (error) {
-      console.error("Error fetching payees:", error);
-      // An empty table must not be indistinguishable from a failed request.
-      setLoadError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  function handleAddNew() {
-    setEditingPayee(null);
-    setFormData({
-      name: "",
-      address: "",
-      phone: "",
-      email: "",
-      bankAccount: "",
-      chequeLimit: "",
-    });
-    setIsDialogOpen(true);
-  }
-
-  function handleEdit(payee: Payee) {
-    setEditingPayee(payee);
-    setFormData({
-      name: payee.name,
-      address: payee.address || "",
-      phone: payee.phone || "",
-      email: payee.email || "",
-      bankAccount: payee.bankAccount || "",
-      chequeLimit: payee.chequeLimit || "",
-    });
-    setIsDialogOpen(true);
-  }
-
-  async function handleDelete(payee: Payee) {
-    if (!window.confirm(t("deleteConfirm", { name: payee.name }))) return;
-
-    try {
-      const res = await fetch(`/api/payees?id=${payee.id}`, {
-        method: "DELETE",
+      const payees = await prisma.payee.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        select: {
+          id: true,
+          name: true,
+          address: true,
+          phone: true,
+          email: true,
+          bankAccount: true,
+          chequeLimit: true,
+          createdAt: true,
+        },
       });
 
-      if (!res.ok) throw new Error("failed");
-      setPayees(payees.filter((p) => p.id !== payee.id));
+      initialPayees = payees.map((payee) => ({
+        id: payee.id,
+        name: payee.name,
+        address: payee.address ?? undefined,
+        phone: payee.phone ?? undefined,
+        email: payee.email ?? undefined,
+        bankAccount: payee.bankAccount ?? undefined,
+        chequeLimit: payee.chequeLimit?.toString() ?? undefined,
+        createdAt: payee.createdAt.toISOString(),
+      }));
     } catch (error) {
-      console.error("Error deleting payee:", error);
-      showToast(t("deleteError"), "error");
+      console.error("[PAYEES_PAGE_DATA_ERROR]", describePrismaError(error), error);
+      initialError = true;
     }
   }
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-
-    if (!formData.name.trim()) {
-      showToast(t("nameRequired"), "error");
-      return;
-    }
-
-    try {
-      const url = editingPayee ? `/api/payees` : "/api/payees";
-      const method = editingPayee ? "PUT" : "POST";
-
-      const body = editingPayee ? { id: editingPayee.id, ...formData } : formData;
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "failed");
-      }
-
-      const saved = await res.json();
-      if (editingPayee) {
-        setPayees(payees.map((p) => (p.id === saved.id ? saved : p)));
-      } else {
-        setPayees([saved, ...payees]);
-      }
-      setIsDialogOpen(false);
-      showToast(editingPayee ? t("update") : t("create"), "success");
-    } catch (error: any) {
-      showToast(error?.message || t("saveError"), "error");
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">{t("title")}</h2>
-        <Button onClick={handleAddNew} className="gap-2">
-          <Plus size={16} />
-          {t("addPayee")}
-        </Button>
-      </div>
-
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground">{t("loading")}</div>
-          ) : loadError ? (
-            <div className="p-8 text-center">
-              <p className="text-destructive">{t("loadError")}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{t("loadErrorDesc")}</p>
-              <Button variant="outline" className="mt-3" onClick={fetchPayees}>
-                {t("retry")}
-              </Button>
-            </div>
-          ) : payees.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium">{t("name")}</th>
-                    <th className="px-4 py-3 text-left font-medium">{t("bankAccount")}</th>
-                    <th className="px-4 py-3 text-left font-medium">{t("phone")}</th>
-                    <th className="px-4 py-3 text-left font-medium">{t("email")}</th>
-                    <th className="px-4 py-3 text-right font-medium">{t("actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payees.map((payee) => (
-                    <tr key={payee.id} className="border-b">
-                      <td className="px-4 py-3 font-medium">{payee.name}</td>
-                      <td className="px-4 py-3">{payee.bankAccount || "-"}</td>
-                      <td className="px-4 py-3">{payee.phone || "-"}</td>
-                      <td className="px-4 py-3">{payee.email || "-"}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(payee)}>
-                            <Edit size={16} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(payee)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <CardContent className="py-12 text-center">
-              <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">{t("noPayeesSaved")}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{t("noPayeesDesc")}</p>
-              <Button onClick={handleAddNew} className="mt-4 gap-2">
-                <Plus size={16} />
-                {t("addFirstPayee")}
-              </Button>
-            </CardContent>
-          )}
-        </CardContent>
-      </Card>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingPayee ? t("editPayee") : t("addNewPayee")}</DialogTitle>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit} className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="name">{t("name")} *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder={t("namePlaceholder")}
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="bankAccount">{t("bankAccount")}</Label>
-              <Input
-                id="bankAccount"
-                value={formData.bankAccount}
-                onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
-                placeholder={t("accountPlaceholder")}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="phone">{t("phone")}</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder={t("phonePlaceholder")}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="email">{t("email")}</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder={t("emailPlaceholder")}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="address">{t("address")}</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder={t("addressPlaceholder")}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="chequeLimit">{t("chequeLimit")}</Label>
-              <Input
-                id="chequeLimit"
-                type="number"
-                value={formData.chequeLimit}
-                onChange={(e) => setFormData({ ...formData, chequeLimit: e.target.value })}
-                placeholder={t("chequeLimitPlaceholder")}
-              />
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                {t("cancel")}
-              </Button>
-              <Button type="submit">{editingPayee ? t("update") : t("create")}</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+  return <PayeesList initialPayees={initialPayees} initialError={initialError} />;
 }

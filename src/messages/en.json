@@ -1082,5 +1082,9 @@
   "metadata": {
     "title": "Reactify Cheque Printer System — Cheque Printing Software for Nepal",
     "description": "Print Nepalese bank cheques accurately from your browser. Bank-specific templates for 10 major Nepalese banks, amount-in-words in English and Nepali, calibration, print history and a 24-hour free trial. Built by Reactify Software Technologies Pvt. Ltd."
+  },
+  "languageSwitcher": {
+    "switchToNepali": "Switch to Nepali",
+    "switchToEnglish": "Switch to English"
   }
 }
